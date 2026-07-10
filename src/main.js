@@ -1079,7 +1079,9 @@ window.goProfile = function() {
   document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
   document.getElementById('profile-view').style.display = 'block';
   document.querySelector('.main-container').scrollTo(0, 0);
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach((n, i) => {
+    if (i === 3) n.classList.add('active'); else n.classList.remove('active');
+  });
 };
 
 // Initialize listeners for library filters
