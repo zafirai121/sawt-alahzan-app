@@ -621,6 +621,90 @@ window.openTrackDetail = function(poemId) {
     playPoem(poem);
   }
 };
+
+window.openTrackOptions = function(event, poemId) {
+  event.stopPropagation();
+  const poem = globalPoems.find(p => p.id === poemId);
+  if (!poem) return;
+  
+  const modal = document.getElementById('track-options-modal');
+  const sheet = document.getElementById('track-options-sheet');
+  
+  // Populate Data
+  document.getElementById('track-options-img').src = poem.coverImage || poem.image || '';
+  document.getElementById('track-options-title').textContent = poem.title || poem.name || 'مجهول';
+  document.getElementById('track-options-artist').textContent = poem.reciterName || 'مجهول';
+  
+  // Like Button
+  const isLiked = LibraryStore.likes.includes(poem.id);
+  const likeIcon = document.getElementById('opt-like-icon');
+  likeIcon.className = isLiked ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
+  likeIcon.style.color = isLiked ? '#E91E63' : 'white';
+  document.getElementById('opt-like').onclick = (e) => {
+    e.stopPropagation();
+    LibraryStore.toggleLike(poem.id);
+    closeTrackOptions(e);
+  };
+  
+  // Playlist Button
+  document.getElementById('opt-playlist').onclick = (e) => {
+    e.stopPropagation();
+    closeTrackOptions(e);
+    window.openPlaylistModal(poem.id);
+  };
+  
+  // Download Button
+  const isDl = LibraryStore.downloads.includes(poem.id);
+  const dlIcon = document.getElementById('opt-download-icon');
+  dlIcon.style.color = isDl ? '#4CAF50' : 'white';
+  document.getElementById('opt-download').onclick = (e) => {
+    e.stopPropagation();
+    LibraryStore.toggleDownload(poem.id);
+    closeTrackOptions(e);
+  };
+  
+  // Artist Button
+  document.getElementById('opt-artist').onclick = (e) => {
+    e.stopPropagation();
+    closeTrackOptions(e);
+    if(window.openArtistDetail) window.openArtistDetail(poem.reciterName);
+  };
+
+  // Share Button
+  document.getElementById('opt-share').onclick = (e) => {
+    e.stopPropagation();
+    closeTrackOptions(e);
+    if (navigator.share) {
+      navigator.share({
+        title: poem.title,
+        text: 'استمع إلى ' + poem.title + ' بصوت ' + poem.reciterName,
+        url: window.location.href
+      });
+    } else {
+      alert('تم نسخ الرابط!');
+    }
+  };
+  
+  // Show animation
+  modal.style.display = 'flex';
+  setTimeout(() => {
+    modal.style.opacity = '1';
+    sheet.style.transform = 'translateY(0)';
+  }, 10);
+};
+
+window.closeTrackOptions = function(event) {
+  if (event) event.stopPropagation();
+  const modal = document.getElementById('track-options-modal');
+  const sheet = document.getElementById('track-options-sheet');
+  
+  sheet.style.transform = 'translateY(100%)';
+  modal.style.opacity = '0';
+  setTimeout(() => {
+    modal.style.display = 'none';
+  }, 300);
+};
+
 let isDraggingProgress = false;
 audioContext.addEventListener('timeupdate', () => {
   if (audioContext.duration && isFinite(audioContext.duration)) {

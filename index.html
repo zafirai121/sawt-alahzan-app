@@ -388,6 +388,44 @@
       </div>
     </div>
 
+    <!-- Track Options Modal -->
+    <div id="track-options-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 10000; justify-content: center; align-items: flex-end; backdrop-filter: blur(2px); opacity: 0; transition: opacity 0.3s ease;" onclick="closeTrackOptions(event)">
+      <div id="track-options-sheet" style="background: #282828; width: 100%; border-radius: 24px 24px 0 0; padding: 25px 20px 40px 20px; box-sizing: border-box; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);" onclick="event.stopPropagation()">
+        <!-- Handle for dragging (visual only) -->
+        <div style="width: 40px; height: 5px; background: #555; border-radius: 5px; margin: 0 auto 20px auto;"></div>
+        
+        <div style="display: flex; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 20px; margin-bottom: 10px;">
+          <img id="track-options-img" src="" style="width: 55px; height: 55px; border-radius: 8px; object-fit: cover; margin-left: 15px;" />
+          <div style="flex: 1; overflow: hidden;">
+            <div id="track-options-title" style="font-size: 18px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px;"></div>
+            <div id="track-options-artist" style="color: var(--text-secondary); font-size: 14px;"></div>
+          </div>
+        </div>
+
+        <!-- Options -->
+        <div class="track-option-item" id="opt-like" style="display: flex; align-items: center; padding: 16px 10px; cursor: pointer;">
+          <i class="fa-regular fa-heart" id="opt-like-icon" style="font-size: 20px; width: 35px; color: white;"></i>
+          <span id="opt-like-text" style="font-size: 16px;">إضافة إلى المفضلة</span>
+        </div>
+        <div class="track-option-item" id="opt-playlist" style="display: flex; align-items: center; padding: 16px 10px; cursor: pointer;">
+          <i class="fa-solid fa-list" style="font-size: 20px; width: 35px; color: white;"></i>
+          <span style="font-size: 16px;">إضافة إلى قائمة تشغيل</span>
+        </div>
+        <div class="track-option-item" id="opt-download" style="display: flex; align-items: center; padding: 16px 10px; cursor: pointer;">
+          <i class="fa-solid fa-download" id="opt-download-icon" style="font-size: 20px; width: 35px; color: white;"></i>
+          <span id="opt-download-text" style="font-size: 16px;">تنزيل للاستماع بدون إنترنت</span>
+        </div>
+        <div class="track-option-item" id="opt-artist" style="display: flex; align-items: center; padding: 16px 10px; cursor: pointer;">
+          <i class="fa-regular fa-user" style="font-size: 20px; width: 35px; color: white;"></i>
+          <span style="font-size: 16px;">عرض صفحة الرادود</span>
+        </div>
+        <div class="track-option-item" id="opt-share" style="display: flex; align-items: center; padding: 16px 10px; cursor: pointer;">
+          <i class="fa-solid fa-share-nodes" style="font-size: 20px; width: 35px; color: white;"></i>
+          <span style="font-size: 16px;">مشاركة</span>
+        </div>
+      </div>
+    </div>
+
     <script src="src/supabaseClient.js" type="module"></script>
     <script src="src/main.js" type="module"></script>
   </body>
