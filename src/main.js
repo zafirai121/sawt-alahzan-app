@@ -1075,6 +1075,56 @@ window.goLibrary = function() {
   renderLibraryContent(document.querySelector('.filter-chip.active')?.dataset.filter || 'all');
 };
 
+window.openArtistDetail = function(artistName) {
+  document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
+  document.getElementById('artist-view').style.display = 'block';
+  document.querySelector('.main-container').scrollTo(0, 0);
+  
+  const artist = globalReciters.find(r => r.name === artistName);
+  const artistTracks = globalPoems.filter(p => p.reciterName === artistName);
+  
+  document.getElementById('artist-detail-name').textContent = artistName;
+  document.getElementById('artist-detail-stats').textContent = artistTracks.length + ' مقطع مسموع';
+  
+  if (artist && artist.image) {
+    document.getElementById('artist-detail-image').src = artist.image;
+  } else if (artistTracks.length > 0) {
+    document.getElementById('artist-detail-image').src = artistTracks[0].coverImage;
+  }
+  
+  const trackListContainer = document.getElementById('artist-tracks');
+  trackListContainer.innerHTML = '';
+  
+  if (artistTracks.length === 0) {
+    trackListContainer.innerHTML = '<div style="text-align: center; color: var(--text-secondary); margin-top: 40px;">لا توجد مقاطع لهذا الرادود</div>';
+  } else {
+    artistTracks.forEach((track, index) => {
+      const el = document.createElement('div');
+      el.className = 'track-item animate-in';
+      el.innerHTML = `
+        <div class="track-number">${index + 1}</div>
+        <img src="${track.coverImage || track.image}" class="track-img" />
+        <div class="track-info">
+          <div class="track-title">${track.title || track.name}</div>
+          <div class="track-artist">${track.reciterName || 'مجهول'}</div>
+        </div>
+        <i class="fa-solid fa-ellipsis-vertical" style="color: var(--text-secondary);"></i>
+      `;
+      el.onclick = () => playPoem(track);
+      trackListContainer.appendChild(el);
+    });
+  }
+  
+  const playAllBtn = document.getElementById('artist-play-all');
+  if(playAllBtn) {
+    playAllBtn.onclick = () => {
+      if (artistTracks.length > 0) {
+        playPoem(artistTracks[0]);
+      }
+    };
+  }
+};
+
 window.goProfile = function() {
   document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
   document.getElementById('profile-view').style.display = 'block';
