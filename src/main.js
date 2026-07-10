@@ -1025,13 +1025,15 @@ function getCategoryFirstImage(categoryTitle) {
 }
 
 window.renderSearchContent = function() {
-  const searchInput = document.getElementById('search-input');
+  const searchInput = document.getElementById('main-search-input');
   if (searchInput) {
     searchInput.oninput = (e) => {
       const q = e.target.value.toLowerCase();
       const resultsContainer = document.getElementById('search-results');
       if (q.length > 0) {
-        document.getElementById('search-categories').style.display = 'none';
+        document.getElementById('genre-grid').style.display = 'none';
+        const titleEl = document.getElementById('search-section-title');
+        if (titleEl) titleEl.style.display = 'none';
         resultsContainer.style.display = 'block';
         resultsContainer.innerHTML = '';
         
@@ -1060,13 +1062,15 @@ window.renderSearchContent = function() {
           resultsContainer.innerHTML = '<div style="text-align:center; padding: 20px; color: var(--text-secondary);">\u0644\u0645 \u064a\u062a\u0645 \u0627\u0644\u0639\u062b\u0648\u0631 \u0639\u0644\u0649 \u0646\u062a\u0627\u0626\u062c</div>';
         }
       } else {
-        document.getElementById('search-categories').style.display = 'grid';
+        document.getElementById('genre-grid').style.display = 'grid';
+        const titleEl = document.getElementById('search-section-title');
+        if (titleEl) titleEl.style.display = 'block';
         resultsContainer.style.display = 'none';
       }
     };
   }
 
-  const catContainer = document.getElementById('search-categories');
+  const catContainer = document.getElementById('genre-grid');
   if (catContainer) {
     catContainer.innerHTML = '';
     const categories = [
