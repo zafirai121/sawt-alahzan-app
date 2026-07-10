@@ -275,7 +275,7 @@ function createHorizontalGridScrollerSection(titleText, items) {
       card.innerHTML = `
         <img src="${item.coverImage || item.image}" alt="${item.title || item.name}" style="height: 48px; width: 48px; object-fit: cover; border-radius: 4px;" />
         <div style="flex: 1; padding: 0 12px; font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: right;">${item.title || item.name}</div>
-        <i class="fa-solid fa-ellipsis-vertical" style="color: rgba(255,255,255,0.5); padding: 0 5px; font-size: 14px;"></i>
+        <i class="fa-solid fa-ellipsis-vertical" style="color: rgba(255,255,255,0.5); padding: 10px; font-size: 14px;" onclick="openTrackOptions(event, \`${item.id}\`)"></i>
       `;
       card.onclick = () => {
         if (item.audioUrl) openTrackDetail(item.id);
@@ -487,7 +487,7 @@ function updateQueueUI() {
         <div class="track-title" style="font-size: 15px;">${p.title}</div>
         <div class="track-artist" style="font-size: 13px;">${p.reciterName}</div>
       </div>
-      <i class="fa-solid fa-ellipsis-vertical" style="color: rgba(255,255,255,0.5);"></i>
+      <i class="fa-solid fa-ellipsis-vertical" style="color: rgba(255,255,255,0.5); padding: 10px;" onclick="openTrackOptions(event, \`${p.id}\`)"></i>
     `;
     track.onclick = () => {
       queueIndex += (index + 1);
@@ -1006,7 +1006,7 @@ window.openPlaylistDetail = function(id, title, subtitle) {
             <div class="track-title">${track.title || track.name}</div>
             <div class="track-artist">${track.reciterName || '\u0645\u062c\u0647\u0648\u0644'}</div>
           </div>
-          <i class="fa-solid fa-ellipsis-vertical" style="color: var(--text-secondary);"></i>
+          <i class="fa-solid fa-ellipsis-vertical" style="color: var(--text-secondary); padding: 10px;" onclick="openTrackOptions(event, \`${track.id}\`)"></i>
         `;
         el.onclick = () => playPoem(track);
         tracksContainer.appendChild(el);
@@ -1051,7 +1051,7 @@ window.renderSearchContent = function() {
                 <div class="track-title">${track.title || track.name}</div>
                 <div class="track-artist">${track.reciterName || '\u0645\u062c\u0647\u0648\u0644'}</div>
               </div>
-              <i class="fa-solid fa-ellipsis-vertical" style="color: var(--text-secondary);"></i>
+              <i class="fa-solid fa-ellipsis-vertical" style="color: var(--text-secondary); padding: 10px;" onclick="openTrackOptions(event, \`${track.id}\`)"></i>
             `;
             el.onclick = () => playPoem(track);
             resultsContainer.appendChild(el);
@@ -1121,7 +1121,7 @@ window.openCategoryDetail = function(categoryName, bgImage) {
           <div class="track-title">${track.title || track.name}</div>
           <div class="track-artist">${track.reciterName || '\u0645\u062c\u0647\u0648\u0644'}</div>
         </div>
-        <i class="fa-solid fa-ellipsis-vertical" style="color: var(--text-secondary);"></i>
+        <i class="fa-solid fa-ellipsis-vertical" style="color: var(--text-secondary); padding: 10px;" onclick="openTrackOptions(event, \`${track.id}\`)"></i>
       `;
       el.onclick = () => playPoem(track);
       tc.appendChild(el);
@@ -1192,7 +1192,7 @@ window.openArtistDetail = function(artistName) {
           <div class="track-title">${track.title || track.name}</div>
           <div class="track-artist">${track.reciterName || 'مجهول'}</div>
         </div>
-        <i class="fa-solid fa-ellipsis-vertical" style="color: var(--text-secondary);"></i>
+        <i class="fa-solid fa-ellipsis-vertical" style="color: var(--text-secondary); padding: 10px;" onclick="openTrackOptions(event, \`${track.id}\`)"></i>
       `;
       el.onclick = () => playPoem(track);
       trackListContainer.appendChild(el);
