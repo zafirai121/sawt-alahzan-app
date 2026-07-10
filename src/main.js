@@ -623,6 +623,7 @@ window.openTrackDetail = function(poemId) {
 };
 
 window.openTrackOptions = function(event, poemId) {
+  history.pushState({ overlay: 'track-options' }, '');
   event.stopPropagation();
   const poem = globalPoems.find(p => p.id === poemId);
   if (!poem) return;
@@ -693,7 +694,8 @@ window.openTrackOptions = function(event, poemId) {
   }, 10);
 };
 
-window.closeTrackOptions = function(event) {
+window.closeTrackOptions = function(event, fromPopState = false) {
+  if (!fromPopState) { history.back(); return; }
   if (event) event.stopPropagation();
   const modal = document.getElementById('track-options-modal');
   const sheet = document.getElementById('track-options-sheet');
@@ -797,7 +799,8 @@ window.toggleRepeat = function() {
   if (btn) btn.style.color = isRepeat ? 'var(--accent)' : 'rgba(255,255,255,0.5)';
 };
 
-window.closeFullPlayer = function() {
+window.closeFullPlayer = function(fromPopState = false) {
+  if (!fromPopState) { history.back(); return; }
   document.getElementById('full-player-view').classList.remove('open');
   const miniPlayer = document.getElementById('mini-player');
   if (currentPoem) {
@@ -807,6 +810,7 @@ window.closeFullPlayer = function() {
 };
 
 function openFullPlayer() {
+  history.pushState({ overlay: 'full-player' }, '');
   if (!currentPoem) return;
   const fp = document.getElementById('full-player-view');
   fp.classList.add('open');
@@ -883,6 +887,7 @@ window.renderLibraryContent = function(filter = 'all') {
 };
 
 window.promptCreatePlaylist = function() {
+  history.pushState({ overlay: 'create-playlist' }, '');
   document.getElementById('new-playlist-name').value = '';
   document.getElementById('create-playlist-modal').style.display = 'flex';
 };
@@ -907,6 +912,7 @@ window.submitCreatePlaylist = function() {
 };
 
 window.openPlaylistModal = function(trackId) {
+  history.pushState({ overlay: 'playlist-modal' }, '');
   const modal = document.getElementById('playlist-modal');
   const list = document.getElementById('playlist-modal-list');
   list.innerHTML = '';
@@ -1100,6 +1106,7 @@ window.renderSearchContent = function() {
 };
 
 window.openCategoryDetail = function(categoryName, bgImage) {
+  history.pushState({ overlay: 'category-view' }, '');
   document.getElementById('search-view').style.display = 'none';
   const cv = document.getElementById('category-view');
   if (cv) {
@@ -1176,6 +1183,7 @@ window.goLibrary = function() {
 };
 
 window.openArtistDetail = function(artistName) {
+  history.pushState({ overlay: 'artist-view' }, '');
   document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
   document.getElementById('artist-view').style.display = 'block';
   document.querySelector('.main-container').scrollTo(0, 0);
@@ -1257,3 +1265,43 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
+
+window.addEventListener('popstate', (e) => {
+  const trackOpts = document.getElementById('track-options-modal');
+  if (trackOpts && trackOpts.style.display !== 'none') {
+    closeTrackOptions(null, true);
+    return;
+  }
+  
+  const createPl = document.getElementById('create-playlist-modal');
+  if (createPl && createPl.style.display !== 'none') {
+    createPl.style.display = 'none';
+    return;
+  }
+  
+  const plModal = document.getElementById('playlist-modal');
+  if (plModal && plModal.style.display !== 'none') {
+    if(typeof closePlaylistModal === 'function') closePlaylistModal(true);
+    else plModal.style.display = 'none';
+    return;
+  }
+  
+  const fullPlayer = document.getElementById('full-player-view');
+  if (fullPlayer && fullPlayer.classList.contains('open')) {
+    closeFullPlayer(true);
+    return;
+  }
+  
+  const artistView = document.getElementById('artist-view');
+  if (artistView && artistView.style.display === 'block') {
+    artistView.style.display = 'none';
+    return;
+  }
+  
+  const catView = document.getElementById('category-view');
+  if (catView && catView.style.display === 'block') {
+    catView.style.display = 'none';
+    document.getElementById('search-view').style.display = 'block';
+    return;
+  }
+});
