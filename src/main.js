@@ -38,9 +38,15 @@ const LibraryStore = {
         if (track) {
           try {
             const cache = await caches.open('sawt-alahzan-audio-cache-v1');
-            if (track.audioUrl) await cache.add(track.audioUrl);
+            if (track.audioUrl) {
+              const res = await fetch(track.audioUrl, { mode: 'no-cors' });
+              await cache.put(track.audioUrl, res);
+            }
             const imgUrl = track.coverImage || track.image;
-            if (imgUrl) await cache.add(imgUrl);
+            if (imgUrl) {
+              const imgRes = await fetch(imgUrl, { mode: 'no-cors' });
+              await cache.put(imgUrl, imgRes);
+            }
           } catch(e) { console.error('Cache error', e); }
         }
       }
