@@ -1074,18 +1074,25 @@ window.renderSearchContent = function() {
   if (catContainer) {
     catContainer.innerHTML = '';
     const categories = [
-      { id: 'latmiyat', title: '\u0639\u0632\u0627\u0621' },
-      { id: 'mawalid', title: '\u0645\u0648\u0627\u0644\u064a\u062f' },
-      { id: 'adeya', title: '\u0623\u062f\u0639\u064a\u0629' },
-      { id: 'quran', title: '\u0642\u0631\u0622\u0646 \u0643\u0631\u064a\u0645' }
+      { id: 'latmiyat', title: 'عزاء', color: '#E13300' },
+      { id: 'mawalid', title: 'مواليد', color: '#1E3264' },
+      { id: 'adeya', title: 'أدعية', color: '#E8115B' },
+      { id: 'quran', title: 'قرآن كريم', color: '#148A08' },
+      { id: 'shor', title: 'شور', color: '#8C1932' },
+      { id: 'nae', title: 'نعي', color: '#006450' },
+      { id: 'ziyarat', title: 'زيارات', color: '#8400E7' },
+      { id: 'husseini', title: 'قصائد حسينية', color: '#E91429' }
     ];
     
     categories.forEach(cat => {
       const card = document.createElement('div');
-      card.className = 'category-card';
+      card.className = 'genre-card';
+      card.style.backgroundColor = cat.color;
       const imgUrl = getCategoryFirstImage(cat.title);
-      card.style.background = `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.7)), url('${imgUrl}') center/cover`;
-      card.innerHTML = `<span style="font-size: 18px; font-weight: bold;">${cat.title}</span>`;
+      card.innerHTML = `
+        <div class="genre-card-title">${cat.title}</div>
+        <img src="${imgUrl}" class="genre-card-img" onerror="this.src='https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=200'" />
+      `;
       card.onclick = () => openCategoryDetail(cat.title, imgUrl);
       catContainer.appendChild(card);
     });
@@ -1108,9 +1115,14 @@ window.openCategoryDetail = function(categoryName, bgImage) {
     tc.innerHTML = '';
     
     let filtered = [];
-    if (categoryName === '\u0639\u0632\u0627\u0621') filtered = globalPoems.filter(p => p.title.includes('\u0644\u0637\u0645') || p.title.includes('\u0634\u0648\u0631') || p.category === '\u0639\u0632\u0627\u0621');
-    else if (categoryName === '\u0645\u0648\u0627\u0644\u064a\u062f') filtered = globalPoems.filter(p => p.title.includes('\u0645\u0648\u0644\u062f') || p.title.includes('\u0645\u064a\u0644\u0627\u062f') || p.title.includes('\u0641\u0631\u062d'));
-    else if (categoryName === '\u0623\u062f\u0639\u064a\u0629') filtered = globalPoems.filter(p => p.title.includes('\u062f\u0639\u0627\u0621') || p.title.includes('\u0632\u064a\u0627\u0631\u0629') || p.title.includes('\u0645\u0646\u0627\u062c\u0627\u0629'));
+    if (categoryName === 'عزاء') filtered = globalPoems.filter(p => p.title.includes('لطم') || p.title.includes('شور') || p.title.includes('عزاء') || p.category === 'عزاء');
+    else if (categoryName === 'مواليد') filtered = globalPoems.filter(p => p.title.includes('مولد') || p.title.includes('ميلاد') || p.title.includes('فرح') || p.title.includes('مواليد'));
+    else if (categoryName === 'أدعية') filtered = globalPoems.filter(p => p.title.includes('دعاء') || p.title.includes('مناجاة'));
+    else if (categoryName === 'زيارات') filtered = globalPoems.filter(p => p.title.includes('زيار'));
+    else if (categoryName === 'قرآن كريم') filtered = globalPoems.filter(p => p.title.includes('قرآن') || p.title.includes('سورة') || p.title.includes('تلاوة'));
+    else if (categoryName === 'نعي') filtered = globalPoems.filter(p => p.title.includes('نعي') || p.title.includes('مجلس'));
+    else if (categoryName === 'شور') filtered = globalPoems.filter(p => p.title.includes('شور'));
+    else if (categoryName === 'قصائد حسينية') filtered = globalPoems.filter(p => p.title.includes('قصيد') || p.title.includes('حسين'));
     else filtered = globalPoems.filter(p => p.title.includes(categoryName));
     
     if (filtered.length === 0) filtered = [...globalPoems].sort(() => 0.5 - Math.random()).slice(0, 10);
