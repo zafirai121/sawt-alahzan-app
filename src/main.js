@@ -27,12 +27,37 @@ const LibraryStore = {
     return arr.includes(id);
   },
 
-  toggleDownload(id) {
+  async toggleDownload(id) {
     let arr = this.downloads;
-    if (arr.includes(id)) arr = arr.filter(x => x !== id);
-    else arr.push(id);
+    const isDownloading = !arr.includes(id);
+    
+    if (isDownloading) {
+      arr.push(id);
+      if ('caches' in window) {
+        const track = globalPoems.find(p => p.id === id);
+        if (track) {
+          try {
+            const cache = await caches.open('sawt-alahzan-audio-cache-v1');
+            if (track.audioUrl) await cache.add(track.audioUrl);
+            const imgUrl = track.coverImage || track.image;
+            if (imgUrl) await cache.add(imgUrl);
+          } catch(e) { console.error('Cache error', e); }
+        }
+      }
+    } else {
+      arr = arr.filter(x => x !== id);
+      if ('caches' in window) {
+        const track = globalPoems.find(p => p.id === id);
+        if (track) {
+          try {
+            const cache = await caches.open('sawt-alahzan-audio-cache-v1');
+            if (track.audioUrl) await cache.delete(track.audioUrl);
+          } catch(e) {}
+        }
+      }
+    }
     this.downloads = arr;
-    return arr.includes(id);
+    return isDownloading;
   },
 
   addPlaylist(name) {
@@ -566,8 +591,8 @@ function playPoem(poem, fromQueueNavigation = false) {
     const isDl = LibraryStore.downloads.includes(poem.id);
     dlBtn.style.color = isDl ? '#4CAF50' : 'white';
     
-    dlBtn.onclick = () => {
-      const downloaded = LibraryStore.toggleDownload(poem.id);
+    dlBtn.onclick = async () => {
+      const downloaded = await LibraryStore.toggleDownload(poem.id);
       dlBtn.style.color = downloaded ? '#4CAF50' : 'white';
       dlBtn.style.transform = 'scale(1.2)';
       setTimeout(() => dlBtn.style.transform = 'scale(1)', 200);
@@ -658,9 +683,9 @@ window.openTrackOptions = function(event, poemId) {
   const isDl = LibraryStore.downloads.includes(poem.id);
   const dlIcon = document.getElementById('opt-download-icon');
   dlIcon.style.color = isDl ? '#4CAF50' : 'white';
-  document.getElementById('opt-download').onclick = (e) => {
+  document.getElementById('opt-download').onclick = async (e) => {
     e.stopPropagation();
-    LibraryStore.toggleDownload(poem.id);
+    await LibraryStore.toggleDownload(poem.id);
     closeTrackOptions(e);
   };
   
