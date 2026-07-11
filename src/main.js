@@ -1354,16 +1354,55 @@ window.openTrackDetail = function(poemOrId) {
   const tdView = document.getElementById('track-detail-view');
   if (tdView) tdView.style.display = 'block';
   
-  document.getElementById('td-cover').src = poem.coverImage || poem.image;
+  const tdCover = document.getElementById('td-cover');
+  tdCover.src = poem.coverImage || poem.image;
+  
+  // Set blurred background blob color dynamically based on cover? Or just leave it #337183 for now as per design.
+  
   document.getElementById('td-title').textContent = poem.title;
   const artistEl = document.getElementById('td-artist');
   artistEl.textContent = poem.reciterName || 'مجهول';
   artistEl.onclick = () => openArtistDetail(poem.reciterName);
   
+  const artistImg = document.getElementById('td-artist-img');
+  if (artistImg) {
+    const artist = globalArtists.find(a => a.name === poem.reciterName);
+    artistImg.src = artist && artist.image ? artist.image : 'https://i.pravatar.cc/150?img=11';
+    artistImg.onclick = () => openArtistDetail(poem.reciterName);
+  }
+  
   const playBtn = document.getElementById('td-play-btn');
   playBtn.onclick = () => {
     playPoem(poem);
   };
+  
+  const likeBtn = document.getElementById('td-like-btn');
+  const updateLikeBtn = () => {
+    const isLiked = LibraryStore.likes.includes(poem.id);
+    likeBtn.className = isLiked ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
+    likeBtn.style.color = isLiked ? '#57B560' : 'white';
+  };
+  updateLikeBtn();
+  likeBtn.onclick = () => {
+    LibraryStore.toggleLike(poem.id);
+    updateLikeBtn();
+  };
+  
+  const dlBtn = document.getElementById('td-download-btn');
+  const updateDlBtn = () => {
+    const isDl = LibraryStore.downloads.includes(poem.id);
+    dlBtn.style.color = isDl ? '#57B560' : 'white';
+  };
+  updateDlBtn();
+  dlBtn.onclick = async () => {
+    dlBtn.className = 'fa-solid fa-spinner fa-spin';
+    await LibraryStore.toggleDownload(poem.id);
+    dlBtn.className = 'fa-solid fa-arrow-down';
+    updateDlBtn();
+  };
+  
+  const optionsBtn = document.getElementById('td-options-btn');
+  optionsBtn.onclick = (e) => openTrackOptions(e, poem.id);
   
   const similarContainer = document.getElementById('td-similar-list');
   similarContainer.innerHTML = '';
