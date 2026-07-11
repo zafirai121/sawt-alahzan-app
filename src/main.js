@@ -562,9 +562,6 @@ function playPoem(poem, fromQueueNavigation = false) {
     player.classList.add('active');
   }
 
-  if (!fromQueueNavigation && typeof openFullPlayer === 'function') {
-    openFullPlayer();
-  }
   document.getElementById('mp-cover').src = poem.coverImage;
   document.getElementById('mp-title').textContent = poem.title;
   document.getElementById('mp-reciter').textContent = poem.reciterName;
@@ -640,7 +637,7 @@ function playPoem(poem, fromQueueNavigation = false) {
         <div style="font-size: 14px; font-weight: bold; margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: right;">${t.title}</div>
         <div style="font-size: 13px; color: rgba(255,255,255,0.6); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: right;">${t.reciterName}</div>
       `;
-      card.onclick = () => playPoem(t);
+      card.onclick = () => openTrackDetail(t);
       similarContainer.appendChild(card);
     });
   }
@@ -1054,7 +1051,7 @@ window.openPlaylistDetail = function(id, title, subtitle) {
           </div>
           <i class="fa-solid fa-ellipsis-vertical" style="color: var(--text-secondary); padding: 10px;" onclick="openTrackOptions(event, \`${track.id}\`)"></i>
         `;
-        el.onclick = () => playPoem(track);
+        el.onclick = () => openTrackDetail(track);
         tracksContainer.appendChild(el);
       });
     }
@@ -1101,7 +1098,7 @@ window.renderSearchContent = function() {
               </div>
               <i class="fa-solid fa-ellipsis-vertical" style="color: var(--text-secondary); padding: 10px;" onclick="openTrackOptions(event, \`${track.id}\`)"></i>
             `;
-            el.onclick = () => playPoem(track);
+            el.onclick = () => openTrackDetail(track);
             resultsContainer.appendChild(el);
           });
         } else {
@@ -1186,7 +1183,7 @@ window.openCategoryDetail = function(categoryName, bgImage) {
         </div>
         <i class="fa-solid fa-ellipsis-vertical" style="color: var(--text-secondary); padding: 10px;" onclick="openTrackOptions(event, \`${track.id}\`)"></i>
       `;
-      el.onclick = () => playPoem(track);
+      el.onclick = () => openTrackDetail(track);
       tc.appendChild(el);
     });
   }
@@ -1258,7 +1255,7 @@ window.openArtistDetail = function(artistName) {
         </div>
         <i class="fa-solid fa-ellipsis-vertical" style="color: var(--text-secondary); padding: 10px;" onclick="openTrackOptions(event, \`${track.id}\`)"></i>
       `;
-      el.onclick = () => playPoem(track);
+      el.onclick = () => openTrackDetail(track);
       trackListContainer.appendChild(el);
     });
   }
@@ -1267,7 +1264,7 @@ window.openArtistDetail = function(artistName) {
   if(playAllBtn) {
     playAllBtn.onclick = () => {
       if (artistTracks.length > 0) {
-        playPoem(artistTracks[0]);
+        openTrackDetail(artistTracks[0]);
       }
     };
   }
@@ -1338,6 +1335,12 @@ window.addEventListener('popstate', (e) => {
     return;
   }
   
+  const tdView = document.getElementById('track-detail-view');
+  if (tdView && tdView.style.display === 'block') {
+    tdView.style.display = 'none';
+    return;
+  }
+  
   const catView = document.getElementById('category-view');
   if (catView && catView.style.display === 'block') {
     catView.style.display = 'none';
@@ -1345,3 +1348,42 @@ window.addEventListener('popstate', (e) => {
     return;
   }
 });
+
+window.openTrackDetail = function(poem) {
+  history.pushState({ overlay: 'track-detail' }, '');
+  const tdView = document.getElementById('track-detail-view');
+  if (tdView) tdView.style.display = 'block';
+  
+  document.getElementById('td-cover').src = poem.coverImage || poem.image;
+  document.getElementById('td-title').textContent = poem.title;
+  const artistEl = document.getElementById('td-artist');
+  artistEl.textContent = poem.reciterName || 'مجهول';
+  artistEl.onclick = () => openArtistDetail(poem.reciterName);
+  
+  const playBtn = document.getElementById('td-play-btn');
+  playBtn.onclick = () => {
+    playPoem(poem);
+  };
+  
+  const similarContainer = document.getElementById('td-similar-list');
+  similarContainer.innerHTML = '';
+  const similar = [...globalPoems].filter(p => p.id !== poem.id && (p.reciterName === poem.reciterName || p.category === poem.category)).sort(() => 0.5 - Math.random()).slice(0, 5);
+  if (similar.length === 0) similar.push(...[...globalPoems].filter(p => p.id !== poem.id).slice(0, 5));
+  
+  similar.forEach(track => {
+    const el = document.createElement('div');
+    el.className = 'track-item animate-in';
+    el.innerHTML = `
+      <img src="${track.coverImage || track.image}" class="track-img" />
+      <div class="track-info">
+        <div class="track-title">${track.title || track.name}</div>
+        <div class="track-artist">${track.reciterName || 'مجهول'}</div>
+      </div>
+      <i class="fa-solid fa-ellipsis-vertical" style="color: rgba(255,255,255,0.5); padding: 10px;" onclick="openTrackOptions(event, '${track.id}')"></i>
+    `;
+    el.onclick = () => {
+      openTrackDetail(track);
+    };
+    similarContainer.appendChild(el);
+  });
+};
