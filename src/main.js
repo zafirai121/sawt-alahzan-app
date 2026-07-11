@@ -39,12 +39,12 @@ const LibraryStore = {
           try {
             const cache = await caches.open('sawt-alahzan-audio-cache-v1');
             if (track.audioUrl) {
-              const res = await fetch(track.audioUrl, { mode: 'no-cors' });
+              const res = await fetch(track.audioUrl);
               await cache.put(track.audioUrl, res);
             }
             const imgUrl = track.coverImage || track.image;
             if (imgUrl) {
-              const imgRes = await fetch(imgUrl, { mode: 'no-cors' });
+              const imgRes = await fetch(imgUrl);
               await cache.put(imgUrl, imgRes);
             }
           } catch(e) { console.error('Cache error', e); }
@@ -598,7 +598,10 @@ function playPoem(poem, fromQueueNavigation = false) {
     dlBtn.style.color = isDl ? '#4CAF50' : 'white';
     
     dlBtn.onclick = async () => {
+      const originalHtml = dlBtn.innerHTML;
+      dlBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
       const downloaded = await LibraryStore.toggleDownload(poem.id);
+      dlBtn.innerHTML = originalHtml;
       dlBtn.style.color = downloaded ? '#4CAF50' : 'white';
       dlBtn.style.transform = 'scale(1.2)';
       setTimeout(() => dlBtn.style.transform = 'scale(1)', 200);
@@ -691,6 +694,8 @@ window.openTrackOptions = function(event, poemId) {
   dlIcon.style.color = isDl ? '#4CAF50' : 'white';
   document.getElementById('opt-download').onclick = async (e) => {
     e.stopPropagation();
+    const icon = document.getElementById('opt-download-icon');
+    if (icon) icon.className = 'fa-solid fa-spinner fa-spin';
     await LibraryStore.toggleDownload(poem.id);
     closeTrackOptions(e);
   };
