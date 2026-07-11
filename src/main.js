@@ -1366,7 +1366,7 @@ window.openTrackDetail = function(poemOrId) {
   
   const artistImg = document.getElementById('td-artist-img');
   if (artistImg) {
-    const artist = globalArtists.find(a => a.name === poem.reciterName);
+    const artist = globalReciters.find(a => a.name === poem.reciterName);
     artistImg.src = artist && artist.image ? artist.image : 'https://i.pravatar.cc/150?img=11';
     artistImg.onclick = () => openArtistDetail(poem.reciterName);
   }
