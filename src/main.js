@@ -650,12 +650,7 @@ function playPoem(poem, fromQueueNavigation = false) {
   audioContext.play().catch(err => console.error('Audio playback failed:', err));
 }
 
-window.openTrackDetail = function(poemId) {
-  const poem = globalPoems.find(p => p.id === poemId);
-  if (poem) {
-    playPoem(poem);
-  }
-};
+// Removed old openTrackDetail
 
 window.openTrackOptions = function(event, poemId) {
   history.pushState({ overlay: 'track-options' }, '');
@@ -1349,7 +1344,12 @@ window.addEventListener('popstate', (e) => {
   }
 });
 
-window.openTrackDetail = function(poem) {
+window.openTrackDetail = function(poemOrId) {
+  let poem = poemOrId;
+  if (typeof poemOrId === 'string' || typeof poemOrId === 'number') {
+    poem = globalPoems.find(p => String(p.id) === String(poemOrId));
+  }
+  if (!poem) return;
   history.pushState({ overlay: 'track-detail' }, '');
   const tdView = document.getElementById('track-detail-view');
   if (tdView) tdView.style.display = 'block';
