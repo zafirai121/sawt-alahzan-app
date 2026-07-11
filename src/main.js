@@ -561,6 +561,10 @@ function playPoem(poem, fromQueueNavigation = false) {
     player.style.display = 'flex';
     player.classList.add('active');
   }
+
+  if (!fromQueueNavigation && typeof openFullPlayer === 'function') {
+    openFullPlayer();
+  }
   document.getElementById('mp-cover').src = poem.coverImage;
   document.getElementById('mp-title').textContent = poem.title;
   document.getElementById('mp-reciter').textContent = poem.reciterName;
