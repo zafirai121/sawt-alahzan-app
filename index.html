@@ -22,8 +22,9 @@
         <div id="home-view" class="view active">
           <!-- Header -->
           <header>
-            <h1 class="greeting">مساء الخير</h1>
-            <img src="https://i.pravatar.cc/150?img=11" alt="Profile" style="display: none;" />
+            <h1 class="greeting" id="home-greeting">مرحباً</h1>
+          <img src="https://i.pravatar.cc/150?img=11" alt="Profile" id="header-avatar" style="display:none;width:38px;height:38px;border-radius:50%;cursor:pointer;border:2px solid var(--accent);" onclick="goProfile()" />
+
           </header>
 
           <!-- Dynamic Sections Container -->
@@ -223,10 +224,11 @@
                 <i class="fa-solid fa-camera" style="font-size: 14px; color: white;"></i>
               </div>
             </div>
-            <h2 style="margin: 15px 0 5px 0; font-size: 26px; font-weight: bold;">أحمد الخفاجي</h2>
-            <div style="color: var(--text-secondary); font-size: 14px; display: flex; align-items: center; gap: 6px;">
-              <i class="fa-solid fa-circle-check" style="color: #4CAF50;"></i> حساب مفعل
-            </div>
+              <h2 id="profile-display-name" style="margin: 15px 0 5px 0; font-size: 26px; font-weight: bold;">ضيف</h2>
+              <div id="profile-status-badge" style="color: var(--text-secondary); font-size: 14px; display: flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-circle-check" style="color: #4CAF50;"></i> حساب مفعل
+              </div>
+
           </div>
 
           <!-- Stats Grid -->
@@ -255,9 +257,10 @@
                 <i class="fa-regular fa-envelope" style="font-size: 18px; color: white;"></i>
               </div>
               <div style="flex: 1;">
-                <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 2px;">البريد الإلكتروني</div>
-                <div style="font-size: 15px; font-weight: 500;">ahmed@example.com</div>
-              </div>
+                  <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 2px;">البريد الإلكتروني</div>
+                  <div id="profile-email" style="font-size: 15px; font-weight: 500;">غير مسجل</div>
+                </div>
+
             </div>
             
             <div style="display: flex; align-items: center; padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05);">
@@ -282,11 +285,19 @@
           </div>
 
           <!-- Bottom Actions -->
-          <div style="margin-top: 25px;">
-            <button style="width: 100%; padding: 18px; background: rgba(255, 69, 58, 0.1); border: 1px solid rgba(255, 69, 58, 0.3); color: #FF453A; border-radius: 16px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px; font-family: inherit;">
-              <i class="fa-solid fa-arrow-right-from-bracket"></i> تسجيل الخروج
-            </button>
+          <div style="margin-top: 25px; display:flex; flex-direction:column; gap:12px;">
+            <div id="profile-guest-section" style="display:none;">
+              <button onclick="openAuthModal()" style="width: 100%; padding: 18px; background: linear-gradient(135deg,#E8B86D,#d4954a); border: none; color: white; border-radius: 16px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px; font-family: inherit;">
+                <i class="fa-solid fa-user"></i> تسجيل الدخول
+              </button>
+            </div>
+            <div id="profile-logout-section">
+              <button onclick="doLogout()" style="width: 100%; padding: 18px; background: rgba(255, 69, 58, 0.1); border: 1px solid rgba(255, 69, 58, 0.3); color: #FF453A; border-radius: 16px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px; font-family: inherit;">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i> تسجيل الخروج
+              </button>
+            </div>
           </div>
+
         </div>
 
       </main>
@@ -490,5 +501,40 @@
 
     <script src="src/supabaseClient.js" type="module"></script>
     <script src="src/main.js" type="module"></script>
+
+    <!-- Auth Modal -->
+    <div id="auth-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);flex-direction:column;justify-content:flex-end;">
+      <div id="auth-sheet" style="background:#181818;border-radius:28px 28px 0 0;padding:36px 24px 48px;transform:translateY(100%);transition:transform 0.4s cubic-bezier(0.1,0.9,0.2,1);max-height:92vh;overflow-y:auto;">
+        <div style="text-align:center;margin-bottom:28px;">
+          <div style="font-size:44px;margin-bottom:10px;">🎵</div>
+          <h2 id="auth-title" style="margin:0;font-size:22px;font-weight:800;background:linear-gradient(135deg,#E8B86D,#ff8c42);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">أهلاً بك في صوت الأحزان</h2>
+          <p style="margin:8px 0 0;color:rgba(255,255,255,0.45);font-size:13px;">سجّل دخولك لحفظ إعجاباتك عبر أجهزتك</p>
+        </div>
+        <div id="auth-message" style="display:none;padding:12px 16px;border-radius:12px;margin-bottom:16px;font-size:14px;text-align:center;"></div>
+        <div id="auth-name-field" style="display:none;margin-bottom:14px;">
+          <label style="display:block;color:rgba(255,255,255,0.6);font-size:13px;margin-bottom:6px;">الاسم</label>
+          <input id="auth-name" type="text" placeholder="اسمك الكريم" autocomplete="name" style="width:100%;background:rgba(255,255,255,0.07);border:1.5px solid rgba(255,255,255,0.1);color:white;padding:14px 16px;border-radius:14px;font-size:16px;font-family:inherit;box-sizing:border-box;" />
+        </div>
+        <div style="margin-bottom:14px;">
+          <label style="display:block;color:rgba(255,255,255,0.6);font-size:13px;margin-bottom:6px;">البريد الإلكتروني</label>
+          <input id="auth-email" type="email" placeholder="example@email.com" autocomplete="email" dir="ltr" style="width:100%;background:rgba(255,255,255,0.07);border:1.5px solid rgba(255,255,255,0.1);color:white;padding:14px 16px;border-radius:14px;font-size:16px;font-family:inherit;box-sizing:border-box;" />
+        </div>
+        <div style="margin-bottom:22px;position:relative;">
+          <label style="display:block;color:rgba(255,255,255,0.6);font-size:13px;margin-bottom:6px;">كلمة المرور</label>
+          <input id="auth-password" type="password" placeholder="••••••••" autocomplete="current-password" dir="ltr" style="width:100%;background:rgba(255,255,255,0.07);border:1.5px solid rgba(255,255,255,0.1);color:white;padding:14px 46px 14px 16px;border-radius:14px;font-size:16px;font-family:inherit;box-sizing:border-box;" />
+          <button type="button" onclick="toggleAuthPasswordVisibility()" style="position:absolute;left:14px;bottom:14px;background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;font-size:16px;padding:0;"><i id="auth-eye-icon" class="fa-regular fa-eye"></i></button>
+        </div>
+        <button id="auth-submit-btn" type="button" onclick="submitAuth()" style="width:100%;padding:16px;background:linear-gradient(135deg,#E8B86D,#d4954a);border:none;color:white;font-size:17px;font-weight:bold;border-radius:16px;cursor:pointer;font-family:inherit;margin-bottom:14px;display:flex;justify-content:center;align-items:center;gap:8px;">
+          <span id="auth-btn-text">دخول</span>
+          <i id="auth-btn-spinner" class="fa-solid fa-spinner fa-spin" style="display:none;"></i>
+        </button>
+        <div style="text-align:center;color:rgba(255,255,255,0.5);font-size:14px;margin-bottom:14px;">
+          <span id="auth-toggle-text">ليس لديك حساب؟</span>
+          <button type="button" onclick="toggleAuthMode()" id="auth-toggle-btn" style="background:none;border:none;color:#E8B86D;cursor:pointer;font-size:14px;font-family:inherit;font-weight:bold;padding:0 4px;">إنشاء حساب</button>
+        </div>
+        <button type="button" onclick="skipAuth()" style="width:100%;padding:14px;background:transparent;border:1.5px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.45);font-size:15px;border-radius:16px;cursor:pointer;font-family:inherit;">متابعة بدون تسجيل</button>
+      </div>
+    </div>
+
   </body>
 </html>

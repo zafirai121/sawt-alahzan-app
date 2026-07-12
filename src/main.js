@@ -1,5 +1,222 @@
 import { supabase } from './supabaseClient.js';
 
+// ─── AUTH STATE ───────────────────────────────────────────────
+let currentUser = null;
+let isAuthMode = 'login'; // 'login' | 'signup'
+
+async function initAuth() {
+  const { data: { session } } = await supabase.auth.getSession();
+  currentUser = session?.user ?? null;
+
+  supabase.auth.onAuthStateChange((_event, session) => {
+    currentUser = session?.user ?? null;
+    updateProfileUI();
+    if (currentUser) syncLikesFromSupabase();
+  });
+
+  // Show auth modal only on first visit (no session and no "skipped" flag)
+  if (!currentUser && !localStorage.getItem('sawt_auth_skipped')) {
+    setTimeout(() => openAuthModal(), 800);
+  }
+
+  updateProfileUI();
+  if (currentUser) syncLikesFromSupabase();
+}
+
+function updateProfileUI() {
+  const nameEl = document.getElementById('profile-display-name');
+  const emailEl = document.getElementById('profile-email');
+  const statusEl = document.getElementById('profile-status-badge');
+  const guestSection = document.getElementById('profile-guest-section');
+  const logoutSection = document.getElementById('profile-logout-section');
+  const greetingEl = document.getElementById('home-greeting');
+  const avatarEl = document.getElementById('header-avatar');
+
+  if (currentUser) {
+    const name = currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'مستخدم';
+    if (nameEl) nameEl.textContent = name;
+    if (emailEl) emailEl.textContent = currentUser.email;
+    if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-circle-check" style="color: #4CAF50;"></i> حساب مفعل';
+    if (guestSection) guestSection.style.display = 'none';
+    if (logoutSection) logoutSection.style.display = 'block';
+    if (greetingEl) greetingEl.textContent = 'أهلاً، ' + name.split(' ')[0] + ' 👋';
+    if (avatarEl) avatarEl.style.display = 'block';
+  } else {
+    if (nameEl) nameEl.textContent = 'ضيف';
+    if (emailEl) emailEl.textContent = 'غير مسجل';
+    if (statusEl) statusEl.innerHTML = '<i class="fa-regular fa-user" style="color: #aaa;"></i> غير مسجل';
+    if (guestSection) guestSection.style.display = 'block';
+    if (logoutSection) logoutSection.style.display = 'none';
+    const hour = new Date().getHours();
+    const greeting = hour < 12 ? 'صباح الخير 🌅' : hour < 18 ? 'مساء الخير ☀️' : 'مساء النور 🌙';
+    if (greetingEl) greetingEl.textContent = greeting;
+    if (avatarEl) avatarEl.style.display = 'none';
+  }
+}
+
+window.openAuthModal = function() {
+  const modal = document.getElementById('auth-modal');
+  const sheet = document.getElementById('auth-sheet');
+  if (!modal) return;
+  isAuthMode = 'login';
+  resetAuthForm();
+  modal.style.display = 'flex';
+  requestAnimationFrame(() => {
+    sheet.style.transform = 'translateY(0)';
+  });
+};
+
+function closeAuthModal() {
+  const modal = document.getElementById('auth-modal');
+  const sheet = document.getElementById('auth-sheet');
+  if (!modal) return;
+  sheet.style.transform = 'translateY(100%)';
+  setTimeout(() => { modal.style.display = 'none'; }, 400);
+}
+
+window.skipAuth = function() {
+  localStorage.setItem('sawt_auth_skipped', '1');
+  closeAuthModal();
+};
+
+window.toggleAuthMode = function() {
+  isAuthMode = isAuthMode === 'login' ? 'signup' : 'login';
+  const nameField = document.getElementById('auth-name-field');
+  const btnText = document.getElementById('auth-btn-text');
+  const toggleText = document.getElementById('auth-toggle-text');
+  const toggleBtn = document.getElementById('auth-toggle-btn');
+  const title = document.getElementById('auth-title');
+  if (isAuthMode === 'signup') {
+    if (nameField) nameField.style.display = 'block';
+    if (btnText) btnText.textContent = 'إنشاء الحساب';
+    if (toggleText) toggleText.textContent = 'لديك حساب؟';
+    if (toggleBtn) toggleBtn.textContent = 'دخول';
+    if (title) title.textContent = 'إنشاء حساب جديد';
+  } else {
+    if (nameField) nameField.style.display = 'none';
+    if (btnText) btnText.textContent = 'دخول';
+    if (toggleText) toggleText.textContent = 'ليس لديك حساب؟';
+    if (toggleBtn) toggleBtn.textContent = 'إنشاء حساب';
+    if (title) title.textContent = 'أهلاً بك في صوت الأحزان';
+  }
+  document.getElementById('auth-message').style.display = 'none';
+};
+
+function resetAuthForm() {
+  const f = (id) => document.getElementById(id);
+  if (f('auth-email')) f('auth-email').value = '';
+  if (f('auth-password')) f('auth-password').value = '';
+  if (f('auth-name')) f('auth-name').value = '';
+  if (f('auth-message')) f('auth-message').style.display = 'none';
+  if (f('auth-name-field')) f('auth-name-field').style.display = 'none';
+  if (f('auth-btn-text')) f('auth-btn-text').textContent = 'دخول';
+  if (f('auth-toggle-text')) f('auth-toggle-text').textContent = 'ليس لديك حساب؟';
+  if (f('auth-toggle-btn')) f('auth-toggle-btn').textContent = 'إنشاء حساب';
+  if (f('auth-title')) f('auth-title').textContent = 'أهلاً بك في صوت الأحزان';
+  isAuthMode = 'login';
+}
+
+function showAuthMessage(msg, isError = true) {
+  const el = document.getElementById('auth-message');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.style.background = isError ? 'rgba(255,69,58,0.15)' : 'rgba(76,175,80,0.15)';
+  el.style.color = isError ? '#FF453A' : '#4CAF50';
+  el.style.border = `1px solid ${isError ? 'rgba(255,69,58,0.3)' : 'rgba(76,175,80,0.3)'}`;
+}
+
+function setAuthLoading(loading) {
+  const btn = document.getElementById('auth-submit-btn');
+  const spinner = document.getElementById('auth-btn-spinner');
+  if (btn) btn.disabled = loading;
+  if (spinner) spinner.style.display = loading ? 'inline-block' : 'none';
+}
+
+window.submitAuth = async function() {
+  const email = document.getElementById('auth-email')?.value?.trim();
+  const password = document.getElementById('auth-password')?.value;
+  const name = document.getElementById('auth-name')?.value?.trim();
+
+  if (!email || !password) { showAuthMessage('يرجى تعبئة جميع الحقول'); return; }
+  if (password.length < 6) { showAuthMessage('كلمة المرور يجب أن تكون 6 أحرف على الأقل'); return; }
+
+  setAuthLoading(true);
+  document.getElementById('auth-message').style.display = 'none';
+
+  try {
+    if (isAuthMode === 'signup') {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: name || email.split('@')[0] } }
+      });
+      if (error) throw error;
+      showAuthMessage('تم إنشاء الحساب! تحقق من بريدك الإلكتروني لتفعيل الحساب.', false);
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      closeAuthModal();
+    }
+  } catch (err) {
+    let msg = 'حدث خطأ، يرجى المحاولة مجدداً';
+    if (err.message.includes('Invalid login')) msg = 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
+    if (err.message.includes('already registered')) msg = 'هذا البريد الإلكتروني مسجل مسبقاً';
+    if (err.message.includes('Email not confirmed')) msg = 'يرجى تأكيد البريد الإلكتروني أولاً';
+    showAuthMessage(msg);
+  }
+  setAuthLoading(false);
+};
+
+window.doLogout = async function() {
+  await supabase.auth.signOut();
+  currentUser = null;
+  updateProfileUI();
+};
+
+window.toggleAuthPasswordVisibility = function() {
+  const input = document.getElementById('auth-password');
+  const icon = document.getElementById('auth-eye-icon');
+  if (!input) return;
+  if (input.type === 'password') {
+    input.type = 'text';
+    if (icon) { icon.className = 'fa-regular fa-eye-slash'; }
+  } else {
+    input.type = 'password';
+    if (icon) { icon.className = 'fa-regular fa-eye'; }
+  }
+};
+
+// ─── SUPABASE LIKES SYNC ──────────────────────────────────────
+async function syncLikesFromSupabase() {
+  if (!currentUser) return;
+  try {
+    const { data, error } = await supabase
+      .from('user_likes')
+      .select('poem_id')
+      .eq('user_id', currentUser.id);
+    if (error) throw error;
+    const ids = (data || []).map(r => r.poem_id);
+    LibraryStore.likes = ids;
+  } catch (e) {
+    console.warn('Could not sync likes:', e);
+  }
+}
+
+async function pushLikeToSupabase(poemId, liked) {
+  if (!currentUser) return;
+  try {
+    if (liked) {
+      await supabase.from('user_likes').upsert({ user_id: currentUser.id, poem_id: poemId }, { onConflict: 'user_id,poem_id' });
+    } else {
+      await supabase.from('user_likes').delete().eq('user_id', currentUser.id).eq('poem_id', poemId);
+    }
+  } catch (e) {
+    console.warn('Could not push like:', e);
+  }
+}
+
+
 let isPlaying = false;
 let currentPoem = null;
 let globalPoems = [];
@@ -597,6 +814,7 @@ function playPoem(poem, fromQueueNavigation = false) {
     
     likeBtn.onclick = () => {
       const liked = LibraryStore.toggleLike(poem.id);
+      pushLikeToSupabase(poem.id, liked);
       likeBtn.className = liked ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
       likeBtn.style.color = liked ? '#E91E63' : 'white';
       likeBtn.style.transform = 'scale(1.2)';
@@ -715,7 +933,8 @@ window.openTrackOptions = function(event, poemId) {
   likeIcon.style.color = isLiked ? '#E91E63' : 'white';
   document.getElementById('opt-like').onclick = (e) => {
     e.stopPropagation();
-    LibraryStore.toggleLike(poem.id);
+    const liked = LibraryStore.toggleLike(poem.id);
+    pushLikeToSupabase(poem.id, liked);
     closeTrackOptions(e);
   };
   
@@ -1388,6 +1607,7 @@ filterChips.forEach(chip => {
 });
 
 // Boot App
+initAuth();
 fetchAppData();
 
 // Register Service Worker for PWA
