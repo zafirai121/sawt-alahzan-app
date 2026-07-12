@@ -791,16 +791,37 @@ window.closeTrackOptions = function(event, fromPopState = false) {
 };
 
 let isDraggingProgress = false;
-audioContext.addEventListener('timeupdate', () => {
+let animationFrameId = null;
+let lastKnownTime = 0;
+let lastKnownRealTime = performance.now();
+
+function updateProgressUI() {
   if (audioContext.duration && isFinite(audioContext.duration)) {
-    const progress = (audioContext.currentTime / audioContext.duration) * 100;
+    let visualTime = audioContext.currentTime;
+    
+    // Extrapolate if playing to overcome blocky currentTime updates on mobile
+    if (!audioContext.paused) {
+      if (audioContext.currentTime !== lastKnownTime) {
+         lastKnownTime = audioContext.currentTime;
+         lastKnownRealTime = performance.now();
+      } else {
+         const timeSinceUpdate = (performance.now() - lastKnownRealTime) / 1000;
+         // clamp extrapolation to max 0.5s so we don't drift too far on lag
+         if (timeSinceUpdate < 0.5) {
+           visualTime += timeSinceUpdate;
+         }
+      }
+    }
+    if (visualTime > audioContext.duration) visualTime = audioContext.duration;
+    
+    const progress = (visualTime / audioContext.duration) * 100;
     
     // Update Full Player Slider
     const fpProgress = document.getElementById('fp-progress');
     if (!isDraggingProgress && fpProgress) {
       fpProgress.value = progress;
       fpProgress.style.background = `linear-gradient(to left, var(--accent) ${progress}%, rgba(255,255,255,0.2) ${progress}%)`;
-      const el_fp_current_time = document.getElementById('fp-current-time'); if (el_fp_current_time) el_fp_current_time.textContent = formatTime(audioContext.currentTime);
+      const el_fp_current_time = document.getElementById('fp-current-time'); if (el_fp_current_time) el_fp_current_time.textContent = formatTime(visualTime);
     }
     const el_fp_total_time = document.getElementById('fp-total-time'); if (el_fp_total_time) el_fp_total_time.textContent = formatTime(audioContext.duration);
     
@@ -809,6 +830,28 @@ audioContext.addEventListener('timeupdate', () => {
     if (mpRing) {
       mpRing.style.background = `conic-gradient(var(--accent) ${progress}%, rgba(255,255,255,0.1) 0%)`;
     }
+  }
+}
+
+function startProgressLoop() {
+  updateProgressUI();
+  if (!audioContext.paused) {
+    animationFrameId = requestAnimationFrame(startProgressLoop);
+  }
+}
+
+audioContext.addEventListener('play', () => {
+  if (animationFrameId) cancelAnimationFrame(animationFrameId);
+  startProgressLoop();
+});
+
+audioContext.addEventListener('pause', () => {
+  if (animationFrameId) cancelAnimationFrame(animationFrameId);
+});
+
+audioContext.addEventListener('timeupdate', () => {
+  if (audioContext.paused) {
+    updateProgressUI();
   }
 });
 
