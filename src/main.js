@@ -956,7 +956,16 @@ if (miniPlayerEl) {
 
 const fpProgressElement = document.getElementById('fp-progress');
 if (fpProgressElement) {
-  fpProgressElement.addEventListener('input', () => isDraggingProgress = true);
+  fpProgressElement.addEventListener('input', (e) => {
+    isDraggingProgress = true;
+    const progress = e.target.value;
+    e.target.style.background = `linear-gradient(to left, var(--accent) ${progress}%, rgba(255,255,255,0.2) ${progress}%)`;
+    if (audioContext.duration && isFinite(audioContext.duration)) {
+      const seekTime = (progress / 100) * audioContext.duration;
+      const el_fp_current_time = document.getElementById('fp-current-time'); 
+      if (el_fp_current_time) el_fp_current_time.textContent = formatTime(seekTime);
+    }
+  });
   fpProgressElement.addEventListener('change', (e) => {
     isDraggingProgress = false;
     seekAudio(e.target.value);
