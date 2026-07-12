@@ -134,6 +134,18 @@ async function fetchAppData() {
     globalReciters = Object.values(reciterMap);
 
     renderHomeContent(globalPoems, globalReciters);
+    
+    // Check for Deep Link (Shared Track)
+    const urlParams = new URLSearchParams(window.location.search);
+    const sharedTrackId = urlParams.get('track');
+    if (sharedTrackId) {
+      const sharedTrack = globalPoems.find(p => p.id === sharedTrackId);
+      if (sharedTrack) {
+        setTimeout(() => {
+          openTrackDetail(sharedTrack);
+        }, 300); // slight delay to ensure DOM is ready
+      }
+    }
   } catch (err) {
     console.error('Error fetching data:', err);
     document.getElementById('sections-container').innerHTML = `
@@ -646,11 +658,41 @@ function playPoem(poem, fromQueueNavigation = false) {
     updateQueueUI();
   }
 
+  // Update Lyrics
+  const lyricsText = poem.lyrics || 'الكلمات غير متوفرة';
+  const lyricsPreview = document.getElementById('fp-lyrics-preview');
+  if (lyricsPreview) lyricsPreview.textContent = lyricsText;
+  const lyricsContent = document.getElementById('lyrics-content');
+  if (lyricsContent) lyricsContent.textContent = lyricsText;
+  const lyTitle = document.getElementById('ly-title');
+  if (lyTitle) lyTitle.textContent = poem.title;
+  const lyArtist = document.getElementById('ly-artist');
+  if (lyArtist) lyArtist.textContent = poem.reciterName;
+
   audioContext.src = poem.audioUrl;
   audioContext.play().catch(err => console.error('Audio playback failed:', err));
 }
 
 // Removed old openTrackDetail
+
+// ─── Lyrics View ─────────────────────────────────────────────
+window.openLyricsView = function() {
+  const view = document.getElementById('lyrics-view');
+  if (!view) return;
+  history.pushState({ overlay: 'lyrics' }, '');
+  view.style.display = 'block';
+  requestAnimationFrame(() => {
+    view.style.transform = 'translateY(0)';
+  });
+};
+
+window.closeLyricsView = function() {
+  const view = document.getElementById('lyrics-view');
+  if (!view) return;
+  view.style.transform = 'translateY(100%)';
+  setTimeout(() => { view.style.display = 'none'; }, 350);
+  history.back();
+};
 
 window.openTrackOptions = function(event, poemId) {
   history.pushState({ overlay: 'track-options' }, '');
@@ -707,14 +749,23 @@ window.openTrackOptions = function(event, poemId) {
   document.getElementById('opt-share').onclick = (e) => {
     e.stopPropagation();
     closeTrackOptions(e);
+    
+    // Generate deep link
+    const shareUrl = window.location.origin + window.location.pathname + '?track=' + poem.id;
+    
     if (navigator.share) {
       navigator.share({
         title: poem.title,
         text: 'استمع إلى ' + poem.title + ' بصوت ' + poem.reciterName,
-        url: window.location.href
+        url: shareUrl
       });
     } else {
-      alert('تم نسخ الرابط!');
+      // Fallback for browsers without navigator.share
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        alert('تم نسخ الرابط!');
+      }).catch(err => {
+        alert('لم نتمكن من نسخ الرابط: ' + shareUrl);
+      });
     }
   };
   
@@ -1321,6 +1372,12 @@ window.addEventListener('popstate', (e) => {
   const fullPlayer = document.getElementById('full-player-view');
   if (fullPlayer && fullPlayer.classList.contains('open')) {
     closeFullPlayer(true);
+  }
+  
+  const lyricsView = document.getElementById('lyrics-view');
+  if (lyricsView && lyricsView.style.display === 'block') {
+    lyricsView.style.transform = 'translateY(100%)';
+    setTimeout(() => { lyricsView.style.display = 'none'; }, 350);
     return;
   }
   
