@@ -495,7 +495,7 @@ function toggleLike() {
   }
 }
 
-function toggleAutoplay() {
+window.toggleAutoplay = function() {
   isAutoplay = !isAutoplay;
   const switchContainer = document.getElementById('fp-autoplay-switch');
   const knob = switchContainer.querySelector('.switch-knob');
@@ -575,13 +575,13 @@ function playPoem(poem, fromQueueNavigation = false) {
   }
 
   document.getElementById('mp-cover').src = poem.coverImage;
-  document.getElementById('mp-title').textContent = poem.title;
-  document.getElementById('mp-reciter').textContent = poem.reciterName;
+  const el_mp_title = document.getElementById('mp-title'); if (el_mp_title) el_mp_title.textContent = poem.title;
+  const el_mp_reciter = document.getElementById('mp-reciter'); if (el_mp_reciter) el_mp_reciter.textContent = poem.reciterName;
   
   // Update Full Player
   document.getElementById('fp-cover').src = poem.coverImage;
-  document.getElementById('fp-title').textContent = poem.title;
-  document.getElementById('fp-artist').textContent = poem.reciterName;
+  const el_fp_title = document.getElementById('fp-title'); if (el_fp_title) el_fp_title.textContent = poem.title;
+  const el_fp_artist = document.getElementById('fp-artist'); if (el_fp_artist) el_fp_artist.textContent = poem.reciterName;
   
   const fpBg = document.getElementById('fp-bg');
   if (fpBg) {
@@ -705,8 +705,8 @@ window.openTrackOptions = function(event, poemId) {
   
   // Populate Data
   document.getElementById('track-options-img').src = poem.coverImage || poem.image || '';
-  document.getElementById('track-options-title').textContent = poem.title || poem.name || 'مجهول';
-  document.getElementById('track-options-artist').textContent = poem.reciterName || 'مجهول';
+  const el_track_options_title = document.getElementById('track-options-title'); if (el_track_options_title) el_track_options_title.textContent = poem.title || poem.name || 'مجهول';
+  const el_track_options_artist = document.getElementById('track-options-artist'); if (el_track_options_artist) el_track_options_artist.textContent = poem.reciterName || 'مجهول';
   
   // Like Button
   const isLiked = LibraryStore.likes.includes(poem.id);
@@ -800,9 +800,9 @@ audioContext.addEventListener('timeupdate', () => {
     if (!isDraggingProgress && fpProgress) {
       fpProgress.value = progress;
       fpProgress.style.background = `linear-gradient(to left, var(--accent) ${progress}%, rgba(255,255,255,0.2) ${progress}%)`;
-      document.getElementById('fp-current-time').textContent = formatTime(audioContext.currentTime);
+      const el_fp_current_time = document.getElementById('fp-current-time'); if (el_fp_current_time) el_fp_current_time.textContent = formatTime(audioContext.currentTime);
     }
-    document.getElementById('fp-total-time').textContent = formatTime(audioContext.duration);
+    const el_fp_total_time = document.getElementById('fp-total-time'); if (el_fp_total_time) el_fp_total_time.textContent = formatTime(audioContext.duration);
     
     // Update Mini Player Circular Progress
     const mpRing = document.getElementById('mp-progress-ring');
@@ -1035,8 +1035,8 @@ window.openPlaylistDetail = function(id, title, subtitle) {
   const detailView = document.getElementById('playlist-detail-view');
   detailView.style.display = 'block';
   
-  document.getElementById('playlist-title').textContent = title;
-  document.getElementById('playlist-subtitle').textContent = subtitle;
+  const el_playlist_title = document.getElementById('playlist-title'); if (el_playlist_title) el_playlist_title.textContent = title;
+  const el_playlist_subtitle = document.getElementById('playlist-subtitle'); if (el_playlist_subtitle) el_playlist_subtitle.textContent = subtitle;
   
   const tracksContainer = document.getElementById('playlist-tracks');
   tracksContainer.innerHTML = '';
@@ -1274,8 +1274,8 @@ window.openArtistDetail = function(artistName) {
   const artist = globalReciters.find(r => r.name === artistName);
   const artistTracks = globalPoems.filter(p => p.reciterName === artistName);
   
-  document.getElementById('artist-detail-name').textContent = artistName;
-  document.getElementById('artist-detail-stats').textContent = artistTracks.length + ' مقطع مسموع';
+  const el_artist_detail_name = document.getElementById('artist-detail-name'); if (el_artist_detail_name) el_artist_detail_name.textContent = artistName;
+  const el_artist_detail_stats = document.getElementById('artist-detail-stats'); if (el_artist_detail_stats) el_artist_detail_stats.textContent = artistTracks.length + ' مقطع مسموع';
   
   if (artist && artist.image) {
     document.getElementById('artist-detail-image').src = artist.image;
@@ -1416,7 +1416,7 @@ window.openTrackDetail = function(poemOrId) {
   
   // Set blurred background blob color dynamically based on cover? Or just leave it #337183 for now as per design.
   
-  document.getElementById('td-title').textContent = poem.title;
+  const el_td_title = document.getElementById('td-title'); if (el_td_title) el_td_title.textContent = poem.title;
   const artistEl = document.getElementById('td-artist');
   artistEl.textContent = poem.reciterName || 'مجهول';
   artistEl.onclick = () => openArtistDetail(poem.reciterName);
