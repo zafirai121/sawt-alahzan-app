@@ -808,12 +808,17 @@ function toggleRepeat() {
   audioContext.loop = isRepeat;
 }
 
-function toggleLike() {
+window.toggleLike = function() {
   isLiked = !isLiked;
   const btn = document.getElementById('fp-like-btn');
   if (btn) {
     btn.className = isLiked ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
     btn.style.color = isLiked ? 'var(--accent)' : 'white';
+  }
+  // Also persist the like if a poem is playing
+  if (currentPoem) {
+    LibraryStore.toggleLike(currentPoem.id);
+    pushLikeToSupabase(currentPoem.id, isLiked);
   }
 }
 
