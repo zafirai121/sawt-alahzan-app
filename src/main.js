@@ -1150,6 +1150,9 @@ function updatePlayButton() {
   
   const fpBtn = document.getElementById('fp-play-btn');
   if (fpBtn) fpBtn.innerHTML = isPlaying ? '<i class="fa-solid fa-pause"></i>' : '<i class="fa-solid fa-play" style="margin-left: 4px;"></i>';
+
+  const tdBtn = document.getElementById('td-play-btn');
+  if (tdBtn) tdBtn.innerHTML = isPlaying ? '<i class="fa-solid fa-pause"></i>' : '<i class="fa-solid fa-play" style="margin-left: 4px;"></i>';
 }
 
 window.seekAudio = function(value) {
@@ -1755,8 +1758,17 @@ window.openTrackDetail = function(poemOrId) {
   
   const playBtn = document.getElementById('td-play-btn');
   playBtn.onclick = () => {
-    playPoem(poem);
+    if (currentPoem && currentPoem.id === poem.id) {
+      togglePlay();
+    } else {
+      playPoem(poem);
+    }
   };
+  
+  // Initialize icon state
+  playBtn.innerHTML = (currentPoem && currentPoem.id === poem.id && isPlaying) 
+    ? '<i class="fa-solid fa-pause"></i>' 
+    : '<i class="fa-solid fa-play" style="margin-left: 4px;"></i>';
   
   const likeBtn = document.getElementById('td-like-btn');
   const updateLikeBtn = () => {
