@@ -1106,7 +1106,7 @@ function updateProgressUI() {
     // Update Mini Player Circular Progress
     const mpRing = document.getElementById('mp-progress-ring');
     if (mpRing) {
-      mpRing.style.background = `conic-gradient(var(--accent) ${progress}%, rgba(255,255,255,0.1) 0%)`;
+      mpRing.style.background = `conic-gradient(#d3a84c ${progress}%, rgba(255,255,255,0.1) 0%)`;
     }
   }
 }

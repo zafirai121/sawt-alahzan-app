@@ -593,20 +593,24 @@ header {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background-color: var(--primary);
-  color: var(--dark-bg);
+  background-color: var(--dark-bg);
   display: flex;
   align-items: center;
   justify-content: center;
   border: none;
   cursor: pointer;
 }
+.play-btn i {
+  background: linear-gradient(135deg, #a47a1e, #d3a84c, #ffd87c, #e6be69, #b58f3e, #956d13);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
 
 .mp-progress-ring {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: conic-gradient(var(--accent) 0%, rgba(255,255,255,0.1) 0%);
+  background: conic-gradient(#d3a84c 0%, rgba(255,255,255,0.1) 0%);
   display: flex;
   align-items: center;
   justify-content: center;
