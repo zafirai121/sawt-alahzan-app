@@ -1421,7 +1421,7 @@ window.openPlaylistDetail = function(id, title, subtitle) {
           </div>
           <i class="fa-solid fa-ellipsis-vertical" style="color: var(--text-secondary); padding: 10px;" onclick="openTrackOptions(event, \`${track.id}\`)"></i>
         `;
-        el.onclick = () => openTrackDetail(track);
+        el.onclick = () => playPoem(track);
         tracksContainer.appendChild(el);
       });
     }
