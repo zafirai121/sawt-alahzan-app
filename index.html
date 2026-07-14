@@ -8,7 +8,7 @@
     <meta name="theme-color" content="#121212" />
     <link rel="apple-touch-icon" href="/sawt-alahzan-app/favicon.svg" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <script>window.onerror = function(msg, url, lineNo, columnNo, error) { document.body.innerHTML = '<div style="color:red;padding:20px;z-index:9999;position:fixed;top:0;left:0;background:black;width:100%;">' + msg + '<br>' + url + ':' + lineNo + '</div>'; return false; }; window.onunhandledrejection = function(event) { document.body.innerHTML = '<div style="color:red;padding:20px;z-index:9999;position:fixed;top:0;left:0;background:black;width:100%;">Unhandled Rejection: ' + event.reason + '</div>'; };</script>  <script type="module" crossorigin src="/sawt-alahzan-app/assets/index-BJWbKAFb.js"></script>
+  <script>window.onerror = function(msg, url, lineNo, columnNo, error) { document.body.innerHTML = '<div style="color:red;padding:20px;z-index:9999;position:fixed;top:0;left:0;background:black;width:100%;">' + msg + '<br>' + url + ':' + lineNo + '</div>'; return false; }; window.onunhandledrejection = function(event) { document.body.innerHTML = '<div style="color:red;padding:20px;z-index:9999;position:fixed;top:0;left:0;background:black;width:100%;">Unhandled Rejection: ' + event.reason + '</div>'; };</script>  <script type="module" crossorigin src="/sawt-alahzan-app/assets/index-C6OFaaoA.js"></script>
   <link rel="stylesheet" crossorigin href="/sawt-alahzan-app/assets/index-BxQcTyEi.css">
 </head>
   <body>
@@ -220,11 +220,13 @@
           <!-- Avatar Section -->
           <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 35px; position: relative;">
             <div style="position: relative;">
-              <img src="https://i.pravatar.cc/150?img=11" style="width: 130px; height: 130px; border-radius: 50%; border: 4px solid var(--accent); padding: 3px; background: var(--dark-surface); object-fit: cover; box-shadow: 0 10px 30px rgba(233, 30, 99, 0.3);" />
-              <div style="position: absolute; bottom: 5px; left: 5px; background: var(--accent); width: 35px; height: 35px; border-radius: 50%; display: flex; justify-content: center; align-items: center; border: 3px solid #121212; cursor: pointer;">
+              <img id="profile-avatar-img" src="https://ui-avatars.com/api/?name=Guest&background=282828&color=aaa&size=200" style="width: 130px; height: 130px; border-radius: 50%; border: 4px solid var(--accent); padding: 3px; background: var(--dark-surface); object-fit: cover; box-shadow: 0 10px 30px rgba(233, 30, 99, 0.3);" />
+              <div onclick="openAvatarUpload()" style="position: absolute; bottom: 5px; left: 5px; background: var(--accent); width: 35px; height: 35px; border-radius: 50%; display: flex; justify-content: center; align-items: center; border: 3px solid #121212; cursor: pointer;">
                 <i class="fa-solid fa-camera" style="font-size: 14px; color: white;"></i>
               </div>
+              <input type="file" id="avatar-file-input" accept="image/*" style="display:none;" onchange="handleAvatarUpload(event)" />
             </div>
+
               <h2 id="profile-display-name" style="margin: 15px 0 5px 0; font-size: 26px; font-weight: bold;">ضيف</h2>
               <div id="profile-status-badge" style="color: var(--text-secondary); font-size: 14px; display: flex; align-items: center; gap: 6px;">
                 <i class="fa-solid fa-circle-check" style="color: #4CAF50;"></i> حساب مفعل
@@ -518,11 +520,18 @@
           <label style="display:block;color:rgba(255,255,255,0.6);font-size:13px;margin-bottom:6px;">البريد الإلكتروني</label>
           <input id="auth-email" type="email" placeholder="example@email.com" autocomplete="email" dir="ltr" style="width:100%;background:rgba(255,255,255,0.07);border:1.5px solid rgba(255,255,255,0.1);color:white;padding:14px 16px;border-radius:14px;font-size:16px;font-family:inherit;box-sizing:border-box;" />
         </div>
-        <div style="margin-bottom:22px;position:relative;">
+        <div style="margin-bottom:22px;">
           <label style="display:block;color:rgba(255,255,255,0.6);font-size:13px;margin-bottom:6px;">كلمة المرور</label>
-          <input id="auth-password" type="password" placeholder="••••••••" autocomplete="current-password" dir="ltr" style="width:100%;background:rgba(255,255,255,0.07);border:1.5px solid rgba(255,255,255,0.1);color:white;padding:14px 46px 14px 16px;border-radius:14px;font-size:16px;font-family:inherit;box-sizing:border-box;" />
-          <button type="button" onclick="toggleAuthPasswordVisibility()" style="position:absolute;left:14px;bottom:14px;background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;font-size:16px;padding:0;"><i id="auth-eye-icon" class="fa-regular fa-eye"></i></button>
+          <div style="position:relative;display:flex;align-items:center;">
+            <input id="auth-password" type="password" placeholder="••••••••" autocomplete="current-password" dir="ltr"
+              style="width:100%;background:rgba(255,255,255,0.07);border:1.5px solid rgba(255,255,255,0.1);color:white;padding:14px 16px 14px 48px;border-radius:14px;font-size:18px;letter-spacing:2px;font-family:inherit;box-sizing:border-box;outline:none;transition:border-color 0.2s;" />
+            <button type="button" onclick="toggleAuthPasswordVisibility()"
+              style="position:absolute;left:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.35);cursor:pointer;font-size:18px;padding:6px;display:flex;align-items:center;justify-content:center;transition:color 0.2s;">
+              <i id="auth-eye-icon" class="fa-regular fa-eye"></i>
+            </button>
+          </div>
         </div>
+
         <button id="auth-submit-btn" type="button" onclick="submitAuth()" style="width:100%;padding:16px;background:linear-gradient(135deg,#E8B86D,#d4954a);border:none;color:white;font-size:17px;font-weight:bold;border-radius:16px;cursor:pointer;font-family:inherit;margin-bottom:14px;display:flex;justify-content:center;align-items:center;gap:8px;">
           <span id="auth-btn-text">دخول</span>
           <i id="auth-btn-spinner" class="fa-solid fa-spinner fa-spin" style="display:none;"></i>
