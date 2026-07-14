@@ -1825,4 +1825,63 @@ window.openTrackDetail = function(poemOrId) {
     };
     similarContainer.appendChild(el);
   });
+
+  // Trending Works
+  const trendingContainer = document.getElementById('td-trending-list');
+  const trendingTitle = document.getElementById('td-trending-title');
+  if (trendingContainer && trendingTitle) {
+    trendingContainer.innerHTML = '';
+    const trending = [...globalPoems]
+      .filter(p => p.reciterName === poem.reciterName && p.id !== poem.id)
+      .sort(() => 0.5 - Math.random())
+      .slice(0, 3);
+      
+    if (trending.length > 0) {
+      trendingTitle.textContent = `الأعمال الرائجة لـ ${poem.reciterName || 'الرادود'}`;
+      trending.forEach(track => {
+        const el = document.createElement('div');
+        el.className = 'track-item animate-in';
+        el.innerHTML = `
+          <img src="${track.coverImage || track.image}" class="track-img" />
+          <div class="track-info">
+            <div class="track-title">${track.title || track.name}</div>
+            <div class="track-artist">${track.reciterName || 'مجهول'}</div>
+          </div>
+          <i class="fa-solid fa-ellipsis-vertical" style="color: rgba(255,255,255,0.5); padding: 10px;" onclick="openTrackOptions(event, '${track.id}')"></i>
+        `;
+        el.onclick = () => openTrackDetail(track);
+        trendingContainer.appendChild(el);
+      });
+      trendingTitle.parentElement.style.display = 'block';
+    } else {
+      trendingTitle.parentElement.style.display = 'none';
+    }
+  }
+
+  // Fans Also Like
+  const fansContainer = document.getElementById('td-fans-like-list');
+  if (fansContainer) {
+    fansContainer.innerHTML = '';
+    const otherReciters = [...globalReciters]
+      .filter(r => r.name !== poem.reciterName)
+      .sort(() => 0.5 - Math.random())
+      .slice(0, 6);
+      
+    if (otherReciters.length > 0) {
+      otherReciters.forEach(r => {
+        const card = document.createElement('div');
+        card.className = 'square-card animate-in';
+        card.style.flexShrink = '0';
+        card.innerHTML = `
+          <img src="${r.image}" alt="${r.name}" class="square-cover" style="border-radius: 50%;" />
+          <div class="square-title" style="text-align: center; font-size: 14px; margin-top: 8px; color: white;">${r.name}</div>
+        `;
+        card.onclick = () => openArtistDetail(r.name);
+        fansContainer.appendChild(card);
+      });
+      fansContainer.parentElement.style.display = 'block';
+    } else {
+      fansContainer.parentElement.style.display = 'none';
+    }
+  }
 };
