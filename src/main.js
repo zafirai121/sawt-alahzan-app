@@ -30,29 +30,82 @@ function updateProfileUI() {
   const guestSection = document.getElementById('profile-guest-section');
   const logoutSection = document.getElementById('profile-logout-section');
   const greetingEl = document.getElementById('home-greeting');
-  const avatarEl = document.getElementById('header-avatar');
+  const headerAvatarEl = document.getElementById('header-avatar');
+  const profileAvatarEl = document.getElementById('profile-avatar-img');
 
   if (currentUser) {
     const name = currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'مستخدم';
+    const avatarUrl = currentUser.user_metadata?.avatar_url
+      || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=E8B86D&color=121212&bold=true&size=200`;
+
     if (nameEl) nameEl.textContent = name;
     if (emailEl) emailEl.textContent = currentUser.email;
-    if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-circle-check" style="color: #4CAF50;"></i> حساب مفعل';
+    if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-circle-check" style="color:#4CAF50;"></i> حساب مفعل';
     if (guestSection) guestSection.style.display = 'none';
     if (logoutSection) logoutSection.style.display = 'block';
     if (greetingEl) greetingEl.textContent = 'أهلاً، ' + name.split(' ')[0] + ' 👋';
-    if (avatarEl) avatarEl.style.display = 'block';
+
+    // Update avatar images
+    if (headerAvatarEl) { headerAvatarEl.src = avatarUrl; headerAvatarEl.style.display = 'block'; }
+    if (profileAvatarEl) profileAvatarEl.src = avatarUrl;
   } else {
     if (nameEl) nameEl.textContent = 'ضيف';
     if (emailEl) emailEl.textContent = 'غير مسجل';
-    if (statusEl) statusEl.innerHTML = '<i class="fa-regular fa-user" style="color: #aaa;"></i> غير مسجل';
+    if (statusEl) statusEl.innerHTML = '<i class="fa-regular fa-user" style="color:#aaa;"></i> غير مسجل';
     if (guestSection) guestSection.style.display = 'block';
     if (logoutSection) logoutSection.style.display = 'none';
     const hour = new Date().getHours();
     const greeting = hour < 12 ? 'صباح الخير 🌅' : hour < 18 ? 'مساء الخير ☀️' : 'مساء النور 🌙';
     if (greetingEl) greetingEl.textContent = greeting;
-    if (avatarEl) avatarEl.style.display = 'none';
+    if (headerAvatarEl) headerAvatarEl.style.display = 'none';
+    if (profileAvatarEl) profileAvatarEl.src = 'https://ui-avatars.com/api/?name=Guest&background=282828&color=aaa&size=200';
   }
 }
+
+// ─── AVATAR UPLOAD ────────────────────────────────────────────
+window.openAvatarUpload = function() {
+  if (!currentUser) { openAuthModal(); return; }
+  document.getElementById('avatar-file-input')?.click();
+};
+
+window.handleAvatarUpload = async function(event) {
+  const file = event.target.files[0];
+  if (!file || !currentUser) return;
+
+  // Show loading on avatar
+  const profileAvatarEl = document.getElementById('profile-avatar-img');
+  if (profileAvatarEl) profileAvatarEl.style.opacity = '0.4';
+
+  try {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${currentUser.id}.${fileExt}`;
+
+    // Upload to Supabase Storage
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(fileName, file, { upsert: true });
+    if (uploadError) throw uploadError;
+
+    // Get public URL
+    const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
+    const publicUrl = data.publicUrl + '?t=' + Date.now();
+
+    // Update user metadata
+    await supabase.auth.updateUser({ data: { avatar_url: publicUrl } });
+
+    // Update UI immediately
+    if (profileAvatarEl) { profileAvatarEl.src = publicUrl; profileAvatarEl.style.opacity = '1'; }
+    const headerAvatarEl = document.getElementById('header-avatar');
+    if (headerAvatarEl) headerAvatarEl.src = publicUrl;
+  } catch (err) {
+    console.error('Avatar upload error:', err);
+    if (profileAvatarEl) profileAvatarEl.style.opacity = '1';
+    alert('لم نتمكن من رفع الصورة. تأكد من إعداد Supabase Storage.');
+  }
+  // Reset input
+  event.target.value = '';
+};
+
 
 window.openAuthModal = function() {
   const modal = document.getElementById('auth-modal');
