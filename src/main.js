@@ -1,4 +1,56 @@
 import { supabase } from './supabaseClient.js';
+import Hls from 'hls.js';
+
+// ─── HLS Player ───────────────────────────────────────────────
+let hlsInstance = null;
+
+function loadAndPlay(url) {
+  // Destroy any existing HLS instance
+  if (hlsInstance) {
+    hlsInstance.destroy();
+    hlsInstance = null;
+  }
+
+  const isHLS = url && (url.includes('.m3u8') || url.includes('m3u8'));
+
+  if (isHLS) {
+    if (Hls.isSupported()) {
+      // Use hls.js for adaptive streaming
+      hlsInstance = new Hls({
+        maxBufferLength: 30,           // buffer 30s ahead
+        maxMaxBufferLength: 120,       // max 120s buffer
+        lowLatencyMode: false,
+        startLevel: -1,                // auto-select quality
+        abrEwmaDefaultEstimate: 500000 // assume 500Kbps initially
+      });
+      hlsInstance.loadSource(url);
+      hlsInstance.attachMedia(audioContext);
+      hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+        audioContext.play().catch(err => console.error('HLS play error:', err));
+      });
+      hlsInstance.on(Hls.Events.ERROR, (event, data) => {
+        if (data.fatal) {
+          console.error('Fatal HLS error:', data.type, data.details);
+          // Fallback to direct src
+          hlsInstance.destroy();
+          hlsInstance = null;
+          audioContext.src = url;
+          audioContext.play().catch(e => console.error(e));
+        }
+      });
+    } else if (audioContext.canPlayType('application/vnd.apple.mpegurl')) {
+      // Safari has native HLS support
+      audioContext.src = url;
+      audioContext.play().catch(err => console.error('Native HLS play error:', err));
+    } else {
+      console.warn('HLS not supported on this browser');
+    }
+  } else {
+    // Regular MP3/M4A – use direct src
+    audioContext.src = url;
+    audioContext.play().catch(err => console.error('Audio play error:', err));
+  }
+}
 
 // ─── AUTH STATE ───────────────────────────────────────────────
 let currentUser = null;
@@ -940,8 +992,7 @@ function playPoem(poem, fromQueueNavigation = false) {
   const lyArtist = document.getElementById('ly-artist');
   if (lyArtist) lyArtist.textContent = poem.reciterName;
 
-  audioContext.src = poem.audioUrl;
-  audioContext.play().catch(err => console.error('Audio playback failed:', err));
+  loadAndPlay(poem.audioUrl);
 }
 
 // Removed old openTrackDetail
