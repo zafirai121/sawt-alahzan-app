@@ -965,6 +965,12 @@ window.closeLyricsView = function() {
   history.back();
 };
 
+window.openCurrentTrackOptions = function(event) {
+  if (currentPoem) {
+    openTrackOptions(event, currentPoem.id);
+  }
+};
+
 window.openTrackOptions = function(event, poemId) {
   history.pushState({ overlay: 'track-options' }, '');
   event.stopPropagation();
