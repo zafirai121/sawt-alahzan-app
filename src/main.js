@@ -95,8 +95,7 @@ function updateProfileUI() {
     if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-circle-check" style="color:#4CAF50;"></i> حساب مفعل';
     if (guestSection) guestSection.style.display = 'none';
     if (logoutSection) logoutSection.style.display = 'block';
-    if (greetingEl) greetingEl.textContent = 'أهلاً، ' + name.split(' ')[0] + ' 👋';
-
+    
     // Update avatar images
     if (headerAvatarEl) { headerAvatarEl.src = avatarUrl; headerAvatarEl.style.display = 'block'; }
     if (profileAvatarEl) profileAvatarEl.src = avatarUrl;
@@ -106,9 +105,6 @@ function updateProfileUI() {
     if (statusEl) statusEl.innerHTML = '<i class="fa-regular fa-user" style="color:#aaa;"></i> غير مسجل';
     if (guestSection) guestSection.style.display = 'block';
     if (logoutSection) logoutSection.style.display = 'none';
-    const hour = new Date().getHours();
-    const greeting = hour < 12 ? 'صباح الخير 🌅' : hour < 18 ? 'مساء الخير ☀️' : 'مساء النور 🌙';
-    if (greetingEl) greetingEl.textContent = greeting;
     if (headerAvatarEl) headerAvatarEl.style.display = 'none';
     if (profileAvatarEl) profileAvatarEl.src = 'https://ui-avatars.com/api/?name=Guest&background=282828&color=aaa&size=200';
   }
