@@ -234,6 +234,22 @@ function setAuthLoading(loading) {
   if (spinner) spinner.style.display = loading ? 'inline-block' : 'none';
 }
 
+window.signInWithGoogle = async function() {
+  document.getElementById('auth-message').style.display = 'none';
+  try {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin
+      }
+    });
+    if (error) throw error;
+  } catch (err) {
+    showAuthMessage('فشل تسجيل الدخول بواسطة جوجل', true);
+    console.error(err);
+  }
+}
+
 window.submitAuth = async function() {
   const email = document.getElementById('auth-email')?.value?.trim();
   const password = document.getElementById('auth-password')?.value;
