@@ -251,13 +251,17 @@ window.submitAuth = async function() {
 
   try {
     if (isAuthMode === 'signup') {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: { data: { full_name: name || email.split('@')[0] } }
       });
       if (error) throw error;
-      showAuthMessage('تم إنشاء الحساب! تحقق من بريدك الإلكتروني لتفعيل الحساب.', false);
+      if (data.session) {
+        closeAuthModal();
+      } else {
+        showAuthMessage('تم إنشاء الحساب بنجاح! إذا كانت رسالة التفعيل مطلوبة يرجى تفقد بريدك.', false);
+      }
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
