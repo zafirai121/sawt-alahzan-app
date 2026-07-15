@@ -1137,19 +1137,6 @@ function updateProgressUI() {
   if (audioContext.duration && isFinite(audioContext.duration)) {
     let visualTime = audioContext.currentTime;
     
-    // Extrapolate if playing to overcome blocky currentTime updates on mobile
-    if (!audioContext.paused) {
-      if (audioContext.currentTime !== lastKnownTime) {
-         lastKnownTime = audioContext.currentTime;
-         lastKnownRealTime = performance.now();
-      } else {
-         const timeSinceUpdate = (performance.now() - lastKnownRealTime) / 1000;
-         // clamp extrapolation to max 0.5s so we don't drift too far on lag
-         if (timeSinceUpdate < 0.5) {
-           visualTime += timeSinceUpdate;
-         }
-      }
-    }
     if (visualTime > audioContext.duration) visualTime = audioContext.duration;
     
     const progress = (visualTime / audioContext.duration) * 100;
@@ -1159,9 +1146,11 @@ function updateProgressUI() {
     if (!isDraggingProgress && fpProgress) {
       fpProgress.value = progress;
       fpProgress.style.background = `linear-gradient(to left, var(--accent) ${progress}%, rgba(255,255,255,0.2) ${progress}%)`;
-      const el_fp_current_time = document.getElementById('fp-current-time'); if (el_fp_current_time) el_fp_current_time.textContent = formatTime(visualTime);
+      const el_fp_current_time = document.getElementById('fp-current-time'); 
+      if (el_fp_current_time) el_fp_current_time.textContent = formatTime(visualTime);
     }
-    const el_fp_total_time = document.getElementById('fp-total-time'); if (el_fp_total_time) el_fp_total_time.textContent = formatTime(audioContext.duration);
+    const el_fp_total_time = document.getElementById('fp-total-time'); 
+    if (el_fp_total_time) el_fp_total_time.textContent = formatTime(audioContext.duration);
     
     // Update Mini Player Circular Progress
     const mpRing = document.getElementById('mp-progress-ring');
