@@ -1137,6 +1137,20 @@ function updateProgressUI() {
   if (audioContext.duration && isFinite(audioContext.duration)) {
     let visualTime = audioContext.currentTime;
     
+    // Extrapolate if playing to overcome blocky currentTime updates on mobile/HLS
+    if (!audioContext.paused) {
+      if (audioContext.currentTime !== lastKnownTime) {
+         lastKnownTime = audioContext.currentTime;
+         lastKnownRealTime = performance.now();
+      } else {
+         const timeSinceUpdate = (performance.now() - lastKnownRealTime) / 1000;
+         // clamp extrapolation to max 3 seconds to cover HLS chunk delays
+         if (timeSinceUpdate < 3.0) {
+           visualTime += timeSinceUpdate;
+         }
+      }
+    }
+    
     if (visualTime > audioContext.duration) visualTime = audioContext.duration;
     
     const progress = (visualTime / audioContext.duration) * 100;
