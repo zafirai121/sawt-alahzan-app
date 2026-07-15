@@ -72,7 +72,10 @@ async function initAuth() {
   }
 
   updateProfileUI();
-  if (currentUser) syncLikesFromSupabase();
+  if (currentUser) {
+    syncLikesFromSupabase();
+    syncPlaylistsFromSupabase();
+  }
 }
 
 function updateProfileUI() {
@@ -337,6 +340,57 @@ async function pushLikeToSupabase(poemId, liked) {
   }
 }
 
+// ─── SUPABASE PLAYLISTS SYNC ───────────────────────────────────
+async function syncPlaylistsFromSupabase() {
+  if (!currentUser) return;
+  try {
+    const { data, error } = await supabase
+      .from('user_playlists')
+      .select('id, title, tracks')
+      .eq('user_id', currentUser.id);
+    if (error) throw error;
+    
+    // Map data to local structure: { id, name, tracks }
+    const mapped = (data || []).map(r => ({
+      id: r.id,
+      name: r.title,
+      tracks: r.tracks || []
+    }));
+    _memoryPlaylists = mapped;
+  } catch (e) {
+    console.warn('Could not sync playlists:', e);
+  }
+}
+
+async function createPlaylistInSupabase(name) {
+  if (!currentUser) return null;
+  try {
+    const { data, error } = await supabase
+      .from('user_playlists')
+      .insert({ user_id: currentUser.id, title: name, tracks: [] })
+      .select('id, title, tracks')
+      .single();
+    if (error) throw error;
+    return { id: data.id, name: data.title, tracks: data.tracks || [] };
+  } catch (e) {
+    console.warn('Could not create playlist:', e);
+    return null;
+  }
+}
+
+async function updatePlaylistTracksInSupabase(playlistId, tracks) {
+  if (!currentUser) return;
+  try {
+    const { error } = await supabase
+      .from('user_playlists')
+      .update({ tracks: tracks })
+      .eq('id', playlistId)
+      .eq('user_id', currentUser.id);
+    if (error) throw error;
+  } catch (e) {
+    console.warn('Could not update playlist tracks:', e);
+  }
+}
 
 let isPlaying = false;
 let currentPoem = null;
@@ -344,6 +398,8 @@ let globalPoems = [];
 let globalReciters = [];
 
 // LocalStorage wrapper for Library features
+let _memoryPlaylists = [];
+
 const LibraryStore = {
   get likes() { return JSON.parse(localStorage.getItem('sawt_likes')) || []; },
   set likes(arr) { localStorage.setItem('sawt_likes', JSON.stringify(arr)); },
@@ -351,8 +407,13 @@ const LibraryStore = {
   get downloads() { return JSON.parse(localStorage.getItem('sawt_downloads')) || []; },
   set downloads(arr) { localStorage.setItem('sawt_downloads', JSON.stringify(arr)); },
   
-  get playlists() { return JSON.parse(localStorage.getItem('sawt_playlists')) || []; },
-  set playlists(arr) { localStorage.setItem('sawt_playlists', JSON.stringify(arr)); },
+  get playlists() { 
+    return currentUser ? _memoryPlaylists : (JSON.parse(localStorage.getItem('sawt_playlists')) || []); 
+  },
+  set playlists(arr) { 
+    if (currentUser) { _memoryPlaylists = arr; } 
+    else { localStorage.setItem('sawt_playlists', JSON.stringify(arr)); }
+  },
   
   get artists() { return JSON.parse(localStorage.getItem('sawt_artists')) || []; },
   set artists(arr) { localStorage.setItem('sawt_artists', JSON.stringify(arr)); },
@@ -404,19 +465,29 @@ const LibraryStore = {
     return isDownloading;
   },
 
-  addPlaylist(name) {
-    let arr = this.playlists;
-    arr.push({ id: Date.now().toString(), name, tracks: [] });
-    this.playlists = arr;
+  async addPlaylist(name) {
+    if (currentUser) {
+      const newPl = await createPlaylistInSupabase(name);
+      if (newPl) {
+        _memoryPlaylists.push(newPl);
+      }
+    } else {
+      let arr = this.playlists;
+      arr.push({ id: Date.now().toString(), name, tracks: [] });
+      this.playlists = arr;
+    }
   },
 
-  addTrackToPlaylist(playlistId, trackId) {
+  async addTrackToPlaylist(playlistId, trackId) {
     let arr = this.playlists;
     let pl = arr.find(p => p.id === playlistId);
     if (pl) {
       if (!pl.tracks.includes(trackId)) {
         pl.tracks.push(trackId);
         this.playlists = arr;
+        if (currentUser) {
+          updatePlaylistTracksInSupabase(playlistId, pl.tracks);
+        }
         return true;
       }
     }
@@ -1383,11 +1454,11 @@ window.promptCreatePlaylist = function() {
   document.getElementById('create-playlist-modal').style.display = 'flex';
 };
 
-window.submitCreatePlaylist = function() {
+window.submitCreatePlaylist = async function() {
   const input = document.getElementById('new-playlist-name');
   const name = input.value.trim();
   if (name) {
-    LibraryStore.addPlaylist(name);
+    await LibraryStore.addPlaylist(name);
     document.getElementById('create-playlist-modal').style.display = 'none';
     const activeChip = document.querySelector('.filter-chip.active');
     if (activeChip && document.getElementById('library-view').style.display !== 'none') {
