@@ -326,11 +326,6 @@ header {
   animation: fadeIn 0.5s ease forwards;
 }
 
-@media (max-width: 400px) {
-  .recent-grid {
-    grid-template-columns: 1fr; /* Single column on very small screens */
-  }
-}
 
 /* View Management */
 .view {
