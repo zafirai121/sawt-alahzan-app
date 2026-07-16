@@ -1336,9 +1336,15 @@ window.playPrev = function() {
 window.toggleShuffle = function() {
   isShuffle = !isShuffle;
   const fpBtn = document.getElementById('fp-shuffle-btn');
-  if (fpBtn) fpBtn.style.color = isShuffle ? 'var(--accent)' : 'rgba(255,255,255,0.5)';
+  if (fpBtn) {
+    fpBtn.style.color = 'var(--accent)';
+    fpBtn.style.opacity = isShuffle ? '1' : '0.5';
+  }
   const tdBtn = document.getElementById('td-shuffle-btn');
-  if (tdBtn) tdBtn.style.color = isShuffle ? 'var(--accent)' : 'rgba(255,255,255,0.7)';
+  if (tdBtn) {
+    tdBtn.style.color = 'var(--accent)';
+    tdBtn.style.opacity = isShuffle ? '1' : '0.5';
+  }
 };
 
 window.toggleRepeat = function() {
@@ -1937,7 +1943,10 @@ window.openTrackDetail = function(poemOrId) {
     : '<i class="fa-solid fa-play" style="margin-left: 4px;"></i>';
     
   const tdShuffleBtn = document.getElementById('td-shuffle-btn');
-  if (tdShuffleBtn) tdShuffleBtn.style.color = isShuffle ? 'var(--accent)' : 'rgba(255,255,255,0.7)';
+  if (tdShuffleBtn) {
+    tdShuffleBtn.style.color = 'var(--accent)';
+    tdShuffleBtn.style.opacity = isShuffle ? '1' : '0.5';
+  }
   
   const likeBtn = document.getElementById('td-like-btn');
   const updateLikeBtn = () => {
