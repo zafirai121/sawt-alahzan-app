@@ -1124,7 +1124,7 @@ window.openCurrentTrackOptions = function(event) {
 window.openTrackOptions = function(event, poemId) {
   history.pushState({ overlay: 'track-options' }, '');
   event.stopPropagation();
-  const poem = globalPoems.find(p => p.id === poemId);
+  const poem = globalPoems.find(p => String(p.id) === String(poemId));
   if (!poem) return;
   
   const modal = document.getElementById('track-options-modal');
