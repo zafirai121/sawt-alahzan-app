@@ -585,6 +585,9 @@ function renderHomeContent(poems, reciters) {
   // Section 2: Recently Added (New single row horizontal scroller with rectangular cards)
   container.appendChild(createHorizontalRectScrollerSection('\u0645\u0636\u0627\u0641 \u062d\u062f\u064a\u062b\u0627', poems.slice(0, 15)));
   
+  // Circular Reciters section moved to below Section 2
+  container.appendChild(createReciterSection('\u0623\u0634\u0647\u0631 \u0627\u0644\u0631\u0648\u0627\u062f\u064a\u062f', shuffle(reciters).slice(0, 10)));
+  
   // Section 3: Recently Listened (5 columns x 5 cards horizontal scroller)
   container.appendChild(createHorizontalGridScrollerSection('\u062a\u0645 \u0627\u0644\u0627\u0633\u062a\u0645\u0627\u0639 \u0627\u0644\u064a\u0647 \u0645\u0624\u062e\u0631\u0627', shuffle(poems).slice(0, 25)));
   
@@ -615,8 +618,6 @@ function renderHomeContent(poems, reciters) {
   // 7. \u0645\u064a\u0643\u0633 \u062a\u0645 \u0627\u0639\u062f\u0627\u062f\u0647 \u0644\u0643
   container.appendChild(createSquareScrollerSection('\u0645\u064a\u0643\u0633 \u062a\u0645 \u0627\u0639\u062f\u0627\u062f\u0647 \u0644\u0643', shuffle(poems).slice(0, 15)));
 
-  // Circular Reciters section at the bottom
-  container.appendChild(createReciterSection('\u0623\u0634\u0647\u0631 \u0627\u0644\u0631\u0648\u0627\u062f\u064a\u062f', shuffle(reciters).slice(0, 10)));
 }
 
 // Create a horizontal scroller with a single row of LARGE rectangular cards
