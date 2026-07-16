@@ -365,9 +365,10 @@ async function syncPlaylistsFromSupabase() {
 async function createPlaylistInSupabase(name) {
   if (!currentUser) return null;
   try {
+    const newId = 'playlist_' + Date.now();
     const { data, error } = await supabase
       .from('user_playlists')
-      .insert({ user_id: currentUser.id, title: name, tracks: [] })
+      .insert({ id: newId, user_id: currentUser.id, title: name, tracks: [] })
       .select('id, title, tracks')
       .single();
     if (error) throw error;
@@ -1179,7 +1180,7 @@ window.openTrackOptions = function(event, poemId) {
         title: poem.title,
         text: 'استمع إلى ' + poem.title + ' بصوت ' + poem.reciterName,
         url: shareUrl
-      });
+      }).catch(err => console.log('Share canceled', err));
     } else {
       // Fallback for browsers without navigator.share
       navigator.clipboard.writeText(shareUrl).then(() => {
