@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://zafirai121.github.io/sawt-alahzan-app/sitemap.xml
