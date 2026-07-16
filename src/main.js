@@ -1071,7 +1071,7 @@ function playPoem(poem, fromQueueNavigation = false) {
         <div style="font-size: 14px; font-weight: bold; margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: right;">${t.title}</div>
         <div style="font-size: 13px; color: rgba(255,255,255,0.6); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: right;">${t.reciterName}</div>
       `;
-      card.onclick = () => openTrackDetail(t);
+      card.onclick = () => playPoem(t);
       similarContainer.appendChild(card);
     });
   }
@@ -2002,7 +2002,7 @@ window.openTrackDetail = function(poemOrId) {
             <img src="${track.coverImage || track.image}" style="width: 100%; aspect-ratio: 1; border-radius: 8px; object-fit: cover;" />
             <div style="font-size: 14px; font-weight: bold; margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: right;">${track.title || track.name}</div>
           `;
-        el.onclick = () => openTrackDetail(track);
+        el.onclick = () => playPoem(track);
         trendingContainer.appendChild(el);
       });
       trendingTitle.parentElement.style.display = 'block';
