@@ -1337,12 +1337,12 @@ window.toggleShuffle = function() {
   isShuffle = !isShuffle;
   const fpBtn = document.getElementById('fp-shuffle-btn');
   if (fpBtn) {
-    fpBtn.style.color = 'var(--accent)';
+    fpBtn.style.color = '#ffd87c';
     fpBtn.style.opacity = isShuffle ? '1' : '0.5';
   }
   const tdBtn = document.getElementById('td-shuffle-btn');
   if (tdBtn) {
-    tdBtn.style.color = 'var(--accent)';
+    tdBtn.style.color = '#ffd87c';
     tdBtn.style.opacity = isShuffle ? '1' : '0.5';
   }
 };
@@ -1944,7 +1944,7 @@ window.openTrackDetail = function(poemOrId) {
     
   const tdShuffleBtn = document.getElementById('td-shuffle-btn');
   if (tdShuffleBtn) {
-    tdShuffleBtn.style.color = 'var(--accent)';
+    tdShuffleBtn.style.color = '#ffd87c';
     tdShuffleBtn.style.opacity = isShuffle ? '1' : '0.5';
   }
   
