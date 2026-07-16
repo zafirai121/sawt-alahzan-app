@@ -1227,20 +1227,6 @@ function updateProgressUI() {
   if (audioContext.duration && isFinite(audioContext.duration)) {
     let visualTime = audioContext.currentTime;
     
-    // Extrapolate if playing to overcome blocky currentTime updates on mobile/HLS
-    if (!audioContext.paused) {
-      if (audioContext.currentTime !== lastKnownTime) {
-         lastKnownTime = audioContext.currentTime;
-         lastKnownRealTime = performance.now();
-      } else {
-         const timeSinceUpdate = (performance.now() - lastKnownRealTime) / 1000;
-         // clamp extrapolation to max 3 seconds to cover HLS chunk delays
-         if (timeSinceUpdate < 3.0) {
-           visualTime += timeSinceUpdate;
-         }
-      }
-    }
-    
     if (visualTime > audioContext.duration) visualTime = audioContext.duration;
     
     const progress = (visualTime / audioContext.duration) * 100;
@@ -1715,9 +1701,28 @@ window.openCategoryDetail = function(categoryName, bgImage) {
         </div>
         <i class="fa-solid fa-ellipsis-vertical" style="color: var(--text-secondary); padding: 10px;" onclick="openTrackOptions(event, \`${track.id}\`)"></i>
       `;
-      el.onclick = () => openTrackDetail(track);
+      el.onclick = () => playPoem(track);
       tc.appendChild(el);
     });
+    
+    const playAllBtn = document.getElementById('category-play-all');
+    if (playAllBtn) {
+      playAllBtn.onclick = () => {
+        if (filtered.length > 0) {
+          queueList = [...filtered];
+          queueIndex = 0;
+          playPoem(filtered[0], true);
+          
+          // Update similarList manually
+          let reciterTracks = [...globalPoems].filter(p => p.reciterName === filtered[0].reciterName && p.audioUrl !== filtered[0].audioUrl).sort(() => 0.5 - Math.random());
+          if (reciterTracks.length < 5) {
+            const otherTracks = [...globalPoems].filter(p => p.reciterName !== filtered[0].reciterName && p.audioUrl !== filtered[0].audioUrl).sort(() => 0.5 - Math.random());
+            reciterTracks = [...reciterTracks, ...otherTracks];
+          }
+          similarList = reciterTracks.slice(0, 5);
+        }
+      };
+    }
   }
 };
 
