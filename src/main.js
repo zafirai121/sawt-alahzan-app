@@ -1984,24 +1984,24 @@ window.openTrackDetail = function(poemOrId) {
   const trendingTitle = document.getElementById('td-trending-title');
   if (trendingContainer && trendingTitle) {
     trendingContainer.innerHTML = '';
-    const trending = [...globalPoems]
-      .filter(p => p.reciterName === poem.reciterName && p.id !== poem.id)
-      .sort(() => 0.5 - Math.random())
-      .slice(0, 3);
-      
-    if (trending.length > 0) {
-      trendingTitle.textContent = `الأعمال الرائجة لـ ${poem.reciterName || 'الرادود'}`;
-      trending.forEach(track => {
-        const el = document.createElement('div');
-        el.className = 'track-item animate-in';
-        el.innerHTML = `
-          <img src="${track.coverImage || track.image}" class="track-img" />
-          <div class="track-info">
-            <div class="track-title">${track.title || track.name}</div>
-            <div class="track-artist">${track.reciterName || 'مجهول'}</div>
-          </div>
-          <i class="fa-solid fa-ellipsis-vertical" style="color: rgba(255,255,255,0.5); padding: 10px;" onclick="openTrackOptions(event, '${track.id}')"></i>
-        `;
+      const trending = [...globalPoems]
+        .filter(p => p.reciterName === poem.reciterName && p.id !== poem.id)
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 10);
+        
+      if (trending.length > 0) {
+        trendingTitle.textContent = `الأعمال الرائجة لـ ${poem.reciterName || 'الرادود'}`;
+        trending.forEach(track => {
+          const el = document.createElement('div');
+          el.className = 'album-card reciter-card';
+          el.style.width = '32vw';
+          el.style.maxWidth = '140px';
+          el.style.flexShrink = '0';
+          
+          el.innerHTML = `
+            <img src="${track.coverImage || track.image}" style="width: 100%; aspect-ratio: 1; border-radius: 8px; object-fit: cover;" />
+            <div style="font-size: 14px; font-weight: bold; margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: right;">${track.title || track.name}</div>
+          `;
         el.onclick = () => openTrackDetail(track);
         trendingContainer.appendChild(el);
       });
