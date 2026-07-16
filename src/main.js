@@ -977,8 +977,14 @@ function playPoem(poem, fromQueueNavigation = false) {
       queueList = [poem, ...globalPoems];
       queueIndex = 0;
     }
-    // Update similar list only on fresh play
-    similarList = [...globalPoems].filter(p => p.audioUrl !== poem.audioUrl).sort(() => 0.5 - Math.random()).slice(0, 5);
+    // Update similar list only on fresh play to show tracks by the same reciter
+    let reciterTracks = [...globalPoems].filter(p => p.reciterName === poem.reciterName && p.audioUrl !== poem.audioUrl).sort(() => 0.5 - Math.random());
+    // If not enough tracks by this reciter, pad with other random tracks
+    if (reciterTracks.length < 5) {
+      const otherTracks = [...globalPoems].filter(p => p.reciterName !== poem.reciterName && p.audioUrl !== poem.audioUrl).sort(() => 0.5 - Math.random());
+      reciterTracks = [...reciterTracks, ...otherTracks];
+    }
+    similarList = reciterTracks.slice(0, 5);
   }
   
   // Update Mini Player only if full player is not open
