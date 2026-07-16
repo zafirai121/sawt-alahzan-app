@@ -1335,8 +1335,10 @@ window.playPrev = function() {
 
 window.toggleShuffle = function() {
   isShuffle = !isShuffle;
-  const btn = document.getElementById('fp-shuffle-btn');
-  if (btn) btn.style.color = isShuffle ? 'var(--accent)' : 'rgba(255,255,255,0.5)';
+  const fpBtn = document.getElementById('fp-shuffle-btn');
+  if (fpBtn) fpBtn.style.color = isShuffle ? 'var(--accent)' : 'rgba(255,255,255,0.5)';
+  const tdBtn = document.getElementById('td-shuffle-btn');
+  if (tdBtn) tdBtn.style.color = isShuffle ? 'var(--accent)' : 'rgba(255,255,255,0.7)';
 };
 
 window.toggleRepeat = function() {
@@ -1929,10 +1931,13 @@ window.openTrackDetail = function(poemOrId) {
     }
   };
   
-  // Initialize icon state
+  // Initialize icon states
   playBtn.innerHTML = (currentPoem && currentPoem.id === poem.id && isPlaying) 
     ? '<i class="fa-solid fa-pause"></i>' 
     : '<i class="fa-solid fa-play" style="margin-left: 4px;"></i>';
+    
+  const tdShuffleBtn = document.getElementById('td-shuffle-btn');
+  if (tdShuffleBtn) tdShuffleBtn.style.color = isShuffle ? 'var(--accent)' : 'rgba(255,255,255,0.7)';
   
   const likeBtn = document.getElementById('td-like-btn');
   const updateLikeBtn = () => {
