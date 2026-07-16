@@ -137,14 +137,10 @@ Schedule: ${l.map(y=>Ue(y))} pos: ${this.timelinePos}`),u.length&&this.log(`Remo
         <div class="track-artist">${T.reciterName||"مجهول"}</div>
       </div>
       <i class="fa-solid fa-ellipsis-vertical" style="color: rgba(255,255,255,0.5); padding: 10px;" onclick="openTrackOptions(event, '${T.id}')"></i>
-    `,v.onclick=()=>{openTrackDetail(T)},f.appendChild(v)});const y=document.getElementById("td-trending-list"),p=document.getElementById("td-trending-title");if(y&&p){y.innerHTML="";const T=[...Z].filter(v=>v.reciterName===e.reciterName&&v.id!==e.id).sort(()=>.5-Math.random()).slice(0,3);T.length>0?(p.textContent=`الأعمال الرائجة لـ ${e.reciterName||"الرادود"}`,T.forEach(v=>{const S=document.createElement("div");S.className="track-item animate-in",S.innerHTML=`
-          <img src="${v.coverImage||v.image}" class="track-img" />
-          <div class="track-info">
-            <div class="track-title">${v.title||v.name}</div>
-            <div class="track-artist">${v.reciterName||"مجهول"}</div>
-          </div>
-          <i class="fa-solid fa-ellipsis-vertical" style="color: rgba(255,255,255,0.5); padding: 10px;" onclick="openTrackOptions(event, '${v.id}')"></i>
-        `,S.onclick=()=>openTrackDetail(v),y.appendChild(S)}),p.parentElement.style.display="block"):p.parentElement.style.display="none"}const E=document.getElementById("td-fans-like-list");if(E){E.innerHTML="";const T=[...St].filter(v=>v.name!==e.reciterName).sort(()=>.5-Math.random()).slice(0,6);T.length>0?(T.forEach(v=>{const S=document.createElement("div");S.className="square-card animate-in",S.style.flexShrink="0",S.innerHTML=`
+    `,v.onclick=()=>{openTrackDetail(T)},f.appendChild(v)});const y=document.getElementById("td-trending-list"),p=document.getElementById("td-trending-title");if(y&&p){y.innerHTML="";const T=[...Z].filter(v=>v.reciterName===e.reciterName&&v.id!==e.id).sort(()=>.5-Math.random()).slice(0,10);T.length>0?(p.textContent=`الأعمال الرائجة لـ ${e.reciterName||"الرادود"}`,T.forEach(v=>{const S=document.createElement("div");S.className="album-card reciter-card",S.style.width="32vw",S.style.maxWidth="140px",S.style.flexShrink="0",S.innerHTML=`
+            <img src="${v.coverImage||v.image}" style="width: 100%; aspect-ratio: 1; border-radius: 8px; object-fit: cover;" />
+            <div style="font-size: 14px; font-weight: bold; margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: right;">${v.title||v.name}</div>
+          `,S.onclick=()=>openTrackDetail(v),y.appendChild(S)}),p.parentElement.style.display="block"):p.parentElement.style.display="none"}const E=document.getElementById("td-fans-like-list");if(E){E.innerHTML="";const T=[...St].filter(v=>v.name!==e.reciterName).sort(()=>.5-Math.random()).slice(0,6);T.length>0?(T.forEach(v=>{const S=document.createElement("div");S.className="square-card animate-in",S.style.flexShrink="0",S.innerHTML=`
           <img src="${v.image}" alt="${v.name}" class="square-cover" style="border-radius: 50%;" />
           <div class="square-title" style="text-align: center; font-size: 14px; margin-top: 8px; color: white;">${v.name}</div>
         `,S.onclick=()=>openArtistDetail(v.name),E.appendChild(S)}),E.parentElement.style.display="block"):E.parentElement.style.display="none"}};
