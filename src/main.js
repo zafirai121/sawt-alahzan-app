@@ -1346,6 +1346,11 @@ window.toggleShuffle = function() {
     tdBtn.style.color = '#ffd87c';
     tdBtn.style.opacity = isShuffle ? '1' : '0.5';
   }
+  const catBtn = document.getElementById('category-shuffle-btn');
+  if (catBtn) {
+    catBtn.style.color = '#ffd87c';
+    catBtn.style.opacity = isShuffle ? '1' : '0.5';
+  }
 };
 
 window.toggleRepeat = function() {
@@ -1714,6 +1719,12 @@ window.openCategoryDetail = function(categoryName, bgImage) {
       tc.appendChild(el);
     });
     
+    const catShuffleBtn = document.getElementById('category-shuffle-btn');
+    if (catShuffleBtn) {
+      catShuffleBtn.style.color = '#ffd87c';
+      catShuffleBtn.style.opacity = isShuffle ? '1' : '0.5';
+    }
+
     const playAllBtn = document.getElementById('category-play-all');
     if (playAllBtn) {
       playAllBtn.onclick = () => {
