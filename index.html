@@ -18,7 +18,7 @@
     <meta name="theme-color" content="#121212" />
     <link rel="apple-touch-icon" href="/sawt-alahzan-app/favicon.svg" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <script>window.onerror = function(msg, url, lineNo, columnNo, error) { document.body.innerHTML = '<div style="color:red;padding:20px;z-index:9999;position:fixed;top:0;left:0;background:black;width:100%;">' + msg + '<br>' + url + ':' + lineNo + '</div>'; return false; }; window.onunhandledrejection = function(event) { document.body.innerHTML = '<div style="color:red;padding:20px;z-index:9999;position:fixed;top:0;left:0;background:black;width:100%;">Unhandled Rejection: ' + event.reason + '</div>'; };</script>  <script type="module" crossorigin src="/sawt-alahzan-app/assets/index-JYM4U-99.js"></script>
+  <script>window.onerror = function(msg, url, lineNo, columnNo, error) { document.body.innerHTML = '<div style="color:red;padding:20px;z-index:9999;position:fixed;top:0;left:0;background:black;width:100%;">' + msg + '<br>' + url + ':' + lineNo + '</div>'; return false; }; window.onunhandledrejection = function(event) { document.body.innerHTML = '<div style="color:red;padding:20px;z-index:9999;position:fixed;top:0;left:0;background:black;width:100%;">Unhandled Rejection: ' + event.reason + '</div>'; };</script>  <script type="module" crossorigin src="/sawt-alahzan-app/assets/index-B29wppA_.js"></script>
   <link rel="stylesheet" crossorigin href="/sawt-alahzan-app/assets/index-Bm9WWqVq.css">
 </head>
   <body>
@@ -131,11 +131,10 @@
               
               <!-- Right side elements grouped with equal spacing -->
               <div style="display: flex; align-items: center; gap: 22px;">
-                <i class="fa-solid fa-heart" style="color: #E91E63; font-size: 20px;"></i>
-                <i class="fa-solid fa-circle-arrow-down" style="color: white; font-size: 20px;"></i>
-                <i class="fa-solid fa-list-ul" style="color: white; font-size: 20px;"></i>
-                <i class="fa-solid fa-ellipsis-vertical" style="color: white; font-size: 20px;"></i>
-                <i class="fa-solid fa-shuffle" style="font-size: 20px; color: white;"></i>
+                <i id="artist-like-btn" class="fa-regular fa-heart" style="font-size: 22px; color: white; cursor: pointer;"></i>
+                <i id="artist-download-btn" class="fa-solid fa-arrow-down" style="font-size: 20px; color: white; cursor: pointer;"></i>
+                <i id="artist-options-btn" class="fa-solid fa-ellipsis-vertical" style="font-size: 20px; color: white; cursor: pointer;"></i>
+                <i id="artist-shuffle-btn" class="fa-solid fa-shuffle" style="font-size: 20px; color: #ffd87c; opacity: 0.5; cursor: pointer;" onclick="toggleShuffle()"></i>
               </div>
               
               <!-- Flexible spacer to push Play button to the far left -->
@@ -175,9 +174,9 @@
             <div style="display: flex; align-items: center; width: 100%; margin-bottom: 25px; margin-top: -20px; z-index: 5; position: relative;">
               <!-- Right side elements grouped with equal spacing -->
               <div style="display: flex; align-items: center; gap: 22px;">
-                <i id="category-like-btn" class="fa-regular fa-heart" style="font-size: 22px; color: white; cursor: pointer;" onclick="alert('سيتم توفير هذه الميزة قريباً')"></i>
-                <i id="category-download-btn" class="fa-solid fa-arrow-down" style="font-size: 20px; color: white; cursor: pointer;" onclick="alert('سيتم توفير هذه الميزة قريباً')"></i>
-                <i id="category-options-btn" class="fa-solid fa-ellipsis-vertical" style="font-size: 20px; color: white; cursor: pointer;" onclick="alert('سيتم توفير هذه الميزة قريباً')"></i>
+                <i id="category-like-btn" class="fa-regular fa-heart" style="font-size: 22px; color: white; cursor: pointer;"></i>
+                <i id="category-download-btn" class="fa-solid fa-arrow-down" style="font-size: 20px; color: white; cursor: pointer;"></i>
+                <i id="category-options-btn" class="fa-solid fa-ellipsis-vertical" style="font-size: 20px; color: white; cursor: pointer;"></i>
                 <i id="category-shuffle-btn" class="fa-solid fa-shuffle" style="font-size: 20px; color: #ffd87c; opacity: 0.5; cursor: pointer;" onclick="toggleShuffle()"></i>
               </div>
               
