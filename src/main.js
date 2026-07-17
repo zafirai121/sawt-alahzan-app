@@ -1614,6 +1614,10 @@ window.renderSearchContent = function() {
         document.getElementById('genre-grid').style.display = 'none';
         const titleEl = document.getElementById('search-section-title');
         if (titleEl) titleEl.style.display = 'none';
+        const otherTitleEl = document.getElementById('search-other-title');
+        if (otherTitleEl) otherTitleEl.style.display = 'none';
+        const otherGridEl = document.getElementById('other-genre-grid');
+        if (otherGridEl) otherGridEl.style.display = 'none';
         resultsContainer.style.display = 'block';
         resultsContainer.innerHTML = '';
         
@@ -1645,6 +1649,10 @@ window.renderSearchContent = function() {
         document.getElementById('genre-grid').style.display = 'grid';
         const titleEl = document.getElementById('search-section-title');
         if (titleEl) titleEl.style.display = 'block';
+        const otherTitleEl = document.getElementById('search-other-title');
+        if (otherTitleEl) otherTitleEl.style.display = 'block';
+        const otherGridEl = document.getElementById('other-genre-grid');
+        if (otherGridEl) otherGridEl.style.display = 'grid';
         resultsContainer.style.display = 'none';
       }
     };
@@ -1675,6 +1683,31 @@ window.renderSearchContent = function() {
       `;
       card.onclick = () => openCategoryDetail(cat.title, imgUrl);
       catContainer.appendChild(card);
+    });
+  }
+
+  const otherCatContainer = document.getElementById('other-genre-grid');
+  if (otherCatContainer) {
+    otherCatContainer.innerHTML = '';
+    const otherCategories = [
+      { id: 'afrah', title: 'أفراح', color: '#B02897' },
+      { id: 'anasheed', title: 'اناشيد', color: '#148A08' },
+      { id: 'podcasts', title: 'بودكاست', color: '#006450' },
+      { id: 'remix', title: 'ريمكس', color: '#8400E7' },
+      { id: 'acapella', title: 'بدون موسيقى', color: '#E1118C' }
+    ];
+    
+    otherCategories.forEach(cat => {
+      const card = document.createElement('div');
+      card.className = 'genre-card';
+      card.style.backgroundColor = cat.color;
+      const imgUrl = getCategoryFirstImage(cat.title);
+      card.innerHTML = `
+        <div class="genre-card-title">${cat.title}</div>
+        <img src="${imgUrl}" class="genre-card-img" onerror="this.src='https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=200'" />
+      `;
+      card.onclick = () => openCategoryDetail(cat.title, imgUrl);
+      otherCatContainer.appendChild(card);
     });
   }
 };
