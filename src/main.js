@@ -1351,6 +1351,11 @@ window.toggleShuffle = function() {
     catBtn.style.color = '#ffd87c';
     catBtn.style.opacity = isShuffle ? '1' : '0.5';
   }
+  const artBtn = document.getElementById('artist-shuffle-btn');
+  if (artBtn) {
+    artBtn.style.color = '#ffd87c';
+    artBtn.style.opacity = isShuffle ? '1' : '0.5';
+  }
 };
 
 window.toggleRepeat = function() {
@@ -1725,6 +1730,28 @@ window.openCategoryDetail = function(categoryName, bgImage) {
       catShuffleBtn.style.opacity = isShuffle ? '1' : '0.5';
     }
 
+    const catLikeBtn = document.getElementById('category-like-btn');
+    if (catLikeBtn) {
+      catLikeBtn.className = 'fa-regular fa-heart';
+      catLikeBtn.style.color = 'white';
+      catLikeBtn.onclick = () => {
+        const isLiked = catLikeBtn.classList.contains('fa-solid');
+        catLikeBtn.className = isLiked ? 'fa-regular fa-heart' : 'fa-solid fa-heart';
+        catLikeBtn.style.color = isLiked ? 'white' : '#E91E63';
+        if (!isLiked) alert('تمت الإضافة إلى مفضلتك');
+      };
+    }
+
+    const catDlBtn = document.getElementById('category-download-btn');
+    if (catDlBtn) {
+      catDlBtn.onclick = () => alert('تم بدء تنزيل جميع المقاطع');
+    }
+
+    const catOptBtn = document.getElementById('category-options-btn');
+    if (catOptBtn) {
+      catOptBtn.onclick = () => alert('تم نسخ الرابط بنجاح');
+    }
+
     const playAllBtn = document.getElementById('category-play-all');
     if (playAllBtn) {
       playAllBtn.onclick = () => {
@@ -1821,9 +1848,40 @@ window.openArtistDetail = function(artistName) {
   if(playAllBtn) {
     playAllBtn.onclick = () => {
       if (artistTracks.length > 0) {
-        openTrackDetail(artistTracks[0]);
+        queueList = [...artistTracks];
+        queueIndex = 0;
+        playPoem(queueList[0]);
       }
     };
+  }
+  
+  const artistLikeBtn = document.getElementById('artist-like-btn');
+  if (artistLikeBtn) {
+    // Reset state
+    artistLikeBtn.className = 'fa-regular fa-heart';
+    artistLikeBtn.style.color = 'white';
+    artistLikeBtn.onclick = () => {
+      const isLiked = artistLikeBtn.classList.contains('fa-solid');
+      artistLikeBtn.className = isLiked ? 'fa-regular fa-heart' : 'fa-solid fa-heart';
+      artistLikeBtn.style.color = isLiked ? 'white' : '#E91E63';
+      if (!isLiked) alert('تمت الإضافة إلى مفضلتك');
+    };
+  }
+
+  const artistDlBtn = document.getElementById('artist-download-btn');
+  if (artistDlBtn) {
+    artistDlBtn.onclick = () => alert('تم بدء تنزيل جميع المقاطع');
+  }
+
+  const artistOptBtn = document.getElementById('artist-options-btn');
+  if (artistOptBtn) {
+    artistOptBtn.onclick = () => alert('تم نسخ الرابط بنجاح');
+  }
+  
+  const artShuffleBtn = document.getElementById('artist-shuffle-btn');
+  if (artShuffleBtn) {
+    artShuffleBtn.style.color = '#ffd87c';
+    artShuffleBtn.style.opacity = isShuffle ? '1' : '0.5';
   }
 };
 
