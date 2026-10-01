@@ -2,602 +2,456 @@
 <html lang="ar" dir="rtl">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>صوت الأحزان | أضخم مكتبة صوتيات حسينية</title>
     <meta name="description" content="تطبيق صوت الأحزان - مكتبتك الشاملة للقصائد والصوتيات الحسينية لكبار الرواديد. استمع وشارك واصنع قوائم التشغيل الخاصة بك." />
-    <meta name="keywords" content="صوت الأحزان, قصائد حسينية, رواديد, لطميات, محرم, باسم الكربلائي, عاشوراء, صوتيات شيعية" />
     <meta name="author" content="صوت الأحزان" />
-    
-    <!-- Open Graph / Facebook -->
+    <link rel="canonical" href="https://web.soutalahzan.com/" />
+
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://sout-al-ahzan-web.pages.dev/" />
+    <meta property="og:url" content="https://zafirai121.github.io/sawt-alahzan-app/" />
     <meta property="og:title" content="صوت الأحزان" />
     <meta property="og:description" content="تطبيق صوت الأحزان - مكتبتك الشاملة للقصائد والصوتيات الحسينية." />
-    <meta property="og:image" content="https://sout-al-ahzan-web.pages.dev/favicon.svg" />
-    <link rel="manifest" href="/manifest.json" />
+    <meta property="og:image" content="https://web.soutalahzan.com/favicon-192.png" />
+
+    <link rel="manifest" href="manifest.json" />
     <meta name="theme-color" content="#121212" />
-    <link rel="apple-touch-icon" href="/favicon.svg" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="/src/style.css?v=3" />
-  <script>window.onerror = function(msg, url, lineNo, columnNo, error) { document.body.innerHTML = '<div style="color:red;padding:20px;z-index:9999;position:fixed;top:0;left:0;background:black;width:100%;">' + msg + '<br>' + url + ':' + lineNo + '</div>'; return false; }; window.onunhandledrejection = function(event) { document.body.innerHTML = '<div style="color:red;padding:20px;z-index:9999;position:fixed;top:0;left:0;background:black;width:100%;">Unhandled Rejection: ' + event.reason + '</div>'; };</script></head>
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="صوت الأحزان" />
+    <link rel="icon" type="image/png" href="icon-192.png" />
+    <link rel="apple-touch-icon" href="icon-192.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
   <body>
     <div id="app">
-      <!-- Background Gradient -->
       <div class="top-gradient"></div>
 
-      <!-- Main Content Area -->
       <main class="main-container">
-        
-        <!-- Home View -->
-        <div id="home-view" class="view active">
-          <!-- Header -->
+
+        <!-- Home -->
+        <div id="home-view" class="view">
           <header>
             <h1 class="greeting" id="home-greeting">صوت الأحزان</h1>
-          <img src="https://i.pravatar.cc/150?img=11" alt="Profile" id="header-avatar" style="display:none;width:38px;height:38px;border-radius:50%;cursor:pointer;border:2px solid var(--accent);" onclick="goProfile()" />
-
+            <button class="avatar-btn" onclick="goProfile()" aria-label="حسابي"></button>
           </header>
-
-          <!-- Dynamic Sections Container -->
-          <div id="sections-container">
-            <!-- Sections will be injected here via JS -->
-          </div>
+          <div id="sections-container"></div>
         </div>
 
-        <!-- Search View -->
+        <!-- Search -->
         <div id="search-view" class="view" style="display: none;">
-          <header style="justify-content: flex-start; gap: 16px;">
-            <img src="https://i.pravatar.cc/150?img=11" alt="Profile" style="width: 35px; height: 35px; border-radius: 50%; cursor: pointer;" onclick="goProfile()" />
-            <h1 class="search-header" style="margin: 0; font-size: 24px;">البحث</h1>
+          <header class="page-header">
+            <button class="avatar-btn" onclick="goProfile()" aria-label="حسابي"></button>
+            <h1 class="search-header">البحث</h1>
           </header>
           <div class="search-input-container">
-            <i class="fa-solid fa-magnifying-glass search-icon"></i>
-            <input type="text" id="main-search-input" class="search-input" placeholder="قصائد، رواديد، أو تصنيفات" />
+            <i class="ic search-icon" data-icon="search"></i>
+            <input type="search" id="main-search-input" class="search-input" placeholder="قصائد، رواديد، أو تصنيفات" autocomplete="off" />
           </div>
-          
           <div class="section-title" id="search-section-title" style="margin-top: 24px; font-size: 18px;">تصفح الكل</div>
-          <div id="genre-grid" class="genre-grid">
-            <!-- Categories injected here -->
-          </div>
-          
-          <div id="search-results" class="track-list" style="display: none;">
-            <!-- Search results injected here -->
-          </div>
+          <div id="genre-grid" class="genre-grid"></div>
+          <div id="search-results" style="display: none;"></div>
         </div>
 
-        <!-- Library View -->
+        <!-- Library -->
         <div id="library-view" class="view" style="display: none;">
-          <header style="justify-content: flex-start; gap: 16px;">
-            <img src="https://i.pravatar.cc/150?img=11" alt="Profile" style="width: 35px; height: 35px; border-radius: 50%; cursor: pointer;" onclick="goProfile()" />
-            <h1 class="search-header" style="margin: 0; font-size: 24px; flex: 1;">المكتبة</h1>
-            <button onclick="promptCreatePlaylist()" style="background: transparent; border: none; color: white; font-size: 20px; cursor: pointer;"><i class="fa-solid fa-plus"></i></button>
+          <header class="page-header">
+            <button class="avatar-btn" onclick="goProfile()" aria-label="حسابي"></button>
+            <h1 class="search-header" style="flex: 1;">مكتبتك</h1>
+            <button class="icon-btn" onclick="promptCreatePlaylist()" aria-label="قائمة جديدة"><i class="ic" data-icon="plus"></i></button>
           </header>
-          
           <div class="horizontal-scroller" style="margin: 16px 0;">
             <button class="filter-chip active" data-filter="all">الكل</button>
             <button class="filter-chip" data-filter="downloads">التنزيلات</button>
             <button class="filter-chip" data-filter="playlists">قوائم التشغيل</button>
             <button class="filter-chip" data-filter="artists">الرواديد</button>
           </div>
-
-          <div id="library-content">
-            <!-- Library cards injected here -->
-          </div>
+          <div id="library-content"></div>
         </div>
 
-        <!-- Playlist Detail View -->
-        <div id="playlist-detail-view" class="view" style="display: none; padding-top: 10px;">
-          <header style="justify-content: flex-start; gap: 16px; margin-bottom: 10px;">
-            <button class="control-btn" onclick="document.getElementById('library-view').style.display='block'; document.getElementById('playlist-detail-view').style.display='none';"><i class="fa-solid fa-arrow-right"></i></button>
-            <h1 id="playlist-title" class="search-header" style="margin: 0; font-size: 24px;">قائمة التشغيل</h1>
+        <!-- Playlist / likes / downloads list -->
+        <div id="playlist-detail-view" class="view" style="display: none;">
+          <header class="page-header" style="margin-bottom: 10px;">
+            <button class="icon-btn" onclick="history.back()" aria-label="رجوع"><i class="ic" data-icon="back"></i></button>
+            <h1 id="playlist-title" class="search-header" style="flex: 1;">قائمة التشغيل</h1>
+            <button class="icon-btn" id="playlist-delete-btn" style="display: none;" aria-label="حذف القائمة"><i class="ic" data-icon="trash"></i></button>
           </header>
-          
-          <div id="playlist-subtitle" style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;"></div>
-          
+          <div class="list-actions">
+            <div id="playlist-subtitle" class="muted"></div>
+            <div class="list-actions-buttons">
+              <button class="icon-btn shuffle-toggle" onclick="toggleShuffle()" aria-label="تشغيل عشوائي"><i class="ic" data-icon="shuffle"></i></button>
+              <button class="big-play" id="playlist-play-all" aria-label="تشغيل الكل"><i class="ic" data-icon="play" data-fill></i></button>
+            </div>
+          </div>
           <div class="search-input-container" style="margin-bottom: 20px;">
-            <i class="fa-solid fa-magnifying-glass search-icon"></i>
-            <input type="text" class="search-input" placeholder="ابحث في هذه القائمة" style="background: rgba(255,255,255,0.1); color: white;" />
+            <i class="ic search-icon" data-icon="search" style="color: rgba(255,255,255,0.6);"></i>
+            <input type="search" id="playlist-search" class="search-input dark" placeholder="ابحث في هذه القائمة" autocomplete="off" />
           </div>
+          <div id="playlist-tracks" class="track-list"></div>
+        </div>
 
-          <div id="playlist-tracks" class="track-list">
-            <!-- Tracks injected here -->
+        <!-- Reciter -->
+        <div id="artist-view" class="view hero-view" style="display: none;">
+          <button class="hero-back" onclick="history.back()" aria-label="رجوع"><i class="ic" data-icon="chevron-right"></i></button>
+          <div class="hero-image" style="height: 55vh;">
+            <img id="artist-detail-image" src="" alt="" />
+            <div class="hero-shade"></div>
+            <div class="hero-text">
+              <h1 id="artist-detail-name"></h1>
+              <div id="artist-detail-stats" class="hero-stats"></div>
+            </div>
+          </div>
+          <div class="hero-content">
+            <div class="list-actions">
+              <div class="list-actions-buttons">
+                <button class="pill-btn" id="artist-follow-btn"><i class="ic" data-icon="follow"></i> <span>متابعة</span></button>
+                <button class="icon-btn" id="artist-share-btn" aria-label="مشاركة"><i class="ic" data-icon="share"></i></button>
+              </div>
+              <div class="list-actions-buttons">
+                <button class="icon-btn shuffle-toggle" onclick="toggleShuffle()" aria-label="تشغيل عشوائي"><i class="ic" data-icon="shuffle"></i></button>
+                <button class="big-play" id="artist-play-all" aria-label="تشغيل الكل"><i class="ic" data-icon="play" data-fill></i></button>
+              </div>
+            </div>
+            <h2 class="sub-title">كل القصائد</h2>
+            <div class="track-list" id="artist-tracks"></div>
           </div>
         </div>
 
-        <!-- Artist Detail View -->
-        <div id="artist-view" class="view" style="display: none; padding: 0;">
-          <!-- Top Icons -->
-          <button onclick="goHome()" style="position: absolute; top: 20px; right: 15px; z-index: 10; background: transparent; border: none; color: white; font-size: 24px; padding: 10px; cursor: pointer; text-shadow: 0 2px 4px rgba(0,0,0,0.5);"><i class="fa-solid fa-angle-right"></i></button>
-          <button style="position: absolute; top: 20px; left: 15px; z-index: 10; background: transparent; border: none; color: white; font-size: 20px; padding: 10px; cursor: pointer; text-shadow: 0 2px 4px rgba(0,0,0,0.5);"><i class="fa-solid fa-ellipsis-vertical"></i></button>
-
-          <!-- Header Image Area -->
-          <div style="position: relative; width: 100vw; height: 65vh; margin-top: -10px; margin-left: calc(-50vw + 50%); margin-right: calc(-50vw + 50%);">
-            <img id="artist-detail-image" src="" style="width: 100%; height: 100%; object-fit: cover;" />
-            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(0deg, #121212 0%, rgba(18,18,18,0.8) 40%, rgba(18,18,18,0) 100%);"></div>
-            
-            <div style="position: absolute; bottom: 15px; right: 20px; left: 20px; text-align: right;">
-              <div style="color: #f39c12; font-size: 14px; margin-bottom: 5px; font-weight: bold; text-align: right; direction: rtl;">
-                رادود حسيني معتمد &nbsp;<i class="fa-solid fa-certificate"></i>
-              </div>
-              <h1 id="artist-detail-name" style="font-size: 42px; font-weight: 900; margin: 0; text-shadow: 0 4px 10px rgba(0,0,0,0.5);"></h1>
-              <div id="artist-detail-stats" style="color: rgba(255,255,255,0.7); font-size: 14px; margin-top: 8px;"></div>
+        <!-- Category -->
+        <div id="category-view" class="view hero-view" style="display: none;">
+          <button class="hero-back" onclick="history.back()" aria-label="رجوع"><i class="ic" data-icon="chevron-right"></i></button>
+          <div class="hero-image" style="height: 36vh;">
+            <img id="category-detail-image" src="" alt="" />
+            <div class="hero-shade"></div>
+            <div class="hero-text">
+              <h1 id="category-detail-name"></h1>
+              <div id="category-detail-stats" class="hero-stats"></div>
             </div>
           </div>
-
-          <!-- Content Area -->
-          <div style="padding: 0 20px 80px 20px;">
-            <!-- Actions -->
-            <div style="display: flex; align-items: center; width: 100%; margin-bottom: 25px;">
-              
-              <!-- Right side elements grouped with equal spacing -->
-              <div style="display: flex; align-items: center; gap: 22px;">
-                <i id="artist-like-btn" class="fa-regular fa-heart" style="font-size: 22px; color: white; cursor: pointer;"></i>
-                <i id="artist-download-btn" class="fa-solid fa-arrow-down" style="font-size: 20px; color: white; cursor: pointer;"></i>
-                <i id="artist-options-btn" class="fa-solid fa-ellipsis-vertical" style="font-size: 20px; color: white; cursor: pointer;"></i>
-                <i id="artist-shuffle-btn" class="fa-solid fa-shuffle" style="font-size: 20px; color: #ffd87c; opacity: 0.5; cursor: pointer;" onclick="toggleShuffle()"></i>
+          <div class="hero-content">
+            <div class="list-actions">
+              <div></div>
+              <div class="list-actions-buttons">
+                <button class="icon-btn shuffle-toggle" onclick="toggleShuffle()" aria-label="تشغيل عشوائي"><i class="ic" data-icon="shuffle"></i></button>
+                <button class="big-play" id="category-play-all" aria-label="تشغيل الكل"><i class="ic" data-icon="play" data-fill></i></button>
               </div>
-              
-              <!-- Flexible spacer to push Play button to the far left -->
-              <div style="flex: 1;"></div>
-              
-              <!-- Far Left element -->
-              <button id="artist-play-all" style="width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, #a47a1e, #d3a84c, #ffd87c, #e6be69, #b58f3e, #956d13); color: #121212; border: none; font-size: 20px; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3);"><i class="fa-solid fa-play" style="margin-left: 4px;"></i></button>
             </div>
-
-            <!-- Popular Tracks -->
-            <h2 style="font-size: 18px; margin-bottom: 20px; font-weight: bold; text-align: right;">كل القصائد</h2>
-            <div class="track-list" id="artist-tracks">
-              <!-- Artist tracks injected here -->
-            </div>
+            <div class="track-list" id="category-tracks"></div>
           </div>
         </div>
 
-        <!-- Category View -->
-        <div id="category-view" class="view" style="display: none; padding: 0;">
-          <!-- Top Icons -->
-          <button onclick="document.getElementById('search-view').style.display = 'block'; document.getElementById('category-view').style.display = 'none';" style="position: absolute; top: 20px; right: 15px; z-index: 10; background: transparent; border: none; color: white; font-size: 24px; padding: 10px; cursor: pointer; text-shadow: 0 2px 4px rgba(0,0,0,0.5);"><i class="fa-solid fa-angle-right"></i></button>
-          
-          <!-- Header Image Area -->
-          <div style="position: relative; width: 100vw; height: 40vh; margin-top: -10px; margin-left: calc(-50vw + 50%); margin-right: calc(-50vw + 50%);">
-            <img id="category-detail-image" src="" style="width: 100%; height: 100%; object-fit: cover;" />
-            <div id="category-detail-gradient" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(0deg, #121212 0%, rgba(18,18,18,0.8) 40%, rgba(18,18,18,0) 100%);"></div>
-            
-            <div style="position: absolute; bottom: 15px; right: 20px; left: 20px; text-align: right;">
-              <h1 id="category-detail-name" style="font-size: 42px; font-weight: 900; margin: 0; text-shadow: 0 4px 10px rgba(0,0,0,0.5);"></h1>
-              <div id="category-detail-stats" style="color: rgba(255,255,255,0.7); font-size: 14px; margin-top: 8px;"></div>
+        <!-- Track -->
+        <div id="track-detail-view" class="view overlay-view" style="display: none;">
+          <div id="td-bg-blob" class="td-blob"></div>
+          <button class="hero-back" onclick="history.back()" aria-label="رجوع"><i class="ic" data-icon="chevron-right"></i></button>
+          <div class="td-body">
+            <img id="td-cover" src="" alt="" class="td-cover" />
+            <h1 id="td-title" class="td-title"></h1>
+            <div class="td-artist-row" id="td-artist-row">
+              <img id="td-artist-img" src="" alt="" />
+              <div id="td-artist"></div>
             </div>
-          </div>
+            <div id="td-meta" class="muted td-meta"></div>
 
-          <!-- Content Area -->
-          <div style="padding: 0 20px 80px 20px;">
-            <!-- Actions -->
-            <div style="display: flex; align-items: center; width: 100%; margin-bottom: 25px; margin-top: -20px; z-index: 5; position: relative;">
-              <!-- Right side elements grouped with equal spacing -->
-              <div style="display: flex; align-items: center; gap: 22px;">
-                <i id="category-like-btn" class="fa-regular fa-heart" style="font-size: 22px; color: white; cursor: pointer;"></i>
-                <i id="category-download-btn" class="fa-solid fa-arrow-down" style="font-size: 20px; color: white; cursor: pointer;"></i>
-                <i id="category-options-btn" class="fa-solid fa-ellipsis-vertical" style="font-size: 20px; color: white; cursor: pointer;"></i>
-                <i id="category-shuffle-btn" class="fa-solid fa-shuffle" style="font-size: 20px; color: #ffd87c; opacity: 0.5; cursor: pointer;" onclick="toggleShuffle()"></i>
+            <div class="list-actions" style="margin-bottom: 30px;">
+              <div class="list-actions-buttons">
+                <button class="icon-btn" id="td-like-btn" aria-label="إعجاب"><i class="ic" data-icon="heart"></i></button>
+                <button class="icon-btn" id="td-download-btn" aria-label="تنزيل"><i class="ic" data-icon="download"></i></button>
+                <button class="icon-btn" id="td-options-btn" aria-label="خيارات"><i class="ic" data-icon="more"></i></button>
               </div>
-              
-              <!-- Flexible spacer to push Play button to the far left -->
-              <div style="flex: 1;"></div>
-              
-              <button id="category-play-all" style="width: 55px; height: 55px; border-radius: 50%; background: linear-gradient(135deg, #a47a1e, #d3a84c, #ffd87c, #e6be69, #b58f3e, #956d13); color: white; border: none; font-size: 22px; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3);"><i class="fa-solid fa-play" style="margin-left: 4px;"></i></button>
+              <button class="big-play" id="td-play-btn" aria-label="تشغيل"><i class="ic" data-icon="play" data-fill></i></button>
             </div>
 
-            <div class="track-list" id="category-tracks">
-              <!-- Category tracks injected here -->
-            </div>
-          </div>
-        </div>
-
-        <!-- Track Detail View -->
-        <div id="track-detail-view" class="view" style="display: none; position: fixed; top: 0; left: 0; width: 100%; bottom: 0; overflow-y: auto; background: #121212; z-index: 50; padding-bottom: 100px;">
-          <!-- Blurred Background Blob -->
-          <div id="td-bg-blob" style="position: absolute; top: -20vh; right: -20vw; width: 100vw; height: 100vw; background: #337183; border-radius: 50%; filter: blur(100px); opacity: 0.5; z-index: 0; pointer-events: none;"></div>
-          
-          <button onclick="history.back()" style="position: absolute; top: 20px; right: 15px; z-index: 10; background: transparent; border: none; color: white; font-size: 24px; padding: 10px; cursor: pointer; text-shadow: 0 2px 4px rgba(0,0,0,0.5);"><i class="fa-solid fa-angle-right"></i></button>
-
-          <div style="position: relative; z-index: 1; padding: 20px; display: flex; flex-direction: column; padding-top: 60px;">
-            <img id="td-cover" src="" style="width: 75vw; max-width: 350px; aspect-ratio: 1; border-radius: 12px; object-fit: cover; box-shadow: 0 24px 60px rgba(0,0,0,0.55); margin: 0 auto 40px auto; display: block;" />
-            
-            <h1 id="td-title" style="font-size: 26px; font-weight: 900; margin: 0 0 15px 0; line-height: 1.2; text-shadow: 0 4px 10px rgba(0,0,0,0.5); text-align: right;"></h1>
-            
-            <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start; gap: 10px;">
-              <img id="td-artist-img" src="https://i.pravatar.cc/150?img=11" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" />
-              <div id="td-artist" style="color: white; font-size: 18px; font-weight: 500; cursor: pointer;"></div>
+            <div id="td-lyrics-section" style="display: none; margin-bottom: 30px;">
+              <h2 class="sub-title">الكلمات</h2>
+              <div id="td-lyrics" class="lyrics-text"></div>
             </div>
 
-            <!-- Action Row -->
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 35px;">
-              <div style="display: flex; align-items: center; gap: 20px;">
-                <i id="td-like-btn" class="fa-regular fa-heart" style="font-size: 22px; color: white; cursor: pointer;"></i>
-                <i id="td-download-btn" class="fa-solid fa-arrow-down" style="font-size: 20px; color: white; cursor: pointer;"></i>
-                <i id="td-options-btn" class="fa-solid fa-ellipsis-vertical" style="font-size: 20px; color: white; cursor: pointer;"></i>
-              </div>
-              <div style="display: flex; align-items: center; gap: 20px;">
-                <i id="td-shuffle-btn" class="fa-solid fa-shuffle" style="font-size: 20px; color: #ffd87c; opacity: 0.5; cursor: pointer;" onclick="toggleShuffle()"></i>
-                <button id="td-play-btn" style="width: 55px; height: 55px; border-radius: 50%; background: linear-gradient(135deg, #a47a1e, #d3a84c, #ffd87c, #e6be69, #b58f3e, #956d13); color: white; border: none; font-size: 22px; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer;"><i class="fa-solid fa-play" style="margin-left: 4px;"></i></button>
-              </div>
-            </div>
-
-            <!-- Similar Tracks -->
             <div>
-              <h2 style="font-size: 18px; font-weight: bold; margin-bottom: 20px; text-align: right;">مقاطع مشابهة</h2>
-              <div id="td-similar-list" class="track-list">
-                <!-- Similar tracks injected here -->
-              </div>
+              <h2 class="sub-title">مقاطع مشابهة</h2>
+              <div id="td-similar-list" class="track-list"></div>
             </div>
 
-            <!-- Trending Works -->
             <div style="margin-top: 30px;">
-              <h2 id="td-trending-title" style="font-size: 18px; font-weight: bold; margin-bottom: 20px; text-align: right;">الأعمال الرائجة</h2>
-              <div id="td-trending-list" class="horizontal-scroller" style="padding: 0 0 20px 0;">
-                <!-- Trending tracks injected here -->
-              </div>
+              <h2 id="td-trending-title" class="sub-title">الأعمال الرائجة</h2>
+              <div id="td-trending-list" class="horizontal-scroller"></div>
             </div>
 
-            <!-- Fans Also Like -->
             <div style="margin-top: 30px;">
-              <h2 style="font-size: 18px; font-weight: bold; margin-bottom: 20px; text-align: right;">المعجبون يحبون أيضاً</h2>
-              <div id="td-fans-like-list" style="display: flex; gap: 15px; overflow-x: auto; padding-bottom: 15px; scrollbar-width: none; flex-direction: row-reverse;">
-                <!-- Circular Artist Cards injected here -->
-              </div>
+              <h2 class="sub-title">المعجبون يحبون أيضاً</h2>
+              <div id="td-fans-like-list" class="horizontal-scroller"></div>
             </div>
           </div>
         </div>
 
-        <!-- Profile View -->
-        <div id="profile-view" class="view" style="display: none; padding-top: 20px; padding-bottom: 100px;">
-          <!-- Top Header -->
-          <header style="justify-content: space-between; margin-bottom: 25px;">
-            <h1 style="margin: 0; font-size: 28px; font-weight: 800; background: linear-gradient(90deg, #fff, #aaa); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">حسابي</h1>
-            <button onclick="alert('الإعدادات قريباً...');" style="background: transparent; border: none; color: white; font-size: 24px; cursor: pointer;"><i class="fa-solid fa-gear"></i></button>
+        <!-- Profile -->
+        <div id="profile-view" class="view" style="display: none; padding-top: 20px;">
+          <header>
+            <h1 class="search-header" style="margin: 0;">حسابي</h1>
           </header>
-          
-          <!-- Avatar Section -->
-          <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 35px; position: relative;">
+
+          <div class="profile-head">
             <div style="position: relative;">
-              <img id="profile-avatar-img" src="https://ui-avatars.com/api/?name=Guest&background=282828&color=aaa&size=200" style="width: 130px; height: 130px; border-radius: 50%; border: 4px solid var(--accent); padding: 3px; background: var(--dark-surface); object-fit: cover; box-shadow: 0 10px 30px rgba(233, 30, 99, 0.3);" />
-              <div onclick="openAvatarUpload()" style="position: absolute; bottom: 5px; left: 5px; background: var(--accent); width: 35px; height: 35px; border-radius: 50%; display: flex; justify-content: center; align-items: center; border: 3px solid #121212; cursor: pointer;">
-                <i class="fa-solid fa-camera" style="font-size: 14px; color: white;"></i>
-              </div>
-              <input type="file" id="avatar-file-input" accept="image/*" style="display:none;" onchange="handleAvatarUpload(event)" />
+              <img id="profile-avatar-img" src="icon-192.png" alt="" class="profile-avatar" />
+              <button id="profile-camera-btn" class="profile-camera" onclick="openAvatarUpload()" aria-label="تغيير الصورة"><i class="ic" data-icon="camera"></i></button>
+              <input type="file" id="avatar-file-input" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleAvatarUpload(event)" />
             </div>
-
-              <h2 id="profile-display-name" style="margin: 15px 0 5px 0; font-size: 26px; font-weight: bold;">ضيف</h2>
-              <div id="profile-status-badge" style="color: var(--text-secondary); font-size: 14px; display: flex; align-items: center; gap: 6px;">
-                <i class="fa-solid fa-circle-check" style="color: #4CAF50;"></i> حساب مفعل
-              </div>
-
+            <h2 id="profile-display-name">ضيف</h2>
+            <div id="profile-status-badge" class="muted"></div>
           </div>
 
-          <!-- Stats Grid -->
-          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 35px;">
-            <div style="background: rgba(255,255,255,0.05); padding: 15px 10px; border-radius: 16px; text-align: center; border: 1px solid rgba(255,255,255,0.05);">
-              <i class="fa-solid fa-music" style="color: var(--accent); font-size: 20px; margin-bottom: 8px;"></i>
-              <div style="font-size: 20px; font-weight: bold;">120</div>
-              <div style="color: var(--text-secondary); font-size: 12px;">مقطع مسموع</div>
-            </div>
-            <div style="background: rgba(255,255,255,0.05); padding: 15px 10px; border-radius: 16px; text-align: center; border: 1px solid rgba(255,255,255,0.05);">
-              <i class="fa-solid fa-list-ul" style="color: var(--accent); font-size: 20px; margin-bottom: 8px;"></i>
-              <div style="font-size: 20px; font-weight: bold;">12</div>
-              <div style="color: var(--text-secondary); font-size: 12px;">قائمة تشغيل</div>
-            </div>
-            <div style="background: rgba(255,255,255,0.05); padding: 15px 10px; border-radius: 16px; text-align: center; border: 1px solid rgba(255,255,255,0.05);">
-              <i class="fa-solid fa-microphone-lines" style="color: var(--accent); font-size: 20px; margin-bottom: 8px;"></i>
-              <div style="font-size: 20px; font-weight: bold;">3</div>
-              <div style="color: var(--text-secondary); font-size: 12px;">متابعات</div>
-            </div>
+          <div class="stats-grid">
+            <div class="stat-box"><i class="ic" data-icon="music"></i><div id="stat-listened">0</div><span>مقطع استمعت إليه</span></div>
+            <div class="stat-box"><i class="ic" data-icon="heart"></i><div id="stat-likes">0</div><span>إعجاب</span></div>
+            <div class="stat-box"><i class="ic" data-icon="playlist"></i><div id="stat-playlists">0</div><span>قائمة تشغيل</span></div>
           </div>
 
-          <!-- Info & Settings List -->
-          <div style="background: rgba(255,255,255,0.03); border-radius: 20px; padding: 10px; border: 1px solid rgba(255,255,255,0.05);">
-            <div style="display: flex; align-items: center; padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-              <div style="width: 40px; height: 40px; border-radius: 12px; background: rgba(255,255,255,0.1); display: flex; justify-content: center; align-items: center; margin-left: 15px;">
-                <i class="fa-regular fa-envelope" style="font-size: 18px; color: white;"></i>
-              </div>
-              <div style="flex: 1;">
-                  <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 2px;">البريد الإلكتروني</div>
-                  <div id="profile-email" style="font-size: 15px; font-weight: 500;">غير مسجل</div>
-                </div>
-
-            </div>
-            
-            <div style="display: flex; align-items: center; padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-              <div style="width: 40px; height: 40px; border-radius: 12px; background: rgba(255,255,255,0.1); display: flex; justify-content: center; align-items: center; margin-left: 15px;">
-                <i class="fa-solid fa-phone" style="font-size: 18px; color: white;"></i>
-              </div>
-              <div style="flex: 1;">
-                <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 2px;">رقم الهاتف</div>
-                <div style="font-size: 15px; font-weight: 500;" dir="ltr" style="text-align: right;">+964 770 123 4567</div>
+          <div class="settings-list">
+            <div class="settings-row" id="profile-email-row">
+              <div class="settings-icon"><i class="ic" data-icon="mail"></i></div>
+              <div style="flex: 1; min-width: 0;">
+                <div class="muted" style="font-size: 13px;">البريد الإلكتروني</div>
+                <div id="profile-email" class="ellipsis">غير مسجل</div>
               </div>
             </div>
-
-            <div style="display: flex; align-items: center; padding: 16px; cursor: pointer;">
-              <div style="width: 40px; height: 40px; border-radius: 12px; background: rgba(255,255,255,0.1); display: flex; justify-content: center; align-items: center; margin-left: 15px;">
-                <i class="fa-regular fa-pen-to-square" style="font-size: 18px; color: white;"></i>
-              </div>
-              <div style="flex: 1;">
-                <div style="font-size: 16px; font-weight: 500;">تعديل البيانات</div>
-              </div>
-              <i class="fa-solid fa-angle-left" style="color: var(--text-secondary);"></i>
-            </div>
+            <button class="settings-row" id="profile-edit-name" onclick="editDisplayName()">
+              <div class="settings-icon"><i class="ic" data-icon="edit"></i></div>
+              <div style="flex: 1;">تعديل الاسم</div>
+              <i class="ic muted" data-icon="chevron-left"></i>
+            </button>
+            <button class="settings-row" onclick="openSleepTimerSheet()">
+              <div class="settings-icon"><i class="ic" data-icon="timer"></i></div>
+              <div style="flex: 1;">مؤقت النوم</div>
+              <span id="sleep-timer-label" class="muted" style="font-size: 13px;"></span>
+            </button>
+            <a class="settings-row" href="https://web.soutalahzan.com/privacy-policy" target="_blank" rel="noopener">
+              <div class="settings-icon"><i class="ic" data-icon="check"></i></div>
+              <div style="flex: 1;">سياسة الخصوصية</div>
+              <i class="ic muted" data-icon="chevron-left"></i>
+            </a>
           </div>
 
-          <!-- Bottom Actions -->
-          <div style="margin-top: 25px; display:flex; flex-direction:column; gap:12px;">
-            <div id="profile-guest-section" style="display:none;">
-              <button onclick="openAuthModal()" style="width: 100%; padding: 18px; background: linear-gradient(135deg,#E8B86D,#d4954a); border: none; color: white; border-radius: 16px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px; font-family: inherit; margin-bottom: 12px;">
-                <i class="fa-solid fa-user"></i> الدخول بالبريد الإلكتروني
-              </button>
-              <button onclick="signInWithGoogle()" style="width: 100%; padding: 18px; background: white; border: none; color: #333; border-radius: 16px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px; font-family: inherit;">
-                <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" style="width: 20px; height: 20px;" />
+          <div style="margin-top: 25px; display: flex; flex-direction: column; gap: 12px;">
+            <div id="profile-guest-section" style="display: none;">
+              <button class="primary-btn" onclick="openAuthModal()" style="margin-bottom: 12px;"><i class="ic" data-icon="user"></i> الدخول بالبريد الإلكتروني</button>
+              <button class="google-btn" onclick="signInWithGoogle()">
+                <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="" width="20" height="20" />
                 المتابعة باستخدام جوجل
               </button>
             </div>
-            <div id="profile-logout-section">
-              <button onclick="doLogout()" style="width: 100%; padding: 18px; background: rgba(255, 69, 58, 0.1); border: 1px solid rgba(255, 69, 58, 0.3); color: #FF453A; border-radius: 16px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px; font-family: inherit;">
-                <i class="fa-solid fa-arrow-right-from-bracket"></i> تسجيل الخروج
-              </button>
+            <div id="profile-logout-section" style="display: none;">
+              <button class="danger-btn" onclick="doLogout()"><i class="ic" data-icon="logout"></i> تسجيل الخروج</button>
             </div>
           </div>
-
         </div>
-
       </main>
 
-      <!-- Full Screen Player View -->
+      <!-- Full screen player -->
       <div id="full-player-view" class="full-player">
-          <div id="fp-bg" class="fp-bg"></div>
-          <div style="padding: 5vh 5vw 2vh 5vw; flex: 1; display: flex; flex-direction: column; overflow-y: auto; z-index: 1;">
-            <!-- Top header -->
-            <header style="justify-content: space-between; margin-bottom: 3vh;">
-              <button class="control-btn" onclick="closeFullPlayer()"><i class="fa-solid fa-chevron-down" style="font-size: 20px;"></i></button>
-              <div style="font-size: 14px; font-weight: bold; color: rgba(255,255,255,0.75);">يتم التشغيل الآن</div>
-              <button class="control-btn" onclick="openCurrentTrackOptions(event)"><i class="fa-solid fa-ellipsis-vertical" style="font-size: 20px;"></i></button>
-            </header>
-            
-            <img id="fp-cover" src="" style="width: 80vw; max-width: 75vmin; margin-left: auto; margin-right: auto; aspect-ratio: 1; border-radius: 12px; margin-bottom: 4vh; object-fit: cover; box-shadow: 0 10px 30px rgba(0,0,0,0.5);" />
-            
-            <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 2vh;">
-              <div style="overflow: hidden; padding-left: 15px; flex: 1;">
-                <h2 id="fp-title" style="margin: 0 0 5px 0; font-size: 24px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></h2>
-                <div id="fp-artist" style="color: rgba(255,255,255,0.5); font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
-              </div>
-              <i id="fp-like-btn" class="fa-regular fa-heart" style="font-size: 26px; cursor: pointer; transition: all 0.2s; flex-shrink: 0; padding: 8px;" onclick="toggleLike()"></i>
+        <div id="fp-bg" class="fp-bg"></div>
+        <div class="fp-scroll">
+          <header style="justify-content: space-between; margin-bottom: 3vh;">
+            <button class="icon-btn" onclick="history.back()" aria-label="إغلاق"><i class="ic" data-icon="chevron-down"></i></button>
+            <div class="fp-heading">
+              <div>يتم التشغيل الآن</div>
+              <div id="fp-sleep-badge" class="fp-sleep-badge" style="display: none;"><i class="ic" data-icon="timer"></i> <span></span></div>
             </div>
-            
-            <!-- Progress Bar -->
-            <div style="width: 100%; margin-bottom: 4vh;">
-              <input type="range" id="fp-progress" min="0" max="100" step="any" value="0" style="width: 100%;" />
-              <div style="display: flex; justify-content: space-between; font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 10px;">
-                <span id="fp-current-time">0:00</span>
-                <span id="fp-total-time">0:00</span>
-              </div>
-            </div>
-            
-            <!-- Controls -->
-            <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 5vh;">
-              <i id="fp-shuffle-btn" class="fa-solid fa-shuffle control-icon" style="font-size: 20px; color: #ffd87c; opacity: 0.5; cursor: pointer; transition: color 0.2s;" onclick="toggleShuffle()"></i>
-              <i class="fa-solid fa-backward-step" style="font-size: max(28px, 3.5vh); cursor: pointer;" onclick="playPrev()"></i>
-              <button id="fp-play-btn" class="fp-play-circle" onclick="togglePlay(event)">
-                <i class="fa-solid fa-play" style="margin-left: 4px;"></i>
-              </button>
-              <i class="fa-solid fa-forward-step" style="font-size: max(28px, 3.5vh); cursor: pointer;" onclick="playNext()"></i>
-              <i id="fp-repeat-btn" class="fa-solid fa-repeat control-icon" style="font-size: 20px; color: rgba(255,255,255,0.5); cursor: pointer; transition: color 0.2s;" onclick="toggleRepeat()"></i>
-            </div>
+            <button class="icon-btn" onclick="openCurrentTrackOptions(event)" aria-label="خيارات"><i class="ic" data-icon="more"></i></button>
+          </header>
 
-            <!-- Lyrics Box -->
-            <div id="fp-lyrics-box" onclick="openLyricsView()" style="width:100%;background:rgba(255,255,255,0.07);border-radius:16px;padding:20px;margin-bottom:20px;cursor:pointer;">
-              <div style="font-size:15px;font-weight:bold;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
-                <span>الكلمات</span>
-                <i class="fa-solid fa-expand" style="color:rgba(255,255,255,0.5);"></i>
-              </div>
-              <div id="fp-lyrics-preview" style="font-size:18px;color:white;line-height:1.7;font-weight:bold;white-space:pre-wrap;overflow:hidden;max-height:90px;-webkit-mask-image:linear-gradient(to bottom,black 40%,transparent 100%);mask-image:linear-gradient(to bottom,black 40%,transparent 100%);">الكلمات غير متوفرة</div>
+          <img id="fp-cover" src="" alt="" class="fp-cover" />
+
+          <div class="fp-title-row">
+            <div style="overflow: hidden; flex: 1; padding-left: 15px;">
+              <h2 id="fp-title" class="ellipsis"></h2>
+              <div id="fp-artist" class="ellipsis fp-artist"></div>
             </div>
+            <button class="icon-btn fp-like" id="fp-like-btn" aria-label="إعجاب"><i class="ic" data-icon="heart"></i></button>
+          </div>
 
-            <!-- Up Next -->
-            <div style="margin-top: 10px;">
-              <h3 style="margin-bottom: 15px; font-size: 18px;">مقاطع مشابهة</h3>
-              <div class="horizontal-scroller" id="fp-similar-list" style="margin-bottom: 30px;">
-                <!-- Similar tracks injected here -->
-              </div>
+          <div style="width: 100%; margin-bottom: 4vh;">
+            <input type="range" id="fp-progress" min="0" max="100" step="any" value="0" style="width: 100%;" aria-label="موضع التشغيل" />
+            <div class="fp-times">
+              <span id="fp-current-time">0:00</span>
+              <span id="fp-total-time">0:00</span>
             </div>
+          </div>
 
-            <div style="width: 100%; background: rgba(255,255,255,0.05); border-radius: 16px; padding: 20px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <div style="font-size: 18px; font-weight: bold;">التالي في قائمة الانتظار</div>
-                <button onclick="alert('راديو الأحزان قريباً...');" style="background: rgba(255,255,255,0.1); border: none; color: white; padding: 6px 16px; border-radius: 20px; font-size: 13px;">شغل الراديو</button>
-              </div>
-              
-              <div id="fp-queue-list" class="track-list" style="margin-bottom: 20px;">
-                <!-- Queue tracks injected here -->
-              </div>
+          <div class="fp-controls">
+            <button class="icon-btn shuffle-toggle" onclick="toggleShuffle()" aria-label="تشغيل عشوائي"><i class="ic" data-icon="shuffle"></i></button>
+            <button class="icon-btn fp-skip" onclick="playPrev()" aria-label="السابق"><i class="ic" data-icon="prev" data-fill></i></button>
+            <button id="fp-play-btn" class="fp-play-circle" onclick="togglePlay(event)" aria-label="تشغيل"><i class="ic" data-icon="play" data-fill></i></button>
+            <button class="icon-btn fp-skip" onclick="playNext()" aria-label="التالي"><i class="ic" data-icon="next" data-fill></i></button>
+            <button class="icon-btn" id="fp-repeat-btn" onclick="toggleRepeat()" aria-label="تكرار"><i class="ic" data-icon="repeat"></i></button>
+          </div>
 
-              <!-- Auto-recommendations Toggle -->
-              <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
-                <span style="font-size: 16px; font-weight: bold;">التشغيل التلقائي</span>
-                <div id="fp-autoplay-switch" style="width: 44px; height: 24px; background: rgba(255,255,255,0.2); border-radius: 12px; position: relative; cursor: pointer; transition: background 0.3s;" onclick="toggleAutoplay()">
-                  <div class="switch-knob" style="width: 20px; height: 20px; background: white; border-radius: 50%; position: absolute; right: 22px; top: 2px; transition: right 0.3s;"></div>
-                </div>
-              </div>
+          <div id="fp-lyrics-box" class="fp-card" onclick="openLyricsView()" style="cursor: pointer;">
+            <div class="fp-card-head"><span>الكلمات</span><i class="ic muted" data-icon="expand"></i></div>
+            <div id="fp-lyrics-preview" class="fp-lyrics-preview"></div>
+          </div>
+
+          <h3 style="margin: 10px 0 15px; font-size: 18px;">مقاطع مشابهة</h3>
+          <div class="horizontal-scroller" id="fp-similar-list" style="margin-bottom: 30px;"></div>
+
+          <div class="fp-card">
+            <div class="fp-card-head">
+              <span style="font-size: 18px;">التالي في قائمة الانتظار</span>
+              <button class="chip-btn" onclick="startRadio()"><i class="ic" data-icon="radio"></i> شغّل الراديو</button>
+            </div>
+            <div id="fp-queue-list" class="track-list" style="margin-bottom: 20px;"></div>
+            <div class="fp-card-head" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; margin: 0;">
+              <span>التشغيل التلقائي</span>
+              <div id="fp-autoplay-switch" class="switch" onclick="toggleAutoplay()" role="switch" aria-label="التشغيل التلقائي"><div class="switch-knob"></div></div>
             </div>
           </div>
         </div>
-
+      </div>
 
       <nav class="bottom-nav">
-        <a href="#" class="nav-item active" onclick="goHome()">
-          <i class="fa-solid fa-house"></i>
-          <span>الرئيسية</span>
-        </a>
-        <a href="#" class="nav-item" onclick="goSearch()">
-          <i class="fa-solid fa-magnifying-glass"></i>
-          <span>البحث</span>
-        </a>
-        <a href="#" class="nav-item" onclick="goLibrary()">
-          <i class="fa-solid fa-lines-leaning"></i>
-          <span>مكتبتك</span>
-        </a>
-        <a href="#" class="nav-item" onclick="goProfile()">
-          <i class="fa-regular fa-user"></i>
-          <span>حسابي</span>
-        </a>
+        <a href="#" class="nav-item active" onclick="goHome(); return false;"><i class="ic" data-icon="home"></i><span>الرئيسية</span></a>
+        <a href="#" class="nav-item" onclick="goSearch(); return false;"><i class="ic" data-icon="search"></i><span>البحث</span></a>
+        <a href="#" class="nav-item" onclick="goLibrary(); return false;"><i class="ic" data-icon="library"></i><span>مكتبتك</span></a>
+        <a href="#" class="nav-item" onclick="goProfile(); return false;"><i class="ic" data-icon="user"></i><span>حسابي</span></a>
       </nav>
 
-      <!-- Mini Player -->
+      <!-- Mini player -->
       <div id="mini-player" class="mini-player" style="display: none;">
+        <div class="mp-progress-line"><div id="mp-progress-fill"></div></div>
         <div class="player-info">
-          <img id="mp-cover" src="" alt="Cover" class="player-cover" />
+          <img id="mp-cover" src="" alt="" class="player-cover" />
           <div class="player-text">
             <span id="mp-title" class="player-title"></span>
             <span id="mp-reciter" class="player-reciter"></span>
           </div>
         </div>
         <div class="player-controls">
-          <button class="control-btn" style="font-size: 16px;" onclick="toggleLike(); event.stopPropagation();"><i class="fa-solid fa-heart"></i></button>
-          <div class="mp-progress-ring" id="mp-progress-ring">
-            <button id="mp-play-btn" class="control-btn play-btn" onclick="togglePlay(event)"><i class="fa-solid fa-play" style="margin-left: 3px;"></i></button>
-          </div>
+          <button class="icon-btn" id="mp-like-btn" aria-label="إعجاب"><i class="ic" data-icon="heart"></i></button>
+          <button id="mp-play-btn" class="mp-play" onclick="togglePlay(event)" aria-label="تشغيل"><i class="ic" data-icon="play" data-fill></i></button>
         </div>
-      </div>
-    </div>
-    
-    <!-- Playlist Modal -->
-    <div id="playlist-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 9999; justify-content: center; align-items: center;">
-      <div style="background: #1e1e1e; padding: 20px; border-radius: 12px; width: 80%; max-width: 400px;">
-        <h2 style="margin-top: 0; font-size: 18px; border-bottom: 1px solid #333; padding-bottom: 10px;">إضافة إلى قائمة تشغيل</h2>
-        <div id="playlist-modal-list" style="max-height: 50vh; overflow-y: auto; margin-bottom: 15px;">
-          <!-- Playlists injected here -->
-        </div>
-        <button onclick="promptCreatePlaylist()" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.1); border: none; color: white; border-radius: 8px; cursor: pointer; font-family: inherit; font-weight: bold; margin-bottom: 10px;">
-          <i class="fa-solid fa-plus"></i> إنشاء قائمة جديدة
-        </button>
-        <button onclick="document.getElementById('playlist-modal').style.display='none'" style="width: 100%; padding: 12px; background: transparent; border: 1px solid #555; color: white; border-radius: 8px; cursor: pointer; font-family: inherit;">
-          إلغاء
-        </button>
       </div>
     </div>
 
-    <!-- Custom Create Playlist Prompt Modal -->
-    <div id="create-playlist-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 10000; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
-      <div style="background: #282828; padding: 25px; border-radius: 16px; width: 85%; max-width: 400px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1);">
-        <h2 style="margin: 0 0 10px 0; font-size: 22px; color: white; font-weight: bold;">إنشاء قائمة تشغيل</h2>
-        <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">أدخل اسماً لقائمة التشغيل الجديدة الخاصة بك.</p>
-        <input type="text" id="new-playlist-name" placeholder="مثال: قصائد للسيارة" style="width: 100%; padding: 15px; border-radius: 8px; border: none; background: rgba(255,255,255,0.1); color: white; font-size: 16px; margin-bottom: 20px; box-sizing: border-box; outline: none; font-family: inherit;" />
+    <!-- Add to playlist -->
+    <div id="playlist-modal" class="modal" style="display: none;">
+      <div class="modal-card">
+        <h2 class="modal-title">إضافة إلى قائمة تشغيل</h2>
+        <div id="playlist-modal-list" style="max-height: 50vh; overflow-y: auto; margin-bottom: 15px;"></div>
+        <button class="secondary-btn" onclick="promptCreatePlaylist()" style="margin-bottom: 10px;"><i class="ic" data-icon="plus"></i> إنشاء قائمة جديدة</button>
+        <button class="outline-btn" onclick="history.back()">إلغاء</button>
+      </div>
+    </div>
+
+    <!-- Text prompt (new playlist, display name) -->
+    <div id="prompt-modal" class="modal" style="display: none;">
+      <div class="modal-card" style="text-align: center;">
+        <h2 id="prompt-title" class="modal-title" style="border: none;"></h2>
+        <p id="prompt-hint" class="muted" style="font-size: 14px; margin-bottom: 20px;"></p>
+        <input type="text" id="prompt-input" class="text-input" maxlength="100" />
         <div style="display: flex; gap: 15px;">
-          <button onclick="document.getElementById('create-playlist-modal').style.display='none'" style="flex: 1; padding: 14px; background: transparent; border: 1px solid #555; color: white; border-radius: 30px; cursor: pointer; font-family: inherit; font-weight: bold; font-size: 16px;">إلغاء</button>
-          <button onclick="submitCreatePlaylist()" style="flex: 1; padding: 14px; background: var(--accent); border: none; color: white; border-radius: 30px; cursor: pointer; font-family: inherit; font-weight: bold; font-size: 16px;">إنشاء</button>
+          <button class="outline-btn" onclick="history.back()">إلغاء</button>
+          <button class="primary-btn" id="prompt-submit">حفظ</button>
         </div>
       </div>
     </div>
 
-    <!-- Track Options Modal -->
-    <div id="track-options-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 10000; justify-content: center; align-items: flex-end; backdrop-filter: blur(2px); opacity: 0; transition: opacity 0.3s ease;" onclick="closeTrackOptions(event)">
-      <div id="track-options-sheet" style="background: #282828; width: 100%; border-radius: 24px 24px 0 0; padding: 25px 20px 40px 20px; box-sizing: border-box; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);" onclick="event.stopPropagation()">
-        <!-- Handle for dragging (visual only) -->
-        <div style="width: 40px; height: 5px; background: #555; border-radius: 5px; margin: 0 auto 20px auto;"></div>
-        
-        <div style="display: flex; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 20px; margin-bottom: 10px;">
-          <img id="track-options-img" src="" style="width: 55px; height: 55px; border-radius: 8px; object-fit: cover; margin-left: 15px;" />
+    <!-- Track options -->
+    <div id="track-options-modal" class="sheet-backdrop" style="display: none;" onclick="history.back()">
+      <div id="track-options-sheet" class="sheet" onclick="event.stopPropagation()">
+        <div class="sheet-handle"></div>
+        <div class="sheet-head">
+          <img id="track-options-img" src="" alt="" />
           <div style="flex: 1; overflow: hidden;">
-            <div id="track-options-title" style="font-size: 18px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px;"></div>
-            <div id="track-options-artist" style="color: var(--text-secondary); font-size: 14px;"></div>
+            <div id="track-options-title" class="ellipsis" style="font-size: 18px; font-weight: bold; margin-bottom: 4px;"></div>
+            <div id="track-options-artist" class="muted" style="font-size: 14px;"></div>
           </div>
         </div>
-
-        <!-- Options -->
-        <div class="track-option-item" id="opt-like" style="display: flex; align-items: center; padding: 16px 10px; cursor: pointer;">
-          <i class="fa-regular fa-heart" id="opt-like-icon" style="font-size: 20px; width: 35px; color: white;"></i>
-          <span id="opt-like-text" style="font-size: 16px;">إضافة إلى المفضلة</span>
-        </div>
-        <div class="track-option-item" id="opt-playlist" style="display: flex; align-items: center; padding: 16px 10px; cursor: pointer;">
-          <i class="fa-solid fa-list" style="font-size: 20px; width: 35px; color: white;"></i>
-          <span style="font-size: 16px;">إضافة إلى قائمة تشغيل</span>
-        </div>
-        <div class="track-option-item" id="opt-download" style="display: flex; align-items: center; padding: 16px 10px; cursor: pointer;">
-          <i class="fa-solid fa-download" id="opt-download-icon" style="font-size: 20px; width: 35px; color: white;"></i>
-          <span id="opt-download-text" style="font-size: 16px;">تنزيل للاستماع بدون إنترنت</span>
-        </div>
-        <div class="track-option-item" id="opt-artist" style="display: flex; align-items: center; padding: 16px 10px; cursor: pointer;">
-          <i class="fa-regular fa-user" style="font-size: 20px; width: 35px; color: white;"></i>
-          <span style="font-size: 16px;">عرض صفحة الرادود</span>
-        </div>
-        <div class="track-option-item" id="opt-share" style="display: flex; align-items: center; padding: 16px 10px; cursor: pointer;">
-          <i class="fa-solid fa-share-nodes" style="font-size: 20px; width: 35px; color: white;"></i>
-          <span style="font-size: 16px;">مشاركة</span>
-        </div>
+        <button class="sheet-item" id="opt-like"><i class="ic" data-icon="heart" id="opt-like-icon"></i><span id="opt-like-text">إضافة إلى المفضلة</span></button>
+        <button class="sheet-item" id="opt-queue"><i class="ic" data-icon="list-plus"></i><span>التشغيل بعد الحالي</span></button>
+        <button class="sheet-item" id="opt-playlist"><i class="ic" data-icon="playlist"></i><span>إضافة إلى قائمة تشغيل</span></button>
+        <button class="sheet-item" id="opt-remove" style="display: none;"><i class="ic" data-icon="trash"></i><span>إزالة من هذه القائمة</span></button>
+        <button class="sheet-item" id="opt-download"><i class="ic" data-icon="download" id="opt-download-icon"></i><span id="opt-download-text">تنزيل للاستماع بدون إنترنت</span></button>
+        <button class="sheet-item" id="opt-artist"><i class="ic" data-icon="mic"></i><span>عرض صفحة الرادود</span></button>
+        <button class="sheet-item" id="opt-share"><i class="ic" data-icon="share"></i><span>مشاركة</span></button>
       </div>
     </div>
 
-    <!-- Lyrics Full View -->
-    <div id="lyrics-view" style="display:none;position:fixed;top:0;left:0;width:100%;bottom:0;overflow-y:auto;background:#121212;z-index:300;padding:0 0 120px 0;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.1,0.9,0.2,1);">
-      <div style="position:sticky;top:0;background:rgba(18,18,18,0.9);backdrop-filter:blur(12px);padding:16px 20px;display:flex;justify-content:space-between;align-items:center;z-index:1;border-bottom:1px solid rgba(255,255,255,0.05);">
-        <button onclick="closeLyricsView()" style="background:transparent;border:none;color:white;font-size:22px;cursor:pointer;padding:8px;"><i class="fa-solid fa-chevron-down"></i></button>
-        <div style="text-align:center;">
-          <div id="ly-title" style="font-size:16px;font-weight:bold;color:white;"></div>
-          <div id="ly-artist" style="font-size:13px;color:rgba(255,255,255,0.5);"></div>
-        </div>
-        <div style="width:38px;"></div>
+    <!-- Sleep timer -->
+    <div id="sleep-modal" class="sheet-backdrop" style="display: none;" onclick="history.back()">
+      <div class="sheet" onclick="event.stopPropagation()">
+        <div class="sheet-handle"></div>
+        <h2 class="modal-title" style="border: none; text-align: center;">مؤقت النوم</h2>
+        <button class="sheet-item" data-sleep="15"><i class="ic" data-icon="timer"></i><span>15 دقيقة</span></button>
+        <button class="sheet-item" data-sleep="30"><i class="ic" data-icon="timer"></i><span>30 دقيقة</span></button>
+        <button class="sheet-item" data-sleep="60"><i class="ic" data-icon="timer"></i><span>ساعة</span></button>
+        <button class="sheet-item" data-sleep="end"><i class="ic" data-icon="disc"></i><span>نهاية المقطع الحالي</span></button>
+        <button class="sheet-item" data-sleep="off"><i class="ic" data-icon="close"></i><span>إيقاف المؤقت</span></button>
       </div>
-      <div id="lyrics-content" style="padding:30px 25px;font-size:26px;font-weight:800;line-height:1.8;color:white;white-space:pre-wrap;direction:rtl;text-align:right;">الكلمات غير متوفرة</div>
     </div>
 
-    <script src="src/supabaseClient.js" type="module"></script>
-    <script src="src/main.js" type="module"></script>
-
-    <!-- Auth Modal -->
-    <div id="auth-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);flex-direction:column;justify-content:flex-end;">
-      <div id="auth-sheet" style="background:#181818;border-radius:28px 28px 0 0;padding:36px 24px 48px;transform:translateY(100%);transition:transform 0.4s cubic-bezier(0.1,0.9,0.2,1);max-height:92vh;overflow-y:auto;">
-        <div style="text-align:center;margin-bottom:28px;">
-          <div style="font-size:44px;margin-bottom:10px;">🎵</div>
-          <h2 id="auth-title" style="margin:0;font-size:22px;font-weight:800;background:linear-gradient(135deg,#E8B86D,#ff8c42);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">أهلاً بك في صوت الأحزان</h2>
-          <p style="margin:8px 0 0;color:rgba(255,255,255,0.45);font-size:13px;">سجّل دخولك لحفظ إعجاباتك عبر أجهزتك</p>
+    <!-- Lyrics -->
+    <div id="lyrics-view" class="lyrics-view" style="display: none;">
+      <div class="lyrics-head">
+        <button class="icon-btn" onclick="history.back()" aria-label="إغلاق"><i class="ic" data-icon="chevron-down"></i></button>
+        <div style="text-align: center; min-width: 0;">
+          <div id="ly-title" class="ellipsis" style="font-size: 16px; font-weight: bold;"></div>
+          <div id="ly-artist" class="muted" style="font-size: 13px;"></div>
         </div>
-        <div id="auth-message" style="display:none;padding:12px 16px;border-radius:12px;margin-bottom:16px;font-size:14px;text-align:center;"></div>
-        
-        <button onclick="signInWithGoogle()" type="button" style="width:100%;padding:16px;background:white;border:none;color:#333;font-size:16px;font-weight:bold;border-radius:16px;cursor:pointer;font-family:inherit;margin-bottom:16px;display:flex;justify-content:center;align-items:center;gap:12px;">
-          <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" style="width:22px;height:22px;" />
+        <div style="width: 38px;"></div>
+      </div>
+      <div id="lyrics-content" class="lyrics-content"></div>
+    </div>
+
+    <!-- Sign in -->
+    <div id="auth-modal" class="auth-modal" style="display: none;">
+      <div id="auth-sheet" class="auth-sheet">
+        <div style="text-align: center; margin-bottom: 28px;">
+          <img src="icon-192.png" alt="" width="64" height="64" style="border-radius: 16px; margin-bottom: 10px;" />
+          <h2 id="auth-title" class="auth-title">أهلاً بك في صوت الأحزان</h2>
+          <p class="muted" style="margin-top: 8px; font-size: 13px;">سجّل دخولك لحفظ إعجاباتك وقوائمك عبر أجهزتك</p>
+        </div>
+        <div id="auth-message" style="display: none;"></div>
+
+        <button class="google-btn" onclick="signInWithGoogle()" type="button" style="margin-bottom: 16px;">
+          <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="" width="22" height="22" />
           المتابعة باستخدام جوجل
         </button>
-        
-        <div style="display:flex;align-items:center;margin-bottom:16px;color:rgba(255,255,255,0.3);">
-          <hr style="flex:1;border:none;border-top:1px solid rgba(255,255,255,0.1);">
-          <span style="padding:0 10px;font-size:13px;">أو بالبريد الإلكتروني</span>
-          <hr style="flex:1;border:none;border-top:1px solid rgba(255,255,255,0.1);">
+
+        <div class="or-line"><hr /><span>أو بالبريد الإلكتروني</span><hr /></div>
+
+        <div id="auth-name-field" style="display: none; margin-bottom: 14px;">
+          <label class="field-label" for="auth-name">الاسم</label>
+          <input id="auth-name" type="text" class="text-input" placeholder="اسمك الكريم" autocomplete="name" maxlength="100" />
         </div>
-        <div id="auth-name-field" style="display:none;margin-bottom:14px;">
-          <label style="display:block;color:rgba(255,255,255,0.6);font-size:13px;margin-bottom:6px;">الاسم</label>
-          <input id="auth-name" type="text" placeholder="اسمك الكريم" autocomplete="name" style="width:100%;background:rgba(255,255,255,0.07);border:1.5px solid rgba(255,255,255,0.1);color:white;padding:14px 16px;border-radius:14px;font-size:16px;font-family:inherit;box-sizing:border-box;" />
+        <div style="margin-bottom: 14px;">
+          <label class="field-label" for="auth-email">البريد الإلكتروني</label>
+          <input id="auth-email" type="email" class="text-input" placeholder="example@email.com" autocomplete="email" dir="ltr" />
         </div>
-        <div style="margin-bottom:14px;">
-          <label style="display:block;color:rgba(255,255,255,0.6);font-size:13px;margin-bottom:6px;">البريد الإلكتروني</label>
-          <input id="auth-email" type="email" placeholder="example@email.com" autocomplete="email" dir="ltr" style="width:100%;background:rgba(255,255,255,0.07);border:1.5px solid rgba(255,255,255,0.1);color:white;padding:14px 16px;border-radius:14px;font-size:16px;font-family:inherit;box-sizing:border-box;" />
-        </div>
-        <div style="margin-bottom:22px;">
-          <label style="display:block;color:rgba(255,255,255,0.6);font-size:13px;margin-bottom:6px;">كلمة المرور</label>
-          <div style="position:relative;display:flex;align-items:center;">
-            <input id="auth-password" type="password" placeholder="••••••••" autocomplete="current-password" dir="ltr"
-              style="width:100%;background:rgba(255,255,255,0.07);border:1.5px solid rgba(255,255,255,0.1);color:white;padding:14px 16px 14px 48px;border-radius:14px;font-size:18px;letter-spacing:2px;font-family:inherit;box-sizing:border-box;outline:none;transition:border-color 0.2s;" />
-            <button type="button" onclick="toggleAuthPasswordVisibility()"
-              style="position:absolute;left:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.35);cursor:pointer;font-size:18px;padding:6px;display:flex;align-items:center;justify-content:center;transition:color 0.2s;">
-              <i id="auth-eye-icon" class="fa-regular fa-eye"></i>
-            </button>
+        <div style="margin-bottom: 22px;">
+          <label class="field-label" for="auth-password">كلمة المرور</label>
+          <div style="position: relative;">
+            <input id="auth-password" type="password" class="text-input" placeholder="••••••••" autocomplete="current-password" dir="ltr" style="padding-left: 48px;" />
+            <button type="button" class="eye-btn" onclick="toggleAuthPasswordVisibility()" aria-label="إظهار كلمة المرور"><i id="auth-eye-icon" class="ic" data-icon="eye"></i></button>
           </div>
         </div>
 
-        <button id="auth-submit-btn" type="button" onclick="submitAuth()" style="width:100%;padding:16px;background:linear-gradient(135deg,#E8B86D,#d4954a);border:none;color:white;font-size:17px;font-weight:bold;border-radius:16px;cursor:pointer;font-family:inherit;margin-bottom:14px;display:flex;justify-content:center;align-items:center;gap:8px;">
+        <button id="auth-submit-btn" type="button" class="primary-btn" onclick="submitAuth()" style="margin-bottom: 14px;">
           <span id="auth-btn-text">دخول</span>
-          <i id="auth-btn-spinner" class="fa-solid fa-spinner fa-spin" style="display:none;"></i>
+          <i id="auth-btn-spinner" class="ic" data-icon="spinner" style="display: none;"></i>
         </button>
-        <div style="text-align:center;color:rgba(255,255,255,0.5);font-size:14px;margin-bottom:14px;">
+        <div class="muted" style="text-align: center; font-size: 14px; margin-bottom: 14px;">
           <span id="auth-toggle-text">ليس لديك حساب؟</span>
-          <button type="button" onclick="toggleAuthMode()" id="auth-toggle-btn" style="background:none;border:none;color:#E8B86D;cursor:pointer;font-size:14px;font-family:inherit;font-weight:bold;padding:0 4px;">إنشاء حساب</button>
+          <button type="button" onclick="toggleAuthMode()" id="auth-toggle-btn" class="link-btn">إنشاء حساب</button>
         </div>
-        <button type="button" onclick="skipAuth()" style="width:100%;padding:14px;background:transparent;border:1.5px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.45);font-size:15px;border-radius:16px;cursor:pointer;font-family:inherit;">متابعة بدون تسجيل</button>
+        <button type="button" class="outline-btn" onclick="skipAuth()">متابعة بدون تسجيل</button>
       </div>
     </div>
 
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script type="module" src="/src/main.js"></script>
   </body>
 </html>

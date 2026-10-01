@@ -1,2129 +1,1630 @@
 import { supabase } from './supabaseClient.js';
-import Hls from 'hls.js';
+import { icon, setIcon, startIcons } from './icons.js';
 
-// ─── HLS Player ───────────────────────────────────────────────
-let hlsInstance = null;
+// ═══ Constants ═══════════════════════════════════════════════════════════════
+const SITE_URL = 'https://web.soutalahzan.com';
+const APP_URL = new URL(import.meta.env.BASE_URL, location.origin).href;
+const FALLBACK_COVER = `${import.meta.env.BASE_URL}icon-512.png`;
+const AUDIO_CACHE = 'sawt-alahzan-audio-cache-v1';
+const PAGE_SIZE = 1000; // Supabase returns at most 1000 rows per request
+const TRACK_COLUMNS = 'id,title,file_name,reciter_name,reciter_id,image_url,file_url,category,lyrics,duration,listen_count,created_at';
 
-function loadAndPlay(url) {
-  // Destroy any existing HLS instance
-  if (hlsInstance) {
-    hlsInstance.destroy();
-    hlsInstance = null;
-  }
+// Same groups as the website's category pages (the database mixes Arabic and
+// English values for the same category)
+const CATEGORIES = [
+  { id: 'hussainiya', title: 'قصائد حسينية', color: '#8400E7', values: ['hussainiya_poems', 'قصائد حسينية', 'لطميات وقصائد', 'لطمية', 'latmiya', 'nazla', 'shoor', 'شور'] },
+  { id: 'dua', title: 'أدعية ومناجاة', color: '#1E8C45', values: ['dua', 'أدعية ومناجاة', 'adhkar'] },
+  { id: 'muwalid', title: 'مواليد', color: '#1E3264', values: ['muwalid', 'مواليد'] },
+  { id: 'naei', title: 'نعي', color: '#AF2896', values: ['naei', 'نعي'] },
+  { id: 'quran', title: 'قرآن كريم', color: '#006450', values: ['quran', 'قرآن'] },
+  { id: 'ziyarat', title: 'زيارات', color: '#8C1932', values: ['ziyarat', 'زيارات'] },
+  { id: 'nasheed', title: 'أناشيد', color: '#E13300', values: ['أناشيد', 'nasheed', 'anasheed'] },
+  { id: 'variety', title: 'منوعات', color: '#E8115B', values: ['منوعات', 'variety', 'lectures', 'محاضرات'] },
+];
 
-  const isHLS = url && (url.includes('.m3u8') || url.includes('m3u8'));
-
-  if (isHLS) {
-    if (Hls.isSupported()) {
-      // Use hls.js for adaptive streaming
-      hlsInstance = new Hls({
-        maxBufferLength: 30,           // buffer 30s ahead
-        maxMaxBufferLength: 120,       // max 120s buffer
-        lowLatencyMode: false,
-        startLevel: -1,                // auto-select quality
-        abrEwmaDefaultEstimate: 500000 // assume 500Kbps initially
-      });
-      hlsInstance.loadSource(url);
-      hlsInstance.attachMedia(audioContext);
-      hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
-        audioContext.play().catch(err => console.error('HLS play error:', err));
-      });
-      hlsInstance.on(Hls.Events.ERROR, (event, data) => {
-        if (data.fatal) {
-          console.error('Fatal HLS error:', data.type, data.details);
-          // Fallback to direct src
-          hlsInstance.destroy();
-          hlsInstance = null;
-          audioContext.src = url;
-          audioContext.play().catch(e => console.error(e));
-        }
-      });
-    } else if (audioContext.canPlayType('application/vnd.apple.mpegurl')) {
-      // Safari has native HLS support
-      audioContext.src = url;
-      audioContext.play().catch(err => console.error('Native HLS play error:', err));
-    } else {
-      console.warn('HLS not supported on this browser');
-    }
-  } else {
-    // Regular MP3/M4A – use direct src
-    audioContext.src = url;
-    audioContext.play().catch(err => console.error('Audio play error:', err));
-  }
-}
-
-// ─── AUTH STATE ───────────────────────────────────────────────
-let currentUser = null;
-let isAuthMode = 'login'; // 'login' | 'signup'
-
-async function initAuth() {
-  const { data: { session } } = await supabase.auth.getSession();
-  currentUser = session?.user ?? null;
-
-  supabase.auth.onAuthStateChange((_event, session) => {
-    currentUser = session?.user ?? null;
-    updateProfileUI();
-    if (currentUser) syncLikesFromSupabase();
-  });
-
-  // Show auth modal only on first visit (no session and no "skipped" flag)
-  if (!currentUser && !localStorage.getItem('sawt_auth_skipped')) {
-    setTimeout(() => openAuthModal(), 800);
-  }
-
-  updateProfileUI();
-  if (currentUser) {
-    syncLikesFromSupabase();
-    syncPlaylistsFromSupabase();
-  }
-}
-
-function updateProfileUI() {
-  const nameEl = document.getElementById('profile-display-name');
-  const emailEl = document.getElementById('profile-email');
-  const statusEl = document.getElementById('profile-status-badge');
-  const guestSection = document.getElementById('profile-guest-section');
-  const logoutSection = document.getElementById('profile-logout-section');
-  const greetingEl = document.getElementById('home-greeting');
-  const headerAvatarEl = document.getElementById('header-avatar');
-  const profileAvatarEl = document.getElementById('profile-avatar-img');
-
-  if (currentUser) {
-    const name = currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'مستخدم';
-    const avatarUrl = currentUser.user_metadata?.avatar_url
-      || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=E8B86D&color=121212&bold=true&size=200`;
-
-    if (nameEl) nameEl.textContent = name;
-    if (emailEl) emailEl.textContent = currentUser.email;
-    if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-circle-check" style="color:#4CAF50;"></i> حساب مفعل';
-    if (guestSection) guestSection.style.display = 'none';
-    if (logoutSection) logoutSection.style.display = 'block';
-    
-    // Update avatar images
-    if (headerAvatarEl) { headerAvatarEl.src = avatarUrl; headerAvatarEl.style.display = 'block'; }
-    if (profileAvatarEl) profileAvatarEl.src = avatarUrl;
-  } else {
-    if (nameEl) nameEl.textContent = 'ضيف';
-    if (emailEl) emailEl.textContent = 'غير مسجل';
-    if (statusEl) statusEl.innerHTML = '<i class="fa-regular fa-user" style="color:#aaa;"></i> غير مسجل';
-    if (guestSection) guestSection.style.display = 'block';
-    if (logoutSection) logoutSection.style.display = 'none';
-    if (headerAvatarEl) headerAvatarEl.style.display = 'none';
-    if (profileAvatarEl) profileAvatarEl.src = 'https://ui-avatars.com/api/?name=Guest&background=282828&color=aaa&size=200';
-  }
-}
-
-// ─── AVATAR UPLOAD ────────────────────────────────────────────
-window.openAvatarUpload = function() {
-  if (!currentUser) { openAuthModal(); return; }
-  document.getElementById('avatar-file-input')?.click();
+// English reciter names found in older uploads
+const RECITER_TRANSLATIONS = {
+  'basim karbalaei': 'باسم الكربلائي', basim_karbalaei: 'باسم الكربلائي', 'mulla basim': 'باسم الكربلائي',
+  'ammar al kinani': 'عمار الكناني', ammar_alkinani: 'عمار الكناني',
+  'qahtan al bdeiri': 'قحطان البديري', qahtan_al_bdeiri: 'قحطان البديري',
+  'muslim al waeli': 'مسلم الوائلي', muslim_al_waeli: 'مسلم الوائلي',
+  'ali al delfi': 'علي الدلفي', ali_delphi: 'علي الدلفي', ali_aldelfi: 'علي الدلفي',
+  'hussain faisal': 'حسين فيصل', hussein_faisal: 'حسين فيصل',
+  'mohammed al halfi': 'محمد الحلفي', mohamed_alhalfi: 'محمد الحلفي',
+  'hussain al akraf': 'حسين الأكرف', hussain_alakraf: 'حسين الأكرف',
+  murtadha_harb: 'مرتضى حرب', 'murtadha harb': 'مرتضى حرب',
+  sayed_faqid: 'سيد فاقد الموسوي', sayed_faqid_almousawi: 'سيد فاقد الموسوي',
+  mustafa_alsudani: 'مصطفى السوداني', ali_bouhamad: 'علي بوحمد', mohammed_bujbara: 'محمد بوجبارة',
+  ahmed_alsaeedi: 'أحمد الساعدي', mohammed_al_jnaid: 'محمد الجنامي', mohamed_aljanami: 'محمد الجنامي',
 };
 
-window.handleAvatarUpload = async function(event) {
-  const file = event.target.files[0];
-  if (!file || !currentUser) return;
+// ═══ Small helpers ═══════════════════════════════════════════════════════════
+const $ = (id) => document.getElementById(id);
 
-  // Show loading on avatar
-  const profileAvatarEl = document.getElementById('profile-avatar-img');
-  if (profileAvatarEl) profileAvatarEl.style.opacity = '0.4';
+// Everything shown from the database goes through esc(): titles and names are
+// written by uploaders and must never be interpreted as HTML.
+const esc = (v) => String(v ?? '')
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
-  try {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${currentUser.id}.${fileExt}`;
-
-    // Upload to Supabase Storage
-    const { error: uploadError } = await supabase.storage
-      .from('avatars')
-      .upload(fileName, file, { upsert: true });
-    if (uploadError) throw uploadError;
-
-    // Get public URL
-    const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
-    const publicUrl = data.publicUrl + '?t=' + Date.now();
-
-    // Update user metadata
-    await supabase.auth.updateUser({ data: { avatar_url: publicUrl } });
-
-    // Update UI immediately
-    if (profileAvatarEl) { profileAvatarEl.src = publicUrl; profileAvatarEl.style.opacity = '1'; }
-    const headerAvatarEl = document.getElementById('header-avatar');
-    if (headerAvatarEl) headerAvatarEl.src = publicUrl;
-  } catch (err) {
-    console.error('Avatar upload error:', err);
-    if (profileAvatarEl) profileAvatarEl.style.opacity = '1';
-    alert('لم نتمكن من رفع الصورة. تأكد من إعداد Supabase Storage.');
-  }
-  // Reset input
-  event.target.value = '';
-};
-
-
-window.openAuthModal = function() {
-  const modal = document.getElementById('auth-modal');
-  const sheet = document.getElementById('auth-sheet');
-  if (!modal) return;
-  isAuthMode = 'login';
-  resetAuthForm();
-  modal.style.display = 'flex';
-  requestAnimationFrame(() => {
-    sheet.style.transform = 'translateY(0)';
-  });
-};
-
-function closeAuthModal() {
-  const modal = document.getElementById('auth-modal');
-  const sheet = document.getElementById('auth-sheet');
-  if (!modal) return;
-  sheet.style.transform = 'translateY(100%)';
-  setTimeout(() => { modal.style.display = 'none'; }, 400);
-}
-
-window.skipAuth = function() {
-  localStorage.setItem('sawt_auth_skipped', '1');
-  closeAuthModal();
-};
-
-window.toggleAuthMode = function() {
-  isAuthMode = isAuthMode === 'login' ? 'signup' : 'login';
-  const nameField = document.getElementById('auth-name-field');
-  const btnText = document.getElementById('auth-btn-text');
-  const toggleText = document.getElementById('auth-toggle-text');
-  const toggleBtn = document.getElementById('auth-toggle-btn');
-  const title = document.getElementById('auth-title');
-  if (isAuthMode === 'signup') {
-    if (nameField) nameField.style.display = 'block';
-    if (btnText) btnText.textContent = 'إنشاء الحساب';
-    if (toggleText) toggleText.textContent = 'لديك حساب؟';
-    if (toggleBtn) toggleBtn.textContent = 'دخول';
-    if (title) title.textContent = 'إنشاء حساب جديد';
-  } else {
-    if (nameField) nameField.style.display = 'none';
-    if (btnText) btnText.textContent = 'دخول';
-    if (toggleText) toggleText.textContent = 'ليس لديك حساب؟';
-    if (toggleBtn) toggleBtn.textContent = 'إنشاء حساب';
-    if (title) title.textContent = 'أهلاً بك في صوت الأحزان';
-  }
-  document.getElementById('auth-message').style.display = 'none';
-};
-
-function resetAuthForm() {
-  const f = (id) => document.getElementById(id);
-  if (f('auth-email')) f('auth-email').value = '';
-  if (f('auth-password')) f('auth-password').value = '';
-  if (f('auth-name')) f('auth-name').value = '';
-  if (f('auth-message')) f('auth-message').style.display = 'none';
-  if (f('auth-name-field')) f('auth-name-field').style.display = 'none';
-  if (f('auth-btn-text')) f('auth-btn-text').textContent = 'دخول';
-  if (f('auth-toggle-text')) f('auth-toggle-text').textContent = 'ليس لديك حساب؟';
-  if (f('auth-toggle-btn')) f('auth-toggle-btn').textContent = 'إنشاء حساب';
-  if (f('auth-title')) f('auth-title').textContent = 'أهلاً بك في صوت الأحزان';
-  isAuthMode = 'login';
-}
-
-function showAuthMessage(msg, isError = true) {
-  const el = document.getElementById('auth-message');
-  if (!el) return;
-  el.textContent = msg;
-  el.style.display = 'block';
-  el.style.background = isError ? 'rgba(255,69,58,0.15)' : 'rgba(76,175,80,0.15)';
-  el.style.color = isError ? '#FF453A' : '#4CAF50';
-  el.style.border = `1px solid ${isError ? 'rgba(255,69,58,0.3)' : 'rgba(76,175,80,0.3)'}`;
-}
-
-function setAuthLoading(loading) {
-  const btn = document.getElementById('auth-submit-btn');
-  const spinner = document.getElementById('auth-btn-spinner');
-  if (btn) btn.disabled = loading;
-  if (spinner) spinner.style.display = loading ? 'inline-block' : 'none';
-}
-
-window.signInWithGoogle = async function() {
-  document.getElementById('auth-message').style.display = 'none';
-  try {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.href
-      }
-    });
-    if (error) throw error;
-  } catch (err) {
-    showAuthMessage('فشل تسجيل الدخول بواسطة جوجل', true);
-    console.error(err);
-  }
-}
-
-window.submitAuth = async function() {
-  const email = document.getElementById('auth-email')?.value?.trim();
-  const password = document.getElementById('auth-password')?.value;
-  const name = document.getElementById('auth-name')?.value?.trim();
-
-  if (!email || !password) { showAuthMessage('يرجى تعبئة جميع الحقول'); return; }
-  if (password.length < 6) { showAuthMessage('كلمة المرور يجب أن تكون 6 أحرف على الأقل'); return; }
-
-  setAuthLoading(true);
-  document.getElementById('auth-message').style.display = 'none';
-
-  try {
-    if (isAuthMode === 'signup') {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { full_name: name || email.split('@')[0] } }
-      });
-      if (error) throw error;
-      if (data.session) {
-        closeAuthModal();
-      } else {
-        showAuthMessage('تم إنشاء الحساب بنجاح! إذا كانت رسالة التفعيل مطلوبة يرجى تفقد بريدك.', false);
-      }
-    } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      closeAuthModal();
-    }
-  } catch (err) {
-    let msg = 'حدث خطأ، يرجى المحاولة مجدداً';
-    if (err.message.includes('Invalid login')) msg = 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
-    if (err.message.includes('already registered')) msg = 'هذا البريد الإلكتروني مسجل مسبقاً';
-    if (err.message.includes('Email not confirmed')) msg = 'يرجى تأكيد البريد الإلكتروني أولاً';
-    showAuthMessage(msg);
-  }
-  setAuthLoading(false);
-};
-
-window.doLogout = async function() {
-  await supabase.auth.signOut();
-  currentUser = null;
-  updateProfileUI();
-};
-
-window.toggleAuthPasswordVisibility = function() {
-  const input = document.getElementById('auth-password');
-  const icon = document.getElementById('auth-eye-icon');
-  if (!input) return;
-  if (input.type === 'password') {
-    input.type = 'text';
-    if (icon) { icon.className = 'fa-regular fa-eye-slash'; }
-  } else {
-    input.type = 'password';
-    if (icon) { icon.className = 'fa-regular fa-eye'; }
-  }
-};
-
-// ─── SUPABASE LIKES SYNC ──────────────────────────────────────
-async function syncLikesFromSupabase() {
-  if (!currentUser) return;
-  try {
-    const { data, error } = await supabase
-      .from('user_likes')
-      .select('poem_id')
-      .eq('user_id', currentUser.id);
-    if (error) throw error;
-    const ids = (data || []).map(r => r.poem_id);
-    LibraryStore.likes = ids;
-  } catch (e) {
-    console.warn('Could not sync likes:', e);
-  }
-}
-
-async function pushLikeToSupabase(poemId, liked) {
-  if (!currentUser) return;
-  try {
-    if (liked) {
-      await supabase.from('user_likes').upsert({ user_id: currentUser.id, poem_id: poemId }, { onConflict: 'user_id,poem_id' });
-    } else {
-      await supabase.from('user_likes').delete().eq('user_id', currentUser.id).eq('poem_id', poemId);
-    }
-  } catch (e) {
-    console.warn('Could not push like:', e);
-  }
-}
-
-// ─── SUPABASE PLAYLISTS SYNC ───────────────────────────────────
-async function syncPlaylistsFromSupabase() {
-  if (!currentUser) return;
-  try {
-    const { data, error } = await supabase
-      .from('user_playlists')
-      .select('id, title, tracks')
-      .eq('user_id', currentUser.id);
-    if (error) throw error;
-    
-    // Map data to local structure: { id, name, tracks }
-    const mapped = (data || []).map(r => ({
-      id: r.id,
-      name: r.title,
-      tracks: r.tracks || []
-    }));
-    _memoryPlaylists = mapped;
-  } catch (e) {
-    console.warn('Could not sync playlists:', e);
-  }
-}
-
-async function createPlaylistInSupabase(name) {
-  if (!currentUser) return null;
-  try {
-    const newId = 'playlist_' + Date.now();
-    const { data, error } = await supabase
-      .from('user_playlists')
-      .insert({ id: newId, user_id: currentUser.id, title: name, tracks: [] })
-      .select('id, title, tracks')
-      .single();
-    if (error) throw error;
-    return { id: data.id, name: data.title, tracks: data.tracks || [] };
-  } catch (e) {
-    console.warn('Could not create playlist:', e);
-    return null;
-  }
-}
-
-async function updatePlaylistTracksInSupabase(playlistId, tracks) {
-  if (!currentUser) return;
-  try {
-    const { error } = await supabase
-      .from('user_playlists')
-      .update({ tracks: tracks })
-      .eq('id', playlistId)
-      .eq('user_id', currentUser.id);
-    if (error) throw error;
-  } catch (e) {
-    console.warn('Could not update playlist tracks:', e);
-  }
-}
-
-let isPlaying = false;
-let currentPoem = null;
-let globalPoems = [];
-let globalReciters = [];
-
-// LocalStorage wrapper for Library features
-let _memoryPlaylists = [];
-
-const LibraryStore = {
-  get likes() { return JSON.parse(localStorage.getItem('sawt_likes')) || []; },
-  set likes(arr) { localStorage.setItem('sawt_likes', JSON.stringify(arr)); },
-  
-  get downloads() { return JSON.parse(localStorage.getItem('sawt_downloads')) || []; },
-  set downloads(arr) { localStorage.setItem('sawt_downloads', JSON.stringify(arr)); },
-  
-  get playlists() { 
-    return currentUser ? _memoryPlaylists : (JSON.parse(localStorage.getItem('sawt_playlists')) || []); 
+const store = {
+  get(key, fallback) {
+    try { const v = JSON.parse(localStorage.getItem(key)); return v ?? fallback; } catch { return fallback; }
   },
-  set playlists(arr) { 
-    if (currentUser) { _memoryPlaylists = arr; } 
-    else { localStorage.setItem('sawt_playlists', JSON.stringify(arr)); }
+  set(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage full or blocked */ }
   },
-  
-  get artists() { return JSON.parse(localStorage.getItem('sawt_artists')) || []; },
-  set artists(arr) { localStorage.setItem('sawt_artists', JSON.stringify(arr)); },
-
-  toggleLike(id) {
-    let arr = this.likes;
-    if (arr.includes(id)) arr = arr.filter(x => x !== id);
-    else arr.push(id);
-    this.likes = arr;
-    return arr.includes(id);
-  },
-
-  async toggleDownload(id) {
-    let arr = this.downloads;
-    const isDownloading = !arr.includes(id);
-    
-    if (isDownloading) {
-      arr.push(id);
-      if ('caches' in window) {
-        const track = globalPoems.find(p => p.id === id);
-        if (track) {
-          try {
-            const cache = await caches.open('sawt-alahzan-audio-cache-v1');
-            if (track.audioUrl) {
-              const res = await fetch(track.audioUrl);
-              await cache.put(track.audioUrl, res);
-            }
-            const imgUrl = track.coverImage || track.image;
-            if (imgUrl) {
-              const imgRes = await fetch(imgUrl);
-              await cache.put(imgUrl, imgRes);
-            }
-          } catch(e) { console.error('Cache error', e); }
-        }
-      }
-    } else {
-      arr = arr.filter(x => x !== id);
-      if ('caches' in window) {
-        const track = globalPoems.find(p => p.id === id);
-        if (track) {
-          try {
-            const cache = await caches.open('sawt-alahzan-audio-cache-v1');
-            if (track.audioUrl) await cache.delete(track.audioUrl);
-          } catch(e) {}
-        }
-      }
-    }
-    this.downloads = arr;
-    return isDownloading;
-  },
-
-  async addPlaylist(name) {
-    if (currentUser) {
-      const newPl = await createPlaylistInSupabase(name);
-      if (newPl) {
-        _memoryPlaylists.push(newPl);
-      }
-    } else {
-      let arr = this.playlists;
-      arr.push({ id: Date.now().toString(), name, tracks: [] });
-      this.playlists = arr;
-    }
-  },
-
-  async addTrackToPlaylist(playlistId, trackId) {
-    let arr = this.playlists;
-    let pl = arr.find(p => p.id === playlistId);
-    if (pl) {
-      if (!pl.tracks.includes(trackId)) {
-        pl.tracks.push(trackId);
-        this.playlists = arr;
-        if (currentUser) {
-          updatePlaylistTracksInSupabase(playlistId, pl.tracks);
-        }
-        return true;
-      }
-    }
-    return false;
-  }
 };
 
-// Loading State
-function showLoading() {
-  const container = document.getElementById('sections-container');
-  container.innerHTML = `
-    <div style="display: flex; justify-content: center; padding: 100px 0;">
-      <i class="fa-solid fa-spinner fa-spin" style="font-size: 40px; color: var(--accent);"></i>
-    </div>
-  `;
-}
+// Arabic spelling variants people mix when searching (أحمد / احمد, فاطمة / فاطمه)
+const normalize = (s) => String(s || '').toLowerCase()
+  .replace(/[ً-ْـ]/g, '')
+  .replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/ؤ/g, 'و').replace(/ئ/g, 'ي');
 
-// Fetch Supabase Data
-async function fetchAppData() {
-  showLoading();
-  
+// Covers are stored full size; Cloudflare resizes them on the fly (as on the website)
+const IMAGE_HOSTS = new Set(['soutalahzan.com', 'ckhtndmrcypkqrpjlzli.supabase.co', 'images.unsplash.com', 'pub-8168942d67ae4c1fb48c404f11458b4a.r2.dev']);
+const SIZE_STEPS = [96, 160, 320, 480, 640, 800, 1080];
+function thumb(url, cssWidth) {
+  if (!url) return FALLBACK_COVER;
   try {
-    // Fetch Poems (Audio Library) - limit to 3000 to get a large library
-    const { data: audioData, error: audioError } = await supabase
-      .from('audio_library')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(3000);
-      
-    if (audioError) throw audioError;
-    
-    // Transform Data
-    globalPoems = (audioData || []).map(p => ({
-      id: p.id,
-      title: p.title || p.file_name || '\u0642\u0635\u064a\u062f\u0629 \u0628\u062f\u0648\u0646 \u0639\u0646\u0648\u0627\u0646',
-      reciterName: translateReciterName(p.reciter_name),
-      coverImage: p.image_url || 'https://images.unsplash.com/photo-1542332213-9b5a5a3fad35?w=500',
-      audioUrl: p.file_url || p.audio_url || p.url,
-      category: p.category || 'variety'
-    }));
-
-    // Dynamically extract unique reciters from the tracks!
-    const reciterMap = {};
-    globalPoems.forEach(p => {
-      if (!reciterMap[p.reciterName]) {
-        reciterMap[p.reciterName] = {
-          id: p.reciterName,
-          name: p.reciterName,
-          image: p.coverImage // use the cover image of their first track as their profile picture
-        };
-      }
-    });
-    globalReciters = Object.values(reciterMap);
-
-    renderHomeContent(globalPoems, globalReciters);
-    
-    // Check for Deep Link (Shared Track)
-    const urlParams = new URLSearchParams(window.location.search);
-    const sharedTrackId = urlParams.get('track');
-    if (sharedTrackId) {
-      const sharedTrack = globalPoems.find(p => p.id === sharedTrackId);
-      if (sharedTrack) {
-        setTimeout(() => {
-          openTrackDetail(sharedTrack);
-        }, 300); // slight delay to ensure DOM is ready
-      }
-    }
-  } catch (err) {
-    console.error('Error fetching data:', err);
-    document.getElementById('sections-container').innerHTML = `
-      <div style="text-align: center; color: red; padding: 50px;">
-        \u062d\u062f\u062b \u062e\u0637\u0623 \u0623\u062b\u0646\u0627\u0621 \u062c\u0644\u0628 \u0627\u0644\u0628\u064a\u0627\u0646\u0627\u062a. \u064a\u0631\u062c\u0649 \u0627\u0644\u062a\u0623\u0643\u062f \u0645\u0646 \u0627\u062a\u0635\u0627\u0644 \u0627\u0644\u0625\u0646\u062a\u0631\u0646\u062a \u0648\u0635\u0644\u0627\u062d\u064a\u0627\u062a \u0642\u0627\u0639\u062f\u0629 \u0627\u0644\u0628\u064a\u0627\u0646\u0627\u062a.
-      </div>
-    `;
-  }
+    if (!IMAGE_HOSTS.has(new URL(url).hostname)) return url;
+  } catch { return url; }
+  const px = SIZE_STEPS.find((s) => s >= cssWidth * 2) ?? 1080;
+  return `https://soutalahzan.com/cdn-cgi/image/width=${px},quality=75,format=auto,fit=scale-down/${url}`;
 }
 
-// Render Home Content based on fetched data
-function renderHomeContent(poems, reciters) {
-  const container = document.getElementById('sections-container');
-  container.innerHTML = '';
-  
-  if (poems.length === 0) {
-    container.innerHTML = '<div style="text-align: center; padding: 50px; color: white;">\u0644\u0627 \u062a\u0648\u062c\u062f \u0645\u0642\u0627\u0637\u0639 \u0635\u0648\u062a\u064a\u0629 \u0645\u0636\u0627\u0641\u0629 \u0628\u0639\u062f.</div>';
-    return;
-  }
-  
-  // Helper to shuffle array
-  const shuffle = (array) => [...array].sort(() => 0.5 - Math.random());
-  
-  // Section 1: Top Grid (Grid 2x3 - 6 cards)
-  container.appendChild(createRecentGridSection(poems.slice(0, 6)));
-  
-  // Section 2: Recently Added (New single row horizontal scroller with rectangular cards)
-  container.appendChild(createHorizontalRectScrollerSection('\u0645\u0636\u0627\u0641 \u062d\u062f\u064a\u062b\u0627', poems.slice(0, 15)));
-  
-  // Circular Reciters section moved to below Section 2
-  container.appendChild(createReciterSection('\u0623\u0634\u0647\u0631 \u0627\u0644\u0631\u0648\u0627\u062f\u064a\u062f', shuffle(reciters).slice(0, 10)));
-  
-  // Section 3: Recently Listened (5 columns x 5 cards horizontal scroller)
-  container.appendChild(createHorizontalGridScrollerSection('\u062a\u0645 \u0627\u0644\u0627\u0633\u062a\u0645\u0627\u0639 \u0627\u0644\u064a\u0647 \u0645\u0624\u062e\u0631\u0627', shuffle(poems).slice(0, 25)));
-  
-  // 1. \u0635\u0645\u0645 \u0645\u0646 \u0627\u062c\u0644 \u0627\u0644\u0636\u064a\u0641
-  container.appendChild(createSquareScrollerSection('\u0635\u0645\u0645 \u0645\u0646 \u0627\u062c\u0644 \u0627\u0644\u0636\u064a\u0641', shuffle(poems).slice(0, 15)));
-  
-  // 2. \u0627\u0633\u062a\u0645\u0639 \u0644\u0644\u0642\u0635\u0627\u0626\u062f \u0627\u0644\u062a\u064a \u0627\u062d\u0628\u0628\u062a\u0647\u0627 \u064a\u0648\u0645\u0627 \u0645\u0627
-  container.appendChild(createSquareScrollerSection('\u0627\u0633\u062a\u0645\u0639 \u0644\u0644\u0642\u0635\u0627\u0626\u062f \u0627\u0644\u062a\u064a \u0627\u062d\u0628\u0628\u062a\u0647\u0627 \u064a\u0648\u0645\u0627 \u0645\u0627', shuffle(poems).slice(0, 15)));
-  
-  // 3. \u062a\u0648\u0635\u064a\u0627\u062a\u0646\u0627 \u0644\u0643 \u0627\u0644\u064a\u0648\u0645
-  container.appendChild(createSquareScrollerSection('\u062a\u0648\u0635\u064a\u0627\u062a\u0646\u0627 \u0644\u0643 \u0627\u0644\u064a\u0648\u0645', shuffle(poems).slice(0, 15)));
-  
-  // 4. \u0627\u0644\u0645\u0632\u064a\u062f \u0645\u062b\u0644
-  if (reciters.length > 0) {
-    const randomReciter = reciters[Math.floor(Math.random() * reciters.length)];
-    const moreLike = poems.filter(p => p.reciterName === randomReciter.name || Math.random() > 0.8).slice(0, 15);
-    container.appendChild(createSquareScrollerSection('\u0627\u0644\u0645\u0632\u064a\u062f \u0645\u062b\u0644 ' + randomReciter.name, moreLike));
-  } else {
-    container.appendChild(createSquareScrollerSection('\u0627\u0644\u0645\u0632\u064a\u062f \u0645\u062b\u0644', shuffle(poems).slice(0, 15)));
-  }
-  
-  // 5. \u0627\u0644\u0645\u062d\u0637\u0627\u062a \u0627\u0644\u0645\u0642\u062a\u0631\u062d\u0629
-  container.appendChild(createSquareScrollerSection('\u0627\u0644\u0645\u062d\u0637\u0627\u062a \u0627\u0644\u0645\u0642\u062a\u0631\u062d\u0629', shuffle(poems).slice(0, 15)));
-  
-  // 6. \u0627\u0644\u0623\u0643\u062b\u0631 \u0627\u0633\u062a\u0645\u0627\u0639\u0627
-  container.appendChild(createHorizontalGridScrollerSection('\u0627\u0644\u0623\u0643\u062b\u0631 \u0627\u0633\u062a\u0645\u0627\u0639\u0627', shuffle(poems).slice(0, 25)));
-  
-  // 7. \u0645\u064a\u0643\u0633 \u062a\u0645 \u0627\u0639\u062f\u0627\u062f\u0647 \u0644\u0643
-  container.appendChild(createSquareScrollerSection('\u0645\u064a\u0643\u0633 \u062a\u0645 \u0627\u0639\u062f\u0627\u062f\u0647 \u0644\u0643', shuffle(poems).slice(0, 15)));
-
-}
-
-// Create a horizontal scroller with a single row of LARGE rectangular cards
-function createHorizontalRectScrollerSection(titleText, items) {
-  const section = document.createElement('div');
-  section.className = 'section animate-in';
-  
-  const title = document.createElement('h2');
-  title.className = 'section-title';
-  title.textContent = titleText;
-  section.appendChild(title);
-  
-  const scroller = document.createElement('div');
-  scroller.className = 'horizontal-scroller';
-  scroller.style.scrollSnapType = 'x mandatory';
-  scroller.style.paddingBottom = '15px';
-  
-  items.forEach(item => {
-    const card = document.createElement('div');
-    card.style.position = 'relative';
-    card.style.flexShrink = '0';
-    card.style.width = '80vw'; // Large width
-    card.style.maxWidth = '320px';
-    card.style.height = '160px'; // Large height (Rectangle)
-    card.style.scrollSnapAlign = 'center';
-    card.style.borderRadius = '12px';
-    card.style.overflow = 'hidden';
-    card.style.cursor = 'pointer';
-    card.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
-    
-    card.innerHTML = `
-      <img src="${item.coverImage || item.image}" alt="${item.title || item.name}" style="width: 100%; height: 100%; object-fit: cover;" />
-      <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(0deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%); padding: 30px 15px 10px 15px; text-align: right;">
-        <div style="font-size: 16px; font-weight: bold; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px;">${item.title || item.name}</div>
-        <div style="font-size: 13px; color: rgba(255,255,255,0.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.reciterName || '\u0645\u062c\u0647\u0648\u0644'}</div>
-      </div>
-    `;
-    card.onclick = () => {
-      if (item.audioUrl) openTrackDetail(item.id);
-    };
-    scroller.appendChild(card);
-  });
-  
-  section.appendChild(scroller);
-  return section;
-}
-
-// Create a 2-column grid section (Spotify "Recently played" style)
-function createRecentGridSection(items) {
-  const section = document.createElement('div');
-  section.className = 'section animate-in';
-  
-  const grid = document.createElement('div');
-  grid.className = 'recent-grid';
-  
-  items.forEach(item => {
-    const card = document.createElement('div');
-    card.className = 'recent-card';
-    card.innerHTML = `
-      <img src="${item.image || item.coverImage}" alt="${item.title || item.name}" class="recent-img" />
-      <div class="recent-title">${item.title || item.name}</div>
-    `;
-    card.onclick = () => {
-      if (item.audioUrl) openTrackDetail(item.id);
-    };
-    grid.appendChild(card);
-  });
-  
-  section.appendChild(grid);
-  return section;
-}
-
-// Create a horizontal scroller with 5 columns, 5 small cards per column
-function createHorizontalGridScrollerSection(titleText, items) {
-  const section = document.createElement('div');
-  section.className = 'section animate-in';
-  
-  const title = document.createElement('h2');
-  title.className = 'section-title';
-  title.textContent = titleText;
-  section.appendChild(title);
-  
-  const scroller = document.createElement('div');
-  scroller.className = 'horizontal-scroller';
-  scroller.style.scrollSnapType = 'x mandatory';
-  scroller.style.paddingBottom = '10px';
-  
-  for (let c = 0; c < 5; c++) {
-    const colItems = items.slice(c * 5, (c + 1) * 5);
-    if (colItems.length === 0) break;
-
-    const col = document.createElement('div');
-    col.style.display = 'flex';
-    col.style.flexDirection = 'column';
-    col.style.gap = '8px';
-    col.style.width = '85vw';
-    col.style.maxWidth = '350px';
-    col.style.flexShrink = '0';
-    col.style.scrollSnapAlign = 'center';
-    
-    colItems.forEach(item => {
-      const card = document.createElement('div');
-      card.style.display = 'flex';
-      card.style.alignItems = 'center';
-      card.style.height = '48px'; // Smaller size
-      card.style.cursor = 'pointer';
-      card.style.background = 'transparent'; // Remove container background
-      
-      card.innerHTML = `
-        <img src="${item.coverImage || item.image}" alt="${item.title || item.name}" style="height: 48px; width: 48px; object-fit: cover; border-radius: 4px;" />
-        <div style="flex: 1; padding: 0 12px; font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: right;">${item.title || item.name}</div>
-        <i class="fa-solid fa-ellipsis-vertical" style="color: rgba(255,255,255,0.5); padding: 10px; font-size: 14px;" onclick="openTrackOptions(event, \`${item.id}\`)"></i>
-      `;
-      card.onclick = () => {
-        if (item.audioUrl) openTrackDetail(item.id);
-      };
-      col.appendChild(card);
-    });
-    scroller.appendChild(col);
-  }
-  
-  section.appendChild(scroller);
-  return section;
-}
-
-// Create a horizontal scroll section with square cards (Spotify "Made for You" style)
-function createSquareScrollerSection(title, items) {
-  const section = document.createElement('div');
-  section.className = 'section animate-in';
-  
-  const header = document.createElement('div');
-  header.className = 'section-title';
-  header.textContent = title;
-  section.appendChild(header);
-  
-  const scroller = document.createElement('div');
-  scroller.className = 'horizontal-scroller';
-  
-  items.forEach(item => {
-    const card = document.createElement('div');
-    card.className = 'square-card';
-    card.innerHTML = `
-      <img src="${item.coverImage || item.image}" alt="${item.title || item.name}" class="square-cover" />
-      <div class="square-title">${item.title || item.name}</div>
-      <div class="square-subtitle">${item.reciterName || ''}</div>
-    `;
-    card.onclick = () => {
-      if (item.audioUrl) openTrackDetail(item.id);
-    };
-    scroller.appendChild(card);
-  });
-  
-  section.appendChild(scroller);
-  return section;
-}
-
-// Create Reciter section (Spotify Artist style)
-function createReciterSection(title, reciterList) {
-  const section = document.createElement('div');
-  section.className = 'section animate-in';
-  
-  const header = document.createElement('div');
-  header.className = 'section-title';
-  header.textContent = title;
-  section.appendChild(header);
-  
-  const scroller = document.createElement('div');
-  scroller.className = 'horizontal-scroller';
-  
-  reciterList.forEach(r => {
-    const card = document.createElement('div');
-    card.className = 'square-card';
-    card.innerHTML = `
-      <img src="${r.image}" alt="${r.name}" class="square-cover" style="border-radius: 50%;" />
-      <div class="square-title" style="text-align: center;">${r.name}</div>
-      <div class="square-subtitle" style="text-align: center;">\u0641\u0646\u0627\u0646</div>
-    `;
-    card.onclick = () => openArtistDetail(r.name);
-    scroller.appendChild(card);
-  });
-  
-  section.appendChild(scroller);
-  return section;
-}
-
-// Audio Player Logic
-const audioContext = new Audio();
-
-audioContext.addEventListener('ended', () => {
-  isPlaying = false;
-  updatePlayButton();
-});
-
-audioContext.addEventListener('pause', () => {
-  isPlaying = false;
-  updatePlayButton();
-});
-
-audioContext.addEventListener('play', () => {
-  isPlaying = true;
-  updatePlayButton();
-});
-
-let queueList = [];
-let queueIndex = 0;
-
-// Translation dictionary for common English reciter names
-const reciterNamesTranslations = {
-  "basim karbalaei": "باسم الكربلائي",
-  "basim_karbalaei": "باسم الكربلائي",
-  "mulla basim": "باسم الكربلائي",
-  "ammar al kinani": "عمار الكناني",
-  "ammar_alkinani": "عمار الكناني",
-  "qahtan al bdeiri": "قحطان البديري",
-  "qahtan_al_bdeiri": "قحطان البديري",
-  "muslim al waeli": "مسلم الوائلي",
-  "muslim_al_waeli": "مسلم الوائلي",
-  "ali al delfi": "علي الدلفي",
-  "ali_delphi": "علي الدلفي",
-  "ali_aldelfi": "علي الدلفي",
-  "hussain faisal": "حسين فيصل",
-  "hussein_faisal": "حسين فيصل",
-  "mohammed al halfi": "محمد الحلفي",
-  "mohamed_alhalfi": "محمد الحلفي",
-  "hussain al akraf": "حسين الأكرف",
-  "hussain_alakraf": "حسين الأكرف",
-  "murtadha_harb": "مرتضى حرب",
-  "murtadha harb": "مرتضى حرب",
-  "sayed_faqid": "سيد فاقد الموسوي",
-  "sayed_faqid_almousawi": "سيد فاقد الموسوي",
-  "mustafa_alsudani": "مصطفى السوداني",
-  "ali_bouhamad": "علي بوحمد",
-  "mohammed_bujbara": "محمد بوجبارة",
-  "ahmed_alsaeedi": "أحمد الساعدي",
-  "mohammed_al_jnaid": "محمد الجنامي",
-  "mohamed_aljanami": "محمد الجنامي"
+// "0:00" means the duration was never measured
+const formatDuration = (d) => (typeof d === 'string' && /^\d+(:\d{2}){1,2}$/.test(d) && !/^0+(:00)+$/.test(d) ? d : '');
+const formatTime = (s) => {
+  if (!s || !isFinite(s)) return '0:00';
+  s = Math.floor(s);
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = String(s % 60).padStart(2, '0');
+  return h ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
 };
+const formatCount = (n) => (n || 0).toLocaleString('ar');
+
+// Same order every time for a given seed (a "daily" mix that doesn't reshuffle on every tap)
+function seededShuffle(list, seed) {
+  const a = [...list];
+  let x = seed || 1;
+  for (let i = a.length - 1; i > 0; i--) {
+    x = (x * 9301 + 49297) % 233280;
+    const j = Math.floor((x / 233280) * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+const todaySeed = () => Number(new Date().toISOString().slice(0, 10).replace(/-/g, ''));
+const shuffled = (list) => seededShuffle(list, Math.floor(Math.random() * 233280));
+
+let toastTimer;
+function toast(message) {
+  const el = $('toast');
+  el.textContent = message;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+}
+
+function initialAvatar(name) {
+  const letter = esc((name || '?').trim().charAt(0) || '?');
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#d97736"/>` +
+    `<text x="50" y="66" font-size="48" font-family="Tajawal, Arial" font-weight="700" fill="#121212" text-anchor="middle">${letter}</text></svg>`);
+}
+
+// ═══ Data ════════════════════════════════════════════════════════════════════
+const trackById = new Map();
+let allTracks = [];        // newest first
+let popularTracks = [];    // most listened
+let reciters = [];         // { id, dbId, name, image, count }
+let reciterByName = new Map();
+let fullyLoaded = false;
+let resolveDataReady;
+const dataReady = new Promise((resolve) => { resolveDataReady = resolve; });
 
 function translateReciterName(name) {
-  if (!name) return '\u0645\u062c\u0647\u0648\u0644';
-  const cleanName = name.toLowerCase().trim();
-  if (reciterNamesTranslations[cleanName]) {
-    return reciterNamesTranslations[cleanName];
-  }
-  // If it's English, at least replace underscores with spaces and capitalize
-  if (/^[a-z_ \-0-9]+$/i.test(name)) {
-     return name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  }
-  return name;
+  if (!name) return 'مجهول';
+  const clean = name.toLowerCase().trim();
+  if (RECITER_TRANSLATIONS[clean]) return RECITER_TRANSLATIONS[clean];
+  if (/^[a-z_ \-0-9]+$/i.test(name)) return name.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+  return name.trim();
 }
-let similarList = [];
 
-// Player States
+function mapTrack(row) {
+  const existing = trackById.get(String(row.id));
+  const track = {
+    id: String(row.id),
+    title: row.title || row.file_name || 'قصيدة بدون عنوان',
+    reciterName: translateReciterName(row.reciter_name),
+    reciterDbId: row.reciter_id ? String(row.reciter_id) : null,
+    coverImage: row.image_url || '',
+    audioUrl: row.file_url || '',
+    category: row.category || '',
+    lyrics: typeof row.lyrics === 'string' ? row.lyrics.trim() : '',
+    duration: formatDuration(row.duration),
+    listens: row.listen_count || 0,
+  };
+  if (existing) { Object.assign(existing, track); return existing; }
+  trackById.set(track.id, track);
+  return track;
+}
+
+async function fetchTrackPage(from) {
+  const { data, error, count } = await supabase
+    .from('audio_library')
+    .select(TRACK_COLUMNS, from === 0 ? { count: 'exact' } : undefined)
+    .order('id', { ascending: false })
+    .range(from, from + PAGE_SIZE - 1);
+  if (error) throw error;
+  return { rows: data || [], count };
+}
+
+async function loadData() {
+  showLoading();
+  try {
+    const [first, popular, recRes] = await Promise.all([
+      fetchTrackPage(0),
+      supabase.from('audio_library').select(TRACK_COLUMNS).order('listen_count', { ascending: false }).limit(40),
+      supabase.from('reciters').select('id,name,image_url').limit(1000),
+    ]);
+    allTracks = first.rows.map(mapTrack);
+    popularTracks = (popular.data || []).map(mapTrack);
+    buildReciters(recRes.data || []);
+    renderHome();
+    resolveDataReady();
+    restoreLastTrack();
+    handleDeepLink();
+
+    // The rest of the library, in parallel, without holding up the first screen
+    const pages = [];
+    for (let from = PAGE_SIZE; from < (first.count || 0); from += PAGE_SIZE) pages.push(fetchTrackPage(from));
+    const rest = await Promise.all(pages);
+    rest.forEach((p) => allTracks.push(...p.rows.map(mapTrack)));
+    fullyLoaded = true;
+    buildReciters(recRes.data || []);
+    const atTop = document.querySelector('.main-container').scrollTop < 40;
+    if (navStack.some((e) => e.type === 'page') || currentTab !== 'home' || atTop) refreshOpenViews();
+  } catch (err) {
+    console.error('Error fetching data:', err);
+    $('sections-container').innerHTML = `
+      <div class="empty-state">
+        <p>تعذّر تحميل المقاطع. تأكد من اتصالك بالإنترنت.</p>
+        <button class="primary-btn" style="width: auto; padding: 12px 28px;" onclick="location.reload()">إعادة المحاولة</button>
+      </div>`;
+  }
+}
+
+// Reciters come from the reciters table (real photos); names that only appear
+// on tracks are added too, using a cover of theirs as the photo.
+function buildReciters(rows) {
+  const counts = new Map();
+  const firstCover = new Map();
+  for (const t of allTracks) {
+    counts.set(t.reciterName, (counts.get(t.reciterName) || 0) + 1);
+    if (!firstCover.has(t.reciterName) && t.coverImage) firstCover.set(t.reciterName, t.coverImage);
+  }
+  const map = new Map();
+  for (const r of rows) {
+    const name = translateReciterName(r.name);
+    if (map.has(name)) continue;
+    map.set(name, { id: `r${r.id}`, dbId: String(r.id), name, image: r.image_url || firstCover.get(name) || '', hasPhoto: !!r.image_url, count: counts.get(name) || 0 });
+  }
+  for (const [name, count] of counts) {
+    if (name === 'مجهول' || map.has(name)) continue;
+    map.set(name, { id: `n${name}`, dbId: null, name, image: firstCover.get(name) || '', hasPhoto: false, count });
+  }
+  reciters = [...map.values()].sort((a, b) => b.count - a.count);
+  reciterByName = map;
+}
+
+const tracksOf = (name) => allTracks.filter((t) => t.reciterName === name);
+const reciterOf = (track) => reciterByName.get(track.reciterName);
+const categoryOf = (track) => CATEGORIES.find((c) => c.values.includes(track.category));
+
+// ═══ Library state (likes, downloads, playlists, follows, history) ═══════════
+let currentUser = null;
+let profile = null; // { display_name, avatar_url }
+
+const lib = {
+  likes: new Set(store.get('sawt_likes', []).map(String)),
+  downloads: new Set(store.get('sawt_downloads', []).map(String)),
+  playlists: store.get('sawt_playlists', []).map((p) => ({ id: String(p.id), name: p.name, tracks: (p.tracks || []).map(String) })),
+  follows: new Set(store.get('sawt_artists', [])),
+  history: store.get('sawt_history', []), // [{ id, t }] newest first
+  saveLocal() {
+    if (!currentUser) {
+      store.set('sawt_likes', [...this.likes]);
+      store.set('sawt_playlists', this.playlists);
+      store.set('sawt_artists', [...this.follows]);
+    }
+    store.set('sawt_downloads', [...this.downloads]);
+    store.set('sawt_history', this.history);
+  },
+};
+
+// The phone app stores track ids as "cloud_<id>"; both apps share these tables
+const cloudId = (id) => `cloud_${id}`;
+const fromCloudId = (pid) => String(pid).replace(/^cloud_/, '');
+
+async function syncFromCloud() {
+  await dataReady;
+  if (!currentUser) return;
+  const uid = currentUser.id;
+  // A guest's likes and playlists move into the account on first sign-in
+  const guestLikes = store.get('sawt_likes', []).map(String);
+  const guestPlaylists = store.get('sawt_playlists', []);
+  try {
+    if (guestLikes.length) {
+      await supabase.from('favorites').upsert(guestLikes.map((id) => ({ user_id: uid, poem_id: cloudId(id) })), { onConflict: 'user_id,poem_id', ignoreDuplicates: true });
+      store.set('sawt_likes', []);
+    }
+    if (guestPlaylists.length) {
+      await supabase.from('user_playlists').upsert(guestPlaylists.map((p) => ({
+        user_id: uid, id: safePlaylistId(p.id), title: p.name, tracks: (p.tracks || []).map((t) => cloudId(t)),
+      })), { onConflict: 'user_id,id' });
+      store.set('sawt_playlists', []);
+    }
+  } catch (e) { console.warn('Could not move guest data:', e); }
+
+  const [fav, pls, fol] = await Promise.all([
+    supabase.from('favorites').select('poem_id').eq('user_id', uid),
+    supabase.from('user_playlists').select('id,title,tracks').eq('user_id', uid).order('created_at'),
+    supabase.from('follows').select('followed_reciter_id').eq('follower_id', uid),
+  ]);
+  if (!fav.error) lib.likes = new Set((fav.data || []).map((r) => fromCloudId(r.poem_id)));
+  if (!pls.error) lib.playlists = (pls.data || []).map((r) => ({ id: r.id, name: r.title, tracks: (r.tracks || []).map(fromCloudId) }));
+  if (!fol.error) {
+    const ids = new Set((fol.data || []).map((r) => String(r.followed_reciter_id)));
+    lib.follows = new Set(reciters.filter((r) => r.dbId && ids.has(r.dbId)).map((r) => r.name));
+  }
+  refreshLikeButtons();
+  refreshOpenViews();
+}
+
+const safePlaylistId = (id) => (/^[A-Za-z0-9_-]{1,100}$/.test(String(id)) ? String(id) : `pl_${Date.now()}`);
+
+async function toggleLike(track) {
+  const liked = !lib.likes.has(track.id);
+  if (liked) lib.likes.add(track.id); else lib.likes.delete(track.id);
+  lib.saveLocal();
+  refreshLikeButtons();
+  toast(liked ? 'أُضيف إلى المفضلة' : 'أُزيل من المفضلة');
+  if (currentUser) {
+    const q = liked
+      ? supabase.from('favorites').upsert({ user_id: currentUser.id, poem_id: cloudId(track.id) }, { onConflict: 'user_id,poem_id', ignoreDuplicates: true })
+      : supabase.from('favorites').delete().eq('user_id', currentUser.id).eq('poem_id', cloudId(track.id));
+    const { error } = await q;
+    if (error) console.warn('Could not save like:', error);
+  }
+  return liked;
+}
+
+async function savePlaylist(pl) {
+  lib.saveLocal();
+  if (!currentUser) return;
+  const { error } = await supabase.from('user_playlists').upsert(
+    { user_id: currentUser.id, id: pl.id, title: pl.name, tracks: pl.tracks.map(cloudId) },
+    { onConflict: 'user_id,id' });
+  if (error) { console.warn('Could not save playlist:', error); toast('تعذر حفظ القائمة في حسابك'); }
+}
+
+async function createPlaylist(name) {
+  const pl = { id: `pl_${Date.now()}`, name, tracks: [] };
+  lib.playlists.push(pl);
+  await savePlaylist(pl);
+  return pl;
+}
+
+async function deletePlaylist(pl) {
+  lib.playlists = lib.playlists.filter((p) => p.id !== pl.id);
+  lib.saveLocal();
+  if (currentUser) await supabase.from('user_playlists').delete().eq('user_id', currentUser.id).eq('id', pl.id);
+}
+
+async function toggleFollow(reciter) {
+  const following = !lib.follows.has(reciter.name);
+  if (following) lib.follows.add(reciter.name); else lib.follows.delete(reciter.name);
+  lib.saveLocal();
+  if (currentUser && reciter.dbId) {
+    const q = following
+      ? supabase.from('follows').upsert({ follower_id: currentUser.id, followed_reciter_id: Number(reciter.dbId) }, { onConflict: 'follower_id,followed_reciter_id', ignoreDuplicates: true })
+      : supabase.from('follows').delete().eq('follower_id', currentUser.id).eq('followed_reciter_id', Number(reciter.dbId));
+    const { error } = await q;
+    if (error) console.warn('Could not save follow:', error);
+  }
+  toast(following ? `تتابع الآن ${reciter.name}` : `ألغيت متابعة ${reciter.name}`);
+  return following;
+}
+
+// Offline listening: the file goes into the cache the service worker serves from
+async function toggleDownload(track) {
+  if (lib.downloads.has(track.id)) {
+    lib.downloads.delete(track.id);
+    lib.saveLocal();
+    try { const cache = await caches.open(AUDIO_CACHE); await cache.delete(track.audioUrl); } catch { /* ignore */ }
+    toast('حُذف التنزيل');
+    return false;
+  }
+  if (!('caches' in window)) { toast('المتصفح لا يدعم التنزيل'); return false; }
+  toast('جارٍ التنزيل...');
+  try {
+    const cache = await caches.open(AUDIO_CACHE);
+    const res = await fetch(track.audioUrl, { mode: 'cors' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    await cache.put(track.audioUrl, res);
+    lib.downloads.add(track.id);
+    lib.saveLocal();
+    toast('تم التنزيل، يمكنك الاستماع بدون إنترنت');
+    return true;
+  } catch (e) {
+    console.warn('Download failed:', e);
+    toast('تعذر تنزيل المقطع');
+    return false;
+  }
+}
+
+function addToHistory(track) {
+  lib.history = [{ id: track.id, t: Date.now() }, ...lib.history.filter((h) => h.id !== track.id)].slice(0, 100);
+  lib.saveLocal();
+}
+const historyTracks = () => lib.history.map((h) => trackById.get(h.id)).filter(Boolean);
+
+// ═══ Navigation ══════════════════════════════════════════════════════════════
+// Tabs are the four bottom-bar screens. Pages (reciter, category, track, list)
+// and overlays (player, sheets, modals) go on a stack mirrored in browser
+// history, so the phone's back button closes / goes back one step.
+const TABS = { home: 'home-view', search: 'search-view', library: 'library-view', profile: 'profile-view' };
+let currentTab = 'home';
+let navStack = [];
+let ignorePops = 0;
+let afterPop = null;
+// While a tab switch rewinds history, new pages/overlays wait for it to finish
+let rewinding = false;
+let waiting = [];
+
+function showView(viewId) {
+  document.querySelectorAll('.view').forEach((v) => { v.style.display = v.id === viewId ? 'block' : 'none'; });
+  document.querySelector('.main-container').scrollTo(0, 0);
+}
+
+function openPage(viewId, render) {
+  if (rewinding) { waiting.push(() => openPage(viewId, render)); return; }
+  render();
+  showView(viewId);
+  navStack.push({ type: 'page', viewId, render });
+  history.pushState({ depth: navStack.length }, '');
+}
+
+function openOverlay(show, hide) {
+  if (rewinding) { waiting.push(() => openOverlay(show, hide)); return; }
+  show();
+  navStack.push({ type: 'overlay', hide });
+  history.pushState({ depth: navStack.length }, '');
+}
+
+// Close the top overlay, then run fn (e.g. open the next sheet)
+function closeOverlayThen(fn) {
+  afterPop = fn;
+  history.back();
+}
+
+window.addEventListener('popstate', () => {
+  if (ignorePops > 0) {
+    ignorePops--;
+    if (!ignorePops) {
+      rewinding = false;
+      const queued = waiting;
+      waiting = [];
+      queued.forEach((fn) => fn());
+    }
+    return;
+  }
+  const top = navStack.pop();
+  if (top?.type === 'overlay') {
+    top.hide();
+  } else if (top?.type === 'page') {
+    const prev = [...navStack].reverse().find((e) => e.type === 'page');
+    if (prev) { prev.render(); showView(prev.viewId); } else showView(TABS[currentTab]);
+  }
+  if (afterPop) { const fn = afterPop; afterPop = null; fn(); }
+});
+
+function goTab(tab) {
+  // Leave any open pages/overlays behind in one step
+  navStack.filter((e) => e.type === 'overlay').forEach((e) => e.hide());
+  if (navStack.length && !rewinding) {
+    ignorePops = 1;
+    rewinding = true;
+    history.go(-navStack.length);
+    navStack = [];
+  }
+  currentTab = tab;
+  showView(TABS[tab]);
+  document.querySelectorAll('.nav-item').forEach((n, i) => n.classList.toggle('active', Object.keys(TABS)[i] === tab));
+}
+
+window.goHome = () => goTab('home');
+window.goSearch = () => { goTab('search'); renderSearchHome(); };
+window.goLibrary = () => { goTab('library'); renderLibrary(); };
+window.goProfile = () => { goTab('profile'); updateProfileUI(); };
+
+function refreshOpenViews() {
+  const top = [...navStack].reverse().find((e) => e.type === 'page');
+  if (top) top.render();
+  else if (currentTab === 'home') renderHome();
+  else if (currentTab === 'library') renderLibrary();
+  else if (currentTab === 'search') { renderSearchHome(); runSearch(); }
+  else if (currentTab === 'profile') updateProfileUI();
+}
+
+// ═══ Shared list rendering ═══════════════════════════════════════════════════
+// Track rows: tap plays the list from that row; ⋮ opens the options sheet.
+// Long lists render in chunks as you scroll.
+function renderTrackList(container, list, { numbered = false, emptyText = 'لا توجد مقاطع هنا بعد', playlist = null } = {}) {
+  container.innerHTML = '';
+  if (!list.length) {
+    container.innerHTML = `<div class="empty-state">${esc(emptyText)}</div>`;
+    return;
+  }
+  let shown = 0;
+  const addChunk = () => {
+    const frag = document.createDocumentFragment();
+    list.slice(shown, shown + 60).forEach((track, i) => {
+      const index = shown + i;
+      const el = document.createElement('div');
+      el.className = 'track-item';
+      el.dataset.trackId = track.id;
+      const meta = [esc(track.reciterName), track.duration && `<span dir="ltr">${track.duration}</span>`].filter(Boolean).join(' • ');
+      el.innerHTML = `
+        ${numbered ? `<div class="track-number">${index + 1}</div>` : ''}
+        <img src="${esc(thumb(track.coverImage, 50))}" class="track-img" alt="" loading="lazy" />
+        <div class="track-info">
+          <div class="track-title">${esc(track.title)}</div>
+          <div class="track-artist">${meta}</div>
+        </div>
+        <button class="icon-btn row-more" aria-label="خيارات">${icon('more')}</button>`;
+      el.onclick = () => playFromList(list, index);
+      el.querySelector('.row-more').onclick = (e) => { e.stopPropagation(); openTrackOptions(track, { playlist }); };
+      frag.appendChild(el);
+    });
+    shown += 60;
+    container.appendChild(frag);
+    markPlayingRows();
+    if (shown < list.length) {
+      const sentinel = document.createElement('div');
+      sentinel.className = 'list-sentinel';
+      container.appendChild(sentinel);
+      const io = new IntersectionObserver((entries) => {
+        if (entries.some((e) => e.isIntersecting)) { io.disconnect(); sentinel.remove(); addChunk(); }
+      }, { root: document.querySelector('.main-container'), rootMargin: '600px' });
+      io.observe(sentinel);
+    }
+  };
+  addChunk();
+}
+
+function markPlayingRows() {
+  document.querySelectorAll('.track-item').forEach((el) => el.classList.toggle('playing', !!currentTrack && el.dataset.trackId === currentTrack.id));
+}
+
+const sectionTitle = (text, onMore) => {
+  const head = document.createElement('div');
+  head.className = 'section-head';
+  head.innerHTML = `<h2 class="section-title">${esc(text)}</h2>${onMore ? '<button class="link-btn">عرض الكل</button>' : ''}`;
+  if (onMore) head.querySelector('button').onclick = onMore;
+  return head;
+};
+
+function squareCard(track, onClick) {
+  const card = document.createElement('div');
+  card.className = 'square-card';
+  card.innerHTML = `
+    <img src="${esc(thumb(track.coverImage, 160))}" alt="" class="square-cover" loading="lazy" />
+    <div class="square-title">${esc(track.title)}</div>
+    <div class="square-subtitle">${esc(track.reciterName)}</div>`;
+  card.onclick = onClick || (() => openTrackDetail(track));
+  return card;
+}
+
+function reciterCard(r) {
+  const card = document.createElement('div');
+  card.className = 'square-card';
+  card.innerHTML = `
+    <img src="${esc(thumb(r.image, 160))}" alt="" class="square-cover round" loading="lazy" />
+    <div class="square-title" style="text-align: center;">${esc(r.name)}</div>
+    <div class="square-subtitle" style="text-align: center;">${formatCount(r.count)} مقطع</div>`;
+  card.onclick = () => openArtistDetail(r.name);
+  return card;
+}
+
+function scroller(items, make) {
+  const row = document.createElement('div');
+  row.className = 'horizontal-scroller';
+  items.forEach((it) => row.appendChild(make(it)));
+  return row;
+}
+
+function section(title, content, onMore) {
+  const s = document.createElement('div');
+  s.className = 'section animate-in';
+  s.appendChild(sectionTitle(title, onMore));
+  s.appendChild(content);
+  return s;
+}
+
+// ═══ Home ════════════════════════════════════════════════════════════════════
+function showLoading() {
+  $('sections-container').innerHTML = `<div class="loading">${icon('spinner')}</div>`;
+}
+
+function greeting() {
+  const h = new Date().getHours();
+  return h >= 5 && h < 12 ? 'صباح الخير' : h < 18 ? 'مساء الخير' : 'طاب مساؤك';
+}
+
+function renderHome() {
+  const container = $('sections-container');
+  if (!allTracks.length) return;
+  container.innerHTML = '';
+  $('home-greeting').textContent = greeting();
+
+  const recent = historyTracks();
+  const liked = [...lib.likes].map((id) => trackById.get(id)).filter(Boolean).reverse();
+
+  // 1. Quick grid: what you played last, otherwise the newest
+  const grid = document.createElement('div');
+  grid.className = 'recent-grid section animate-in';
+  (recent.length >= 4 ? recent : allTracks).slice(0, 6).forEach((t) => {
+    const card = document.createElement('div');
+    card.className = 'recent-card';
+    card.innerHTML = `<img src="${esc(thumb(t.coverImage, 70))}" alt="" class="recent-img" /><div class="recent-title">${esc(t.title)}</div>`;
+    card.onclick = () => openTrackDetail(t);
+    grid.appendChild(card);
+  });
+  container.appendChild(grid);
+
+  // 2. Newest uploads
+  const newest = allTracks.slice(0, 15);
+  container.appendChild(section('مضاف حديثاً', scroller(newest, (t) => {
+    const card = document.createElement('div');
+    card.className = 'wide-card';
+    card.innerHTML = `
+      <img src="${esc(thumb(t.coverImage, 320))}" alt="" loading="lazy" />
+      <div class="wide-card-text"><div class="ellipsis wide-title">${esc(t.title)}</div><div class="ellipsis muted">${esc(t.reciterName)}</div></div>`;
+    card.onclick = () => openTrackDetail(t);
+    return card;
+  }), () => openListPage('مضاف حديثاً', allTracks.slice(0, 100))));
+
+  // 3. Top reciters (with a real photo first)
+  const topReciters = [...reciters].sort((a, b) => (b.hasPhoto - a.hasPhoto) || (b.count - a.count)).slice(0, 12);
+  container.appendChild(section('أشهر الرواديد', scroller(topReciters, reciterCard), () => openAllReciters()));
+
+  // 4. The listener's own history
+  if (recent.length) {
+    container.appendChild(section('تم الاستماع إليه مؤخراً', columnsScroller(recent.slice(0, 25)), () => openListPage('تم الاستماع إليه مؤخراً', recent)));
+  }
+
+  // 5. Made for you: more from the reciters you listen to most
+  if (recent.length) {
+    const favReciters = [...new Set(recent.map((t) => t.reciterName))].slice(0, 3);
+    const played = new Set(recent.map((t) => t.id));
+    const picks = seededShuffle(allTracks.filter((t) => favReciters.includes(t.reciterName) && !played.has(t.id)), todaySeed()).slice(0, 15);
+    if (picks.length >= 3) container.appendChild(section(`مصمم من أجل ${displayName() || 'الضيف'}`, scroller(picks, (t) => squareCard(t))));
+  }
+
+  // 6. Your likes
+  if (liked.length) {
+    container.appendChild(section('استمع للقصائد التي أحببتها', scroller(liked.slice(0, 15), (t) => squareCard(t)), () => openLikesPage()));
+  }
+
+  // 7. Most listened (real listen counts)
+  if (popularTracks.length) {
+    container.appendChild(section('الأكثر استماعاً', columnsScroller(popularTracks.slice(0, 25)), () => openListPage('الأكثر استماعاً', popularTracks)));
+  }
+
+  // 8. Today's picks: stable for the whole day
+  const daily = seededShuffle(popularTracks.length > 15 ? popularTracks : allTracks.slice(0, 200), todaySeed()).slice(0, 15);
+  container.appendChild(section('توصياتنا لك اليوم', scroller(daily, (t) => squareCard(t))));
+
+  // 9. More from the most listened reciter (or the one you play most)
+  const focus = reciterByName.get(recent[0]?.reciterName) || topReciters[0];
+  if (focus) {
+    const more = [...tracksOf(focus.name)].sort((a, b) => b.listens - a.listens).slice(0, 15);
+    if (more.length >= 3) container.appendChild(section(`المزيد من ${focus.name}`, scroller(more, (t) => squareCard(t)), () => openArtistDetail(focus.name)));
+  }
+
+  // 10. Duas
+  const duas = allTracks.filter((t) => CATEGORIES[1].values.includes(t.category)).slice(0, 15);
+  if (duas.length >= 3) container.appendChild(section('أدعية ومناجاة', scroller(duas, (t) => squareCard(t)), () => openCategoryDetail(CATEGORIES[1])));
+}
+
+// Several short rows per column, scrolling sideways
+function columnsScroller(list) {
+  const row = document.createElement('div');
+  row.className = 'horizontal-scroller snap';
+  for (let c = 0; c * 5 < list.length && c < 5; c++) {
+    const col = document.createElement('div');
+    col.className = 'mini-col';
+    list.slice(c * 5, c * 5 + 5).forEach((t, i) => {
+      const item = document.createElement('div');
+      item.className = 'mini-row';
+      item.innerHTML = `
+        <img src="${esc(thumb(t.coverImage, 48))}" alt="" loading="lazy" />
+        <div class="mini-row-text"><div class="ellipsis">${esc(t.title)}</div><div class="ellipsis muted">${esc(t.reciterName)}${t.listens ? ` • ${formatCount(t.listens)} استماع` : ''}</div></div>
+        <button class="icon-btn row-more" aria-label="خيارات">${icon('more')}</button>`;
+      item.onclick = () => playFromList(list, c * 5 + i);
+      item.querySelector('.row-more').onclick = (e) => { e.stopPropagation(); openTrackOptions(t); };
+      col.appendChild(item);
+    });
+    row.appendChild(col);
+  }
+  return row;
+}
+
+// ═══ Pages ═══════════════════════════════════════════════════════════════════
+let playlistPage = null; // { title, list, playlist? }
+
+function openListPage(title, list, playlist = null) {
+  openPage('playlist-detail-view', () => renderListPage(title, typeof list === 'function' ? list() : list, playlist));
+}
+const openLikesPage = () => openListPage('المقاطع المفضلة', () => [...lib.likes].map((id) => trackById.get(id)).filter(Boolean).reverse());
+const openDownloadsPage = () => openListPage('التنزيلات', () => [...lib.downloads].map((id) => trackById.get(id)).filter(Boolean));
+const openPlaylistPage = (pl) => openListPage(pl.name, () => pl.tracks.map((id) => trackById.get(id)).filter(Boolean), pl);
+
+function renderListPage(title, list, playlist) {
+  playlistPage = { title, list, playlist };
+  $('playlist-tracks').className = 'track-list';
+  $('playlist-search').parentElement.style.display = 'block';
+  $('playlist-title').textContent = title;
+  $('playlist-subtitle').textContent = `${formatCount(list.length)} مقطع`;
+  $('playlist-search').value = '';
+  renderTrackList($('playlist-tracks'), list, { numbered: true, playlist });
+  $('playlist-play-all').onclick = () => playFromList(list, 0, { shuffleStart: isShuffle });
+  const del = $('playlist-delete-btn');
+  del.style.display = playlist ? 'flex' : 'none';
+  del.onclick = async () => {
+    if (!playlist || !confirm(`حذف قائمة "${playlist.name}"؟`)) return;
+    await deletePlaylist(playlist);
+    toast('حُذفت القائمة');
+    history.back();
+  };
+}
+
+$('playlist-search').addEventListener('input', (e) => {
+  if (!playlistPage) return;
+  const q = normalize(e.target.value.trim());
+  const list = q ? playlistPage.list.filter((t) => normalize(`${t.title} ${t.reciterName}`).includes(q)) : playlistPage.list;
+  renderTrackList($('playlist-tracks'), list, { numbered: true, playlist: playlistPage.playlist, emptyText: 'لا توجد نتائج' });
+});
+
+function openAllReciters() {
+  openPage('playlist-detail-view', () => {
+    playlistPage = null;
+    $('playlist-title').textContent = 'كل الرواديد';
+    $('playlist-subtitle').textContent = `${formatCount(reciters.length)} رادود`;
+    $('playlist-delete-btn').style.display = 'none';
+    $('playlist-search').parentElement.style.display = 'none';
+    const grid = $('playlist-tracks');
+    grid.className = 'reciter-grid';
+    grid.innerHTML = '';
+    reciters.forEach((r) => grid.appendChild(reciterCard(r)));
+    $('playlist-play-all').onclick = () => playFromList(popularTracks, 0);
+  });
+}
+
+let artistShown = null;
+window.openArtistDetail = (name) => openPage('artist-view', () => renderArtist(name));
+
+function renderArtist(name) {
+  artistShown = name;
+  const r = reciterByName.get(name) || { name, image: '', count: 0 };
+  const list = [...tracksOf(name)].sort((a, b) => b.listens - a.listens);
+  $('artist-detail-name').textContent = name;
+  $('artist-detail-stats').textContent = `${formatCount(list.length)} مقطع • ${formatCount(list.reduce((s, t) => s + t.listens, 0))} استماع`;
+  $('artist-detail-image').src = thumb(r.image || list[0]?.coverImage, 400);
+  renderTrackList($('artist-tracks'), list, { numbered: true });
+  $('artist-play-all').onclick = () => playFromList(list, 0, { shuffleStart: isShuffle });
+  const follow = $('artist-follow-btn');
+  const paintFollow = () => {
+    const on = lib.follows.has(name);
+    follow.classList.toggle('on', on);
+    follow.innerHTML = `${icon(on ? 'following' : 'follow')} <span>${on ? 'تتابعه' : 'متابعة'}</span>`;
+  };
+  paintFollow();
+  follow.onclick = async () => { await toggleFollow(r); paintFollow(); };
+  $('artist-share-btn').onclick = () => share(`${name} | صوت الأحزان`, `استمع إلى قصائد ${name}`, r.dbId ? `${SITE_URL}/reciter?id=${r.dbId}` : APP_URL);
+}
+
+window.openCategoryDetail = (cat) => openPage('category-view', () => renderCategory(cat));
+
+function renderCategory(cat) {
+  const list = allTracks.filter((t) => cat.values.includes(t.category));
+  $('category-detail-name').textContent = cat.title;
+  $('category-detail-stats').textContent = `${formatCount(list.length)} مقطع`;
+  $('category-detail-image').src = thumb(list[0]?.coverImage, 400);
+  $('category-view').querySelector('.hero-image').style.background = cat.color;
+  renderTrackList($('category-tracks'), list, { numbered: true, emptyText: 'لا توجد مقاطع في هذا التصنيف بعد' });
+  $('category-play-all').onclick = () => playFromList(list, 0, { shuffleStart: isShuffle });
+}
+
+window.openTrackDetail = (trackOrId) => {
+  const track = typeof trackOrId === 'object' ? trackOrId : trackById.get(String(trackOrId));
+  if (track) openPage('track-detail-view', () => renderTrackDetail(track));
+};
+
+function renderTrackDetail(track) {
+  $('td-cover').src = thumb(track.coverImage, 350);
+  $('td-title').textContent = track.title;
+  $('td-artist').textContent = track.reciterName;
+  const r = reciterOf(track);
+  $('td-artist-img').src = thumb(r?.image || track.coverImage, 32);
+  $('td-artist-row').onclick = () => openArtistDetail(track.reciterName);
+  const cat = categoryOf(track);
+  $('td-meta').innerHTML = [cat && esc(cat.title), track.duration && `<span dir="ltr">${track.duration}</span>`, `${formatCount(track.listens)} استماع`].filter(Boolean).join(' • ');
+
+  const lyrics = $('td-lyrics-section');
+  lyrics.style.display = track.lyrics ? 'block' : 'none';
+  $('td-lyrics').textContent = track.lyrics;
+
+  const playBtn = $('td-play-btn');
+  playBtn.dataset.trackId = track.id;
+  playBtn.onclick = () => {
+    if (currentTrack?.id === track.id) togglePlay();
+    else playFromList([track, ...similarTo(track, 30)], 0);
+  };
+  paintPlayButtons();
+
+  const like = $('td-like-btn');
+  like.dataset.trackId = track.id;
+  like.onclick = () => toggleLike(track);
+  const dl = $('td-download-btn');
+  const paintDl = () => { dl.classList.toggle('on', lib.downloads.has(track.id)); setIcon(dl.querySelector('.ic'), lib.downloads.has(track.id) ? 'check' : 'download'); };
+  paintDl();
+  dl.onclick = async () => { setIcon(dl.querySelector('.ic'), 'spinner'); await toggleDownload(track); paintDl(); };
+  $('td-options-btn').onclick = () => openTrackOptions(track);
+  refreshLikeButtons();
+
+  const similar = similarTo(track, 6);
+  renderTrackList($('td-similar-list'), similar);
+
+  const trending = tracksOf(track.reciterName).filter((t) => t.id !== track.id).sort((a, b) => b.listens - a.listens).slice(0, 10);
+  $('td-trending-title').textContent = `الأعمال الرائجة لـ ${track.reciterName}`;
+  $('td-trending-title').parentElement.style.display = trending.length ? 'block' : 'none';
+  const tr = $('td-trending-list');
+  tr.innerHTML = '';
+  trending.forEach((t) => tr.appendChild(squareCard(t, () => openTrackDetail(t))));
+
+  const fans = seededShuffle(reciters.filter((x) => x.name !== track.reciterName && x.count > 0).slice(0, 20), Number(track.id)).slice(0, 8);
+  const fl = $('td-fans-like-list');
+  fl.innerHTML = '';
+  fans.forEach((x) => fl.appendChild(reciterCard(x)));
+  fl.parentElement.style.display = fans.length ? 'block' : 'none';
+}
+
+// Same reciter first (most listened), then same category
+function similarTo(track, n) {
+  const same = tracksOf(track.reciterName).filter((t) => t.id !== track.id);
+  const sameCat = track.category ? allTracks.filter((t) => t.category === track.category && t.reciterName !== track.reciterName) : [];
+  return [...seededShuffle(same, Number(track.id)), ...seededShuffle(sameCat.slice(0, 300), Number(track.id))].slice(0, n);
+}
+
+// ═══ Search ══════════════════════════════════════════════════════════════════
+function renderSearchHome() {
+  const grid = $('genre-grid');
+  grid.innerHTML = '';
+  CATEGORIES.forEach((cat) => {
+    const inCat = allTracks.filter((t) => cat.values.includes(t.category));
+    const card = document.createElement('div');
+    card.className = 'genre-card';
+    card.style.backgroundColor = cat.color;
+    card.innerHTML = `
+      <div class="genre-card-title">${esc(cat.title)}<div class="genre-card-count">${formatCount(inCat.length)} مقطع</div></div>
+      ${inCat[0] ? `<img src="${esc(thumb(inCat[0].coverImage, 65))}" class="genre-card-img" alt="" loading="lazy" />` : ''}`;
+    card.onclick = () => openCategoryDetail(cat);
+    grid.appendChild(card);
+  });
+}
+
+let searchTimer;
+$('main-search-input').addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(runSearch, 150);
+});
+
+function runSearch() {
+  const raw = $('main-search-input').value.trim();
+  const results = $('search-results');
+  const browsing = !raw;
+  $('genre-grid').style.display = browsing ? 'grid' : 'none';
+  $('search-section-title').style.display = browsing ? 'block' : 'none';
+  results.style.display = browsing ? 'none' : 'block';
+  if (browsing) return;
+
+  const words = normalize(raw).split(/\s+/).filter(Boolean);
+  const matches = (text) => { const n = normalize(text); return words.every((w) => n.includes(w)); };
+  const foundReciters = reciters.filter((r) => matches(r.name)).slice(0, 8);
+  const foundTracks = allTracks.filter((t) => matches(`${t.title} ${t.reciterName}`));
+
+  results.innerHTML = '';
+  if (!foundReciters.length && !foundTracks.length) {
+    results.innerHTML = `<div class="empty-state">لم يتم العثور على نتائج${fullyLoaded ? '' : '، ما زالت المكتبة تُحمَّل'}</div>`;
+    return;
+  }
+  if (foundReciters.length) results.appendChild(section('الرواديد', scroller(foundReciters, reciterCard)));
+  if (foundTracks.length) {
+    const wrap = document.createElement('div');
+    wrap.className = 'track-list';
+    results.appendChild(section(`المقاطع (${formatCount(foundTracks.length)})`, wrap));
+    renderTrackList(wrap, foundTracks);
+  }
+}
+
+// ═══ Library tab ═════════════════════════════════════════════════════════════
+document.querySelectorAll('.filter-chip').forEach((chip) => {
+  chip.onclick = () => {
+    document.querySelectorAll('.filter-chip').forEach((c) => c.classList.remove('active'));
+    chip.classList.add('active');
+    renderLibrary();
+  };
+});
+
+function renderLibrary() {
+  const filter = document.querySelector('.filter-chip.active')?.dataset.filter || 'all';
+  const container = $('library-content');
+  container.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.className = 'library-grid animate-in';
+
+  const card = (iconName, title, subtitle, onClick, cover) => {
+    const el = document.createElement('div');
+    el.className = 'library-card';
+    el.innerHTML = `${cover ? `<img src="${esc(thumb(cover, 80))}" alt="" class="library-card-cover" />` : icon(iconName)}
+      <div class="library-card-title ellipsis">${esc(title)}</div><div class="library-card-subtitle muted">${esc(subtitle)}</div>`;
+    el.onclick = onClick;
+    grid.appendChild(el);
+  };
+
+  if (filter === 'all') card('heart', 'المقاطع المفضلة', `${formatCount(lib.likes.size)} مقطع`, openLikesPage);
+  if (filter === 'all' || filter === 'downloads') card('download', 'التنزيلات', `${formatCount(lib.downloads.size)} مقطع على الجهاز`, openDownloadsPage);
+  if (filter === 'all' || filter === 'playlists') {
+    lib.playlists.forEach((pl) => card('playlist', pl.name, `${formatCount(pl.tracks.length)} مقطع`, () => openPlaylistPage(pl), trackById.get(pl.tracks[0])?.coverImage));
+    if (filter === 'playlists' && !lib.playlists.length) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      empty.style.gridColumn = '1 / -1';
+      empty.innerHTML = 'لم تنشئ أي قائمة بعد.<br/><button class="link-btn">إنشاء قائمة</button>';
+      empty.querySelector('button').onclick = () => promptCreatePlaylist();
+      grid.appendChild(empty);
+    }
+  }
+  container.appendChild(grid);
+
+  if (filter === 'all' || filter === 'artists') {
+    const followed = [...lib.follows].map((n) => reciterByName.get(n)).filter(Boolean);
+    if (followed.length) container.appendChild(section('الرواديد الذين تتابعهم', scroller(followed, reciterCard)));
+    else if (filter === 'artists') {
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      empty.innerHTML = 'لا تتابع أي رادود بعد. افتح صفحة رادود واضغط "متابعة".<br/><button class="link-btn">تصفح الرواديد</button>';
+      empty.querySelector('button').onclick = () => openAllReciters();
+      container.appendChild(empty);
+    }
+  }
+}
+
+// ═══ Prompts, options, playlists ═════════════════════════════════════════════
+function openPrompt({ title, hint = '', value = '', placeholder = '', onSubmit }) {
+  const modal = $('prompt-modal');
+  $('prompt-title').textContent = title;
+  $('prompt-hint').textContent = hint;
+  const input = $('prompt-input');
+  input.value = value;
+  input.placeholder = placeholder;
+  const submit = async () => {
+    const v = input.value.trim();
+    if (!v) { input.focus(); return; }
+    closeOverlayThen(() => onSubmit(v));
+  };
+  $('prompt-submit').onclick = submit;
+  input.onkeydown = (e) => { if (e.key === 'Enter') submit(); };
+  openOverlay(() => { modal.style.display = 'flex'; setTimeout(() => input.focus(), 50); }, () => { modal.style.display = 'none'; });
+}
+
+window.promptCreatePlaylist = (thenAddTrack = null) => {
+  const run = () => openPrompt({
+    title: 'إنشاء قائمة تشغيل', hint: 'أدخل اسماً لقائمة التشغيل الجديدة.', placeholder: 'مثال: قصائد للسيارة',
+    onSubmit: async (name) => {
+      const pl = await createPlaylist(name);
+      if (thenAddTrack) { pl.tracks.push(thenAddTrack.id); await savePlaylist(pl); toast(`أُضيف إلى "${name}"`); }
+      else toast('أُنشئت القائمة');
+      if (currentTab === 'library') renderLibrary();
+    },
+  });
+  if ($('playlist-modal').style.display === 'flex') closeOverlayThen(run); else run();
+};
+
+function openPlaylistPicker(track) {
+  const modal = $('playlist-modal');
+  const list = $('playlist-modal-list');
+  list.innerHTML = '';
+  if (!lib.playlists.length) list.innerHTML = '<div class="empty-state">لا توجد قوائم تشغيل. أنشئ واحدة أولاً.</div>';
+  lib.playlists.forEach((pl) => {
+    const item = document.createElement('button');
+    item.className = 'sheet-item';
+    const has = pl.tracks.includes(track.id);
+    item.innerHTML = `${icon(has ? 'check' : 'playlist')}<span style="flex:1">${esc(pl.name)}</span><span class="muted" style="font-size:12px">${formatCount(pl.tracks.length)} مقطع</span>`;
+    item.onclick = () => {
+      if (has) { toast('المقطع موجود في هذه القائمة'); return; }
+      pl.tracks.push(track.id);
+      savePlaylist(pl);
+      toast(`أُضيف إلى "${pl.name}"`);
+      history.back();
+    };
+    list.appendChild(item);
+  });
+  modal.querySelector('.secondary-btn').onclick = () => promptCreatePlaylist(track);
+  openOverlay(() => { modal.style.display = 'flex'; }, () => { modal.style.display = 'none'; });
+}
+
+function openSheet(backdropId) {
+  const modal = $(backdropId);
+  const sheet = modal.querySelector('.sheet');
+  openOverlay(
+    () => { modal.style.display = 'flex'; void modal.offsetWidth; modal.classList.add('open'); sheet.classList.add('open'); },
+    () => { modal.classList.remove('open'); sheet.classList.remove('open'); setTimeout(() => { modal.style.display = 'none'; }, 250); },
+  );
+}
+
+function openTrackOptions(track, { playlist = null } = {}) {
+  $('track-options-img').src = thumb(track.coverImage, 55);
+  $('track-options-title').textContent = track.title;
+  $('track-options-artist').textContent = track.reciterName;
+
+  const liked = lib.likes.has(track.id);
+  setIcon($('opt-like-icon'), 'heart', { fill: liked });
+  $('opt-like-icon').classList.toggle('liked', liked);
+  $('opt-like-text').textContent = liked ? 'إزالة من المفضلة' : 'إضافة إلى المفضلة';
+  $('opt-like').onclick = () => closeOverlayThen(() => toggleLike(track));
+
+  $('opt-queue').onclick = () => closeOverlayThen(() => playNextInQueue(track));
+  $('opt-playlist').onclick = () => closeOverlayThen(() => openPlaylistPicker(track));
+
+  const remove = $('opt-remove');
+  remove.style.display = playlist ? 'flex' : 'none';
+  remove.onclick = () => closeOverlayThen(async () => {
+    playlist.tracks = playlist.tracks.filter((id) => id !== track.id);
+    await savePlaylist(playlist);
+    toast('أُزيل من القائمة');
+    refreshOpenViews();
+  });
+
+  const dl = lib.downloads.has(track.id);
+  setIcon($('opt-download-icon'), dl ? 'check' : 'download');
+  $('opt-download-text').textContent = dl ? 'حذف التنزيل' : 'تنزيل للاستماع بدون إنترنت';
+  $('opt-download').onclick = () => closeOverlayThen(() => toggleDownload(track).then(refreshOpenViews));
+
+  $('opt-artist').onclick = () => closeOverlayThen(() => {
+    if ($('full-player-view').classList.contains('open')) closeOverlayThen(() => openArtistDetail(track.reciterName));
+    else openArtistDetail(track.reciterName);
+  });
+  $('opt-share').onclick = () => closeOverlayThen(() => share(track.title, `استمع إلى ${track.title} بصوت ${track.reciterName}`, `${SITE_URL}/track?id=${track.id}`));
+  openSheet('track-options-modal');
+}
+
+window.openCurrentTrackOptions = () => { if (currentTrack) openTrackOptions(currentTrack); };
+
+// Shared links point at the website: it shows a preview in chats/search and
+// sends phones back into this app on the same track.
+async function share(title, text, url) {
+  if (navigator.share) {
+    try { await navigator.share({ title, text, url }); } catch { /* cancelled */ }
+    return;
+  }
+  try { await navigator.clipboard.writeText(url); toast('تم نسخ الرابط'); } catch { prompt('انسخ الرابط:', url); }
+}
+
+// ═══ Player ══════════════════════════════════════════════════════════════════
+const audio = new Audio();
+audio.preload = 'metadata';
+let currentTrack = null;
+let queue = [];
+let queueIndex = 0;
+let queueOriginal = null; // order before shuffling
 let isShuffle = false;
-let isRepeat = false;
-let isAutoplay = false;
-let isLiked = false;
+let repeatMode = 'off';    // off → all → one
+let isAutoplay = store.get('sawt_autoplay', true);
+let countedListen = null;  // track id whose listen was already counted
+let hls = null;
 
-function toggleShuffle() {
+async function loadSource(url) {
+  if (hls) { hls.destroy(); hls = null; }
+  if (/\.m3u8(\?|$)/i.test(url) && !audio.canPlayType('application/vnd.apple.mpegurl')) {
+    const { default: Hls } = await import('hls.js'); // only for the rare streamed track
+    if (Hls.isSupported()) {
+      hls = new Hls();
+      hls.loadSource(url);
+      hls.attachMedia(audio);
+      return;
+    }
+  }
+  audio.src = url;
+}
+
+async function playTrack(track, { autoplay = true, startAt = 0 } = {}) {
+  if (!track.audioUrl) { toast('هذا المقطع لا يحتوي على ملف صوتي'); return; }
+  currentTrack = track;
+  countedListen = null;
+  await loadSource(track.audioUrl);
+  if (startAt) audio.addEventListener('loadedmetadata', () => { audio.currentTime = startAt; }, { once: true });
+  updateNowPlaying();
+  if (autoplay) {
+    addToHistory(track);
+    audio.play().catch((err) => { if (err.name !== 'AbortError') console.warn('play failed:', err); });
+  }
+}
+
+// Play `list` starting at `index`; the list becomes the queue
+function playFromList(list, index, { shuffleStart = false } = {}) {
+  if (!list.length) return;
+  queueOriginal = list.slice();
+  if (isShuffle) {
+    const start = shuffleStart ? Math.floor(Math.random() * list.length) : index;
+    const first = list[start];
+    queue = [first, ...shuffled(list.filter((_, i) => i !== start))];
+    queueIndex = 0;
+  } else {
+    queue = list.slice();
+    queueIndex = index;
+  }
+  playTrack(queue[queueIndex]);
+}
+
+function playNextInQueue(track) {
+  if (!currentTrack) { playFromList([track], 0); return; }
+  queue.splice(queueIndex + 1, 0, track);
+  toast('سيُشغَّل بعد المقطع الحالي');
+  updateQueueUI();
+}
+
+window.togglePlay = (event) => {
+  event?.stopPropagation?.();
+  if (!currentTrack) return;
+  if (audio.paused) {
+    if (!audio.currentSrc) playTrack(currentTrack);
+    else audio.play().catch(() => {});
+  } else audio.pause();
+};
+const togglePlay = window.togglePlay;
+
+// Next track: from the queue; at its end repeat-all wraps, autoplay continues
+// with similar tracks, otherwise playback stops.
+window.playNext = (fromEnded = false) => {
+  if (queueIndex < queue.length - 1) {
+    queueIndex++;
+  } else if (repeatMode === 'all' && queue.length) {
+    queueIndex = 0;
+  } else if (isAutoplay && currentTrack) {
+    const played = new Set(queue.map((t) => t.id));
+    const more = similarTo(currentTrack, 40).filter((t) => !played.has(t.id));
+    if (!more.length) return;
+    queue.push(...more.slice(0, 10));
+    queueIndex++;
+  } else {
+    if (!fromEnded && queue.length) queueIndex = 0; else return;
+  }
+  playTrack(queue[queueIndex]);
+};
+
+window.playPrev = () => {
+  if (audio.currentTime > 3 || queueIndex === 0) { audio.currentTime = 0; return; }
+  queueIndex--;
+  playTrack(queue[queueIndex]);
+};
+
+window.toggleShuffle = () => {
   isShuffle = !isShuffle;
-  const btn = document.getElementById('fp-shuffle-btn');
-  if (btn) btn.style.color = isShuffle ? 'var(--accent)' : 'rgba(255,255,255,0.5)';
-  
-  if (isShuffle && queueList.length > 0) {
-    // Shuffle remaining queue
-    const remaining = queueList.slice(queueIndex + 1);
-    remaining.sort(() => Math.random() - 0.5);
-    queueList = [...queueList.slice(0, queueIndex + 1), ...remaining];
+  if (currentTrack && queue.length > 1) {
+    if (isShuffle) {
+      queueOriginal = queue.slice();
+      queue = [...queue.slice(0, queueIndex + 1), ...shuffled(queue.slice(queueIndex + 1))];
+    } else if (queueOriginal) {
+      const i = queueOriginal.findIndex((t) => t.id === currentTrack.id);
+      if (i !== -1) { queue = queueOriginal.slice(); queueIndex = i; }
+    }
     updateQueueUI();
   }
-}
+  document.querySelectorAll('.shuffle-toggle').forEach((b) => b.classList.toggle('on', isShuffle));
+  toast(isShuffle ? 'التشغيل العشوائي مفعّل' : 'التشغيل العشوائي متوقف');
+};
 
-function toggleRepeat() {
-  isRepeat = !isRepeat;
-  const btn = document.getElementById('fp-repeat-btn');
-  if (btn) btn.style.color = isRepeat ? 'var(--accent)' : 'rgba(255,255,255,0.5)';
-  audioContext.loop = isRepeat;
-}
+window.toggleRepeat = () => {
+  repeatMode = repeatMode === 'off' ? 'all' : repeatMode === 'all' ? 'one' : 'off';
+  audio.loop = repeatMode === 'one';
+  const btn = $('fp-repeat-btn');
+  btn.classList.toggle('on', repeatMode !== 'off');
+  setIcon(btn.querySelector('.ic'), repeatMode === 'one' ? 'repeat-one' : 'repeat');
+  toast({ off: 'التكرار متوقف', all: 'تكرار القائمة', one: 'تكرار المقطع الحالي' }[repeatMode]);
+};
 
-window.toggleLike = function() {
-  isLiked = !isLiked;
-  const btn = document.getElementById('fp-like-btn');
-  if (btn) {
-    btn.className = isLiked ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
-    btn.style.color = isLiked ? 'var(--accent)' : 'white';
-  }
-  // Also persist the like if a poem is playing
-  if (currentPoem) {
-    LibraryStore.toggleLike(currentPoem.id);
-    pushLikeToSupabase(currentPoem.id, isLiked);
-  }
-}
-
-window.toggleAutoplay = function() {
+window.toggleAutoplay = () => {
   isAutoplay = !isAutoplay;
-  const switchContainer = document.getElementById('fp-autoplay-switch');
-  const knob = switchContainer.querySelector('.switch-knob');
-  if (isAutoplay) {
-    switchContainer.style.background = 'var(--accent)';
-    knob.style.right = '2px';
-  } else {
-    switchContainer.style.background = 'rgba(255,255,255,0.2)';
-    knob.style.right = '22px';
+  store.set('sawt_autoplay', isAutoplay);
+  $('fp-autoplay-switch').classList.toggle('on', isAutoplay);
+};
+
+// Radio: shuffle of the current reciter's work, then similar tracks
+window.startRadio = () => {
+  if (!currentTrack) return;
+  const own = shuffled(tracksOf(currentTrack.reciterName).filter((t) => t.id !== currentTrack.id));
+  queue = [currentTrack, ...own, ...similarTo(currentTrack, 20).filter((t) => t.reciterName !== currentTrack.reciterName)];
+  queueOriginal = null;
+  queueIndex = 0;
+  updateQueueUI();
+  toast(`راديو ${currentTrack.reciterName}`);
+};
+
+audio.addEventListener('ended', () => {
+  if (sleepAtEnd) { setSleepTimer('off'); return; }
+  playNext(true);
+});
+audio.addEventListener('play', paintPlayButtons);
+audio.addEventListener('pause', () => { paintPlayButtons(); saveLastPosition(); });
+audio.addEventListener('playing', () => {
+  // One listen per play (same counter as the website and the phone app)
+  if (currentTrack && countedListen !== currentTrack.id) {
+    countedListen = currentTrack.id;
+    currentTrack.listens++;
+    supabase.rpc('increment_listens', { row_id: Number(currentTrack.id) }).then(({ error }) => {
+      if (error) console.warn('increment_listens failed:', error.message);
+    });
+  }
+});
+audio.addEventListener('error', () => {
+  if (currentTrack && audio.error) toast('تعذر تشغيل هذا المقطع');
+});
+
+let lastSaved = 0;
+audio.addEventListener('timeupdate', () => {
+  updateProgressUI();
+  if (Date.now() - lastSaved > 5000) saveLastPosition();
+});
+audio.addEventListener('loadedmetadata', updateProgressUI);
+
+function saveLastPosition() {
+  if (!currentTrack) return;
+  lastSaved = Date.now();
+  store.set('sawt_last', { id: currentTrack.id, t: Math.floor(audio.currentTime || 0) });
+}
+
+// Reopening the app shows the last track, paused where it was left
+function restoreLastTrack() {
+  const last = store.get('sawt_last', null);
+  const track = last && trackById.get(String(last.id));
+  if (!track || currentTrack) return;
+  queue = [track];
+  queueIndex = 0;
+  playTrack(track, { autoplay: false, startAt: last.t || 0 });
+}
+
+function paintPlayButtons() {
+  const playing = !audio.paused;
+  [$('mp-play-btn'), $('fp-play-btn')].forEach((b) => setIcon(b.querySelector('.ic'), playing ? 'pause' : 'play', { fill: true }));
+  const td = $('td-play-btn');
+  setIcon(td.querySelector('.ic'), playing && currentTrack?.id === td.dataset.trackId ? 'pause' : 'play', { fill: true });
+  if ('mediaSession' in navigator) navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
+}
+
+let isDragging = false;
+function updateProgressUI() {
+  const d = audio.duration;
+  if (!d || !isFinite(d)) return;
+  const pct = (audio.currentTime / d) * 100;
+  $('mp-progress-fill').style.width = `${pct}%`;
+  if (!isDragging) {
+    const range = $('fp-progress');
+    range.value = pct;
+    range.style.setProperty('--pct', `${pct}%`);
+    $('fp-current-time').textContent = formatTime(audio.currentTime);
+  }
+  $('fp-total-time').textContent = formatTime(d);
+  if ('mediaSession' in navigator && navigator.mediaSession.setPositionState) {
+    try { navigator.mediaSession.setPositionState({ duration: d, position: Math.min(audio.currentTime, d), playbackRate: audio.playbackRate }); } catch { /* ignore */ }
+  }
+}
+
+const progress = $('fp-progress');
+progress.addEventListener('input', (e) => {
+  isDragging = true;
+  e.target.style.setProperty('--pct', `${e.target.value}%`);
+  if (audio.duration) $('fp-current-time').textContent = formatTime((e.target.value / 100) * audio.duration);
+});
+progress.addEventListener('change', (e) => {
+  isDragging = false;
+  if (audio.duration && isFinite(audio.duration)) audio.currentTime = (e.target.value / 100) * audio.duration;
+});
+
+function updateNowPlaying() {
+  const t = currentTrack;
+  const mini = $('mini-player');
+  if (mini.style.display !== 'flex') { mini.style.display = 'flex'; void mini.offsetWidth; }
+  if (!$('full-player-view').classList.contains('open')) mini.classList.add('active');
+  document.body.classList.add('has-player');
+
+  $('mp-cover').src = thumb(t.coverImage, 48);
+  $('mp-title').textContent = t.title;
+  $('mp-reciter').textContent = t.reciterName;
+  $('fp-cover').src = thumb(t.coverImage, 400);
+  $('fp-bg').style.backgroundImage = `url("${thumb(t.coverImage, 160).replace(/["\\]/g, encodeURIComponent)}")`;
+  $('fp-title').textContent = t.title;
+  $('fp-artist').textContent = t.reciterName;
+  $('fp-artist').onclick = () => closeOverlayThen(() => openArtistDetail(t.reciterName));
+  $('fp-lyrics-preview').textContent = t.lyrics || 'الكلمات غير متوفرة لهذا المقطع';
+  $('lyrics-content').textContent = t.lyrics || 'الكلمات غير متوفرة لهذا المقطع';
+  $('ly-title').textContent = t.title;
+  $('ly-artist').textContent = t.reciterName;
+  $('mp-like-btn').dataset.trackId = t.id;
+  $('fp-like-btn').dataset.trackId = t.id;
+  $('fp-current-time').textContent = '0:00';
+  $('fp-total-time').textContent = t.duration || '0:00';
+
+  const similar = $('fp-similar-list');
+  similar.innerHTML = '';
+  similarTo(t, 8).forEach((s) => similar.appendChild(squareCard(s, () => playFromList([s, ...similarTo(s, 20)], 0))));
+  updateQueueUI();
+  refreshLikeButtons();
+  paintPlayButtons();
+  markPlayingRows();
+
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: t.title,
+      artist: t.reciterName,
+      album: 'صوت الأحزان',
+      artwork: [96, 256, 512].map((s) => ({ src: thumb(t.coverImage, s / 2), sizes: `${s}x${s}` })),
+    });
   }
 }
 
 function updateQueueUI() {
-  const queueContainer = document.getElementById('fp-queue-list');
-  if (!queueContainer) return;
-  
-  queueContainer.innerHTML = '';
-  const upcomingQueue = [];
-  for (let i = 1; i <= 5; i++) {
-    if (queueIndex + i < queueList.length) {
-      upcomingQueue.push(queueList[queueIndex + i]);
-    }
-  }
-  
-  upcomingQueue.forEach((p, index) => {
-    const track = document.createElement('div');
-    track.className = 'track-item';
-    track.style.padding = '5px 0';
-    track.innerHTML = `
-      <img src="${p.coverImage}" class="track-img" style="width: 45px; height: 45px;" />
-      <div class="track-info">
-        <div class="track-title" style="font-size: 15px;">${p.title}</div>
-        <div class="track-artist" style="font-size: 13px;">${p.reciterName}</div>
-      </div>
-      <i class="fa-solid fa-ellipsis-vertical" style="color: rgba(255,255,255,0.5); padding: 10px;" onclick="openTrackOptions(event, \`${p.id}\`)"></i>
-    `;
-    track.onclick = () => {
-      queueIndex += (index + 1);
-      playPoem(p, true);
-    };
-    queueContainer.appendChild(track);
-  });
-  
-  if (upcomingQueue.length === 0) {
-    queueContainer.innerHTML = '<div style="text-align: center; color: rgba(255,255,255,0.5); padding: 10px;">\u0644\u0627 \u064a\u0648\u062c\u062f \u0645\u0642\u0627\u0637\u0639 \u062a\u0627\u0644\u064a\u0629 \u0641\u064a \u0627\u0644\u0642\u0627\u0626\u0645\u0629</div>';
-  }
-}
-
-function playPoem(poem, fromQueueNavigation = false) {
-  if (!poem.audioUrl) {
-    alert('\u0639\u0630\u0631\u0627\u064b\u060c \u0647\u0630\u0627 \u0627\u0644\u0645\u0642\u0637\u0639 \u0644\u0627 \u064a\u062d\u062a\u0648\u064a \u0639\u0644\u0649 \u0631\u0627\u0628\u0637 \u0635\u0648\u062a\u064a.');
+  const box = $('fp-queue-list');
+  box.innerHTML = '';
+  const upcoming = queue.slice(queueIndex + 1, queueIndex + 6);
+  if (!upcoming.length) {
+    box.innerHTML = `<div class="muted" style="text-align: center; padding: 10px;">${isAutoplay ? 'ستُشغَّل مقاطع مشابهة تلقائياً' : 'لا توجد مقاطع تالية في القائمة'}</div>`;
     return;
   }
-
-  currentPoem = poem;
-  
-  // Build queue context if this is a fresh play
-  if (!fromQueueNavigation) {
-    const idx = globalPoems.findIndex(p => p.audioUrl === poem.audioUrl);
-    if (idx !== -1) {
-      queueList = globalPoems;
-      queueIndex = idx;
-    } else {
-      queueList = [poem, ...globalPoems];
-      queueIndex = 0;
-    }
-    // Update similar list only on fresh play to show tracks by the same reciter
-    let reciterTracks = [...globalPoems].filter(p => p.reciterName === poem.reciterName && p.audioUrl !== poem.audioUrl).sort(() => 0.5 - Math.random());
-    // If not enough tracks by this reciter, pad with other random tracks
-    if (reciterTracks.length < 5) {
-      const otherTracks = [...globalPoems].filter(p => p.reciterName !== poem.reciterName && p.audioUrl !== poem.audioUrl).sort(() => 0.5 - Math.random());
-      reciterTracks = [...reciterTracks, ...otherTracks];
-    }
-    similarList = reciterTracks.slice(0, 5);
-  }
-  
-  // Update Mini Player only if full player is not open
-  const player = document.getElementById('mini-player');
-  const fullPlayer = document.getElementById('full-player-view');
-  if (!fullPlayer || !fullPlayer.classList.contains('open')) {
-    player.style.display = 'flex';
-    player.classList.add('active');
-  }
-
-  document.getElementById('mp-cover').src = poem.coverImage;
-  const el_mp_title = document.getElementById('mp-title'); if (el_mp_title) el_mp_title.textContent = poem.title;
-  const el_mp_reciter = document.getElementById('mp-reciter'); if (el_mp_reciter) el_mp_reciter.textContent = poem.reciterName;
-  
-  // Update Full Player
-  document.getElementById('fp-cover').src = poem.coverImage;
-  const el_fp_title = document.getElementById('fp-title'); if (el_fp_title) el_fp_title.textContent = poem.title;
-  const el_fp_artist = document.getElementById('fp-artist'); if (el_fp_artist) el_fp_artist.textContent = poem.reciterName;
-  
-  const fpBg = document.getElementById('fp-bg');
-  if (fpBg) {
-    fpBg.style.backgroundImage = `url('${poem.coverImage}')`;
-  }
-
-  // Wire up Full Player Like button
-  const likeBtn = document.getElementById('fp-like-btn');
-  if (likeBtn) {
-    const isLiked = LibraryStore.likes.includes(poem.id);
-    likeBtn.className = isLiked ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
-    likeBtn.style.color = isLiked ? '#E91E63' : 'white';
-    
-    likeBtn.onclick = () => {
-      const liked = LibraryStore.toggleLike(poem.id);
-      pushLikeToSupabase(poem.id, liked);
-      likeBtn.className = liked ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
-      likeBtn.style.color = liked ? '#E91E63' : 'white';
-      likeBtn.style.transform = 'scale(1.2)';
-      setTimeout(() => likeBtn.style.transform = 'scale(1)', 200);
-    };
-  }
-
-    // Wire up Full Player Download button
-  const dlBtn = document.getElementById('fp-download-btn');
-  if (dlBtn) {
-    const isDl = LibraryStore.downloads.includes(poem.id);
-    dlBtn.style.color = isDl ? '#4CAF50' : 'white';
-    
-    dlBtn.onclick = async () => {
-      const originalHtml = dlBtn.innerHTML;
-      dlBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-      const downloaded = await LibraryStore.toggleDownload(poem.id);
-      dlBtn.innerHTML = originalHtml;
-      dlBtn.style.color = downloaded ? '#4CAF50' : 'white';
-      dlBtn.style.transform = 'scale(1.2)';
-      setTimeout(() => dlBtn.style.transform = 'scale(1)', 200);
-    };
-  }
-
-  // Wire up Full Player Playlist button
-  const plBtn = document.getElementById('fp-playlist-btn');
-  if (plBtn) {
-    plBtn.onclick = () => {
-      window.openPlaylistModal(poem.id);
-      plBtn.style.transform = 'scale(1.2)';
-      setTimeout(() => plBtn.style.transform = 'scale(1)', 200);
-    };
-  }
-  
-  // Update Next Track info (Queue and Similar)
-  const similarContainer = document.getElementById('fp-similar-list');
-  const queueContainer = document.getElementById('fp-queue-list');
-  
-  if (similarContainer) {
-    similarContainer.innerHTML = '';
-    similarList.forEach(t => {
-      const card = document.createElement('div');
-      card.className = 'album-card reciter-card';
-      card.style.width = '32vw';
-      card.style.maxWidth = '140px';
-      card.style.flexShrink = '0';
-      
-      card.innerHTML = `
-        <img src="${t.coverImage}" style="width: 100%; aspect-ratio: 1; border-radius: 8px; object-fit: cover;" />
-        <div style="font-size: 14px; font-weight: bold; margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: right;">${t.title}</div>
-        <div style="font-size: 13px; color: rgba(255,255,255,0.6); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: right;">${t.reciterName}</div>
-      `;
-      card.onclick = () => playPoem(t);
-      similarContainer.appendChild(card);
-    });
-  }
-
-  if (queueContainer) {
-    updateQueueUI();
-  }
-
-  // Update Lyrics
-  const lyricsText = poem.lyrics || 'الكلمات غير متوفرة';
-  const lyricsPreview = document.getElementById('fp-lyrics-preview');
-  if (lyricsPreview) lyricsPreview.textContent = lyricsText;
-  const lyricsContent = document.getElementById('lyrics-content');
-  if (lyricsContent) lyricsContent.textContent = lyricsText;
-  const lyTitle = document.getElementById('ly-title');
-  if (lyTitle) lyTitle.textContent = poem.title;
-  const lyArtist = document.getElementById('ly-artist');
-  if (lyArtist) lyArtist.textContent = poem.reciterName;
-
-  loadAndPlay(poem.audioUrl);
-}
-
-// Removed old openTrackDetail
-
-// ─── Lyrics View ─────────────────────────────────────────────
-window.openLyricsView = function() {
-  const view = document.getElementById('lyrics-view');
-  if (!view) return;
-  history.pushState({ overlay: 'lyrics' }, '');
-  view.style.display = 'block';
-  requestAnimationFrame(() => {
-    view.style.transform = 'translateY(0)';
+  upcoming.forEach((t, i) => {
+    const row = document.createElement('div');
+    row.className = 'track-item';
+    row.innerHTML = `
+      <img src="${esc(thumb(t.coverImage, 45))}" class="track-img" style="width: 45px; height: 45px;" alt="" />
+      <div class="track-info"><div class="track-title">${esc(t.title)}</div><div class="track-artist">${esc(t.reciterName)}</div></div>`;
+    row.onclick = () => { queueIndex += i + 1; playTrack(queue[queueIndex]); };
+    box.appendChild(row);
   });
-};
-
-window.closeLyricsView = function() {
-  const view = document.getElementById('lyrics-view');
-  if (!view) return;
-  view.style.transform = 'translateY(100%)';
-  setTimeout(() => { view.style.display = 'none'; }, 350);
-  history.back();
-};
-
-window.openCurrentTrackOptions = function(event) {
-  if (currentPoem) {
-    openTrackOptions(event, currentPoem.id);
-  }
-};
-
-window.openTrackOptions = function(event, poemId) {
-  history.pushState({ overlay: 'track-options' }, '');
-  event.stopPropagation();
-  const poem = globalPoems.find(p => String(p.id) === String(poemId));
-  if (!poem) return;
-  
-  const modal = document.getElementById('track-options-modal');
-  const sheet = document.getElementById('track-options-sheet');
-  
-  // Populate Data
-  document.getElementById('track-options-img').src = poem.coverImage || poem.image || '';
-  const el_track_options_title = document.getElementById('track-options-title'); if (el_track_options_title) el_track_options_title.textContent = poem.title || poem.name || 'مجهول';
-  const el_track_options_artist = document.getElementById('track-options-artist'); if (el_track_options_artist) el_track_options_artist.textContent = poem.reciterName || 'مجهول';
-  
-  // Like Button
-  const isLiked = LibraryStore.likes.includes(poem.id);
-  const likeIcon = document.getElementById('opt-like-icon');
-  likeIcon.className = isLiked ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
-  likeIcon.style.color = isLiked ? '#E91E63' : 'white';
-  document.getElementById('opt-like').onclick = (e) => {
-    e.stopPropagation();
-    const liked = LibraryStore.toggleLike(poem.id);
-    pushLikeToSupabase(poem.id, liked);
-    closeTrackOptions(e);
-  };
-  
-  // Playlist Button
-  document.getElementById('opt-playlist').onclick = (e) => {
-    e.stopPropagation();
-    closeTrackOptions(e);
-    window.openPlaylistModal(poem.id);
-  };
-  
-  // Download Button
-  const isDl = LibraryStore.downloads.includes(poem.id);
-  const dlIcon = document.getElementById('opt-download-icon');
-  dlIcon.style.color = isDl ? '#4CAF50' : 'white';
-  document.getElementById('opt-download').onclick = async (e) => {
-    e.stopPropagation();
-    const icon = document.getElementById('opt-download-icon');
-    if (icon) icon.className = 'fa-solid fa-spinner fa-spin';
-    await LibraryStore.toggleDownload(poem.id);
-    closeTrackOptions(e);
-  };
-  
-  // Artist Button
-  document.getElementById('opt-artist').onclick = (e) => {
-    e.stopPropagation();
-    closeTrackOptions(e);
-    if(window.openArtistDetail) window.openArtistDetail(poem.reciterName);
-  };
-
-  // Share Button
-  document.getElementById('opt-share').onclick = (e) => {
-    e.stopPropagation();
-    closeTrackOptions(e);
-    
-    // Generate deep link
-    const shareUrl = window.location.origin + window.location.pathname + '?track=' + poem.id;
-    
-    if (navigator.share) {
-      navigator.share({
-        title: poem.title,
-        text: 'استمع إلى ' + poem.title + ' بصوت ' + poem.reciterName,
-        url: shareUrl
-      }).catch(err => console.log('Share canceled', err));
-    } else {
-      // Fallback for browsers without navigator.share
-      navigator.clipboard.writeText(shareUrl).then(() => {
-        alert('تم نسخ الرابط!');
-      }).catch(err => {
-        alert('لم نتمكن من نسخ الرابط: ' + shareUrl);
-      });
-    }
-  };
-  
-  // Show animation
-  modal.style.display = 'flex';
-  setTimeout(() => {
-    modal.style.opacity = '1';
-    sheet.style.transform = 'translateY(0)';
-  }, 10);
-};
-
-window.closeTrackOptions = function(event, fromPopState = false) {
-  if (!fromPopState) { history.back(); return; }
-  if (event) event.stopPropagation();
-  const modal = document.getElementById('track-options-modal');
-  const sheet = document.getElementById('track-options-sheet');
-  
-  sheet.style.transform = 'translateY(100%)';
-  modal.style.opacity = '0';
-  setTimeout(() => {
-    modal.style.display = 'none';
-  }, 300);
-};
-
-let isDraggingProgress = false;
-let animationFrameId = null;
-let lastKnownTime = 0;
-let lastKnownRealTime = performance.now();
-
-function updateProgressUI() {
-  if (audioContext.duration && isFinite(audioContext.duration)) {
-    let visualTime = audioContext.currentTime;
-    
-    if (visualTime > audioContext.duration) visualTime = audioContext.duration;
-    
-    const progress = (visualTime / audioContext.duration) * 100;
-    
-    // Update Full Player Slider
-    const fpProgress = document.getElementById('fp-progress');
-    if (!isDraggingProgress && fpProgress) {
-      fpProgress.value = progress;
-      fpProgress.style.background = `linear-gradient(to left, var(--accent) ${progress}%, rgba(255,255,255,0.2) ${progress}%)`;
-      const el_fp_current_time = document.getElementById('fp-current-time'); 
-      if (el_fp_current_time) el_fp_current_time.textContent = formatTime(visualTime);
-    }
-    const el_fp_total_time = document.getElementById('fp-total-time'); 
-    if (el_fp_total_time) el_fp_total_time.textContent = formatTime(audioContext.duration);
-    
-    // Update Mini Player Circular Progress
-    const mpRing = document.getElementById('mp-progress-ring');
-    if (mpRing) {
-      mpRing.style.background = `conic-gradient(#d3a84c ${progress}%, rgba(255,255,255,0.1) 0%)`;
-    }
-  }
 }
 
-function startProgressLoop() {
-  updateProgressUI();
-  if (!audioContext.paused) {
-    animationFrameId = requestAnimationFrame(startProgressLoop);
-  }
+function refreshLikeButtons() {
+  document.querySelectorAll('#mp-like-btn, #fp-like-btn, #td-like-btn').forEach((btn) => {
+    const liked = !!btn.dataset.trackId && lib.likes.has(btn.dataset.trackId);
+    btn.classList.toggle('liked', liked);
+    setIcon(btn.querySelector('.ic'), 'heart', { fill: liked });
+  });
+}
+$('mp-like-btn').onclick = (e) => { e.stopPropagation(); if (currentTrack) toggleLike(currentTrack); };
+$('fp-like-btn').onclick = () => { if (currentTrack) toggleLike(currentTrack); };
+
+// Lock screen / notification controls
+if ('mediaSession' in navigator) {
+  const ms = navigator.mediaSession;
+  const set = (action, fn) => { try { ms.setActionHandler(action, fn); } catch { /* unsupported */ } };
+  set('play', () => audio.play());
+  set('pause', () => audio.pause());
+  set('previoustrack', () => playPrev());
+  set('nexttrack', () => playNext());
+  set('seekbackward', (d) => { audio.currentTime = Math.max(0, audio.currentTime - (d.seekOffset || 10)); });
+  set('seekforward', (d) => { audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + (d.seekOffset || 10)); });
+  set('seekto', (d) => { audio.currentTime = d.seekTime; });
 }
 
-audioContext.addEventListener('play', () => {
-  if (animationFrameId) cancelAnimationFrame(animationFrameId);
-  startProgressLoop();
-});
-
-audioContext.addEventListener('pause', () => {
-  if (animationFrameId) cancelAnimationFrame(animationFrameId);
-});
-
-audioContext.addEventListener('timeupdate', () => {
-  if (audioContext.paused) {
-    updateProgressUI();
-  }
-});
-
-function formatTime(seconds) {
-  if (!seconds || isNaN(seconds)) return "0:00";
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${s < 10 ? '0' : ''}${s}`;
-}
-
-window.togglePlay = function(event) {
-  if (event) event.stopPropagation();
-  if (!currentPoem || !audioContext.src) return;
-  if (audioContext.paused) {
-    audioContext.play().catch(err => console.error(err));
-  } else {
-    audioContext.pause();
-  }
-};
-
-function updatePlayButton() {
-  const btn = document.getElementById('mp-play-btn');
-  if (btn) btn.innerHTML = isPlaying ? '<i class="fa-solid fa-pause"></i>' : '<i class="fa-solid fa-play" style="margin-left: 3px;"></i>';
-  
-  const fpBtn = document.getElementById('fp-play-btn');
-  if (fpBtn) fpBtn.innerHTML = isPlaying ? '<i class="fa-solid fa-pause"></i>' : '<i class="fa-solid fa-play" style="margin-left: 4px;"></i>';
-
-  const tdBtn = document.getElementById('td-play-btn');
-  if (tdBtn) tdBtn.innerHTML = isPlaying ? '<i class="fa-solid fa-pause"></i>' : '<i class="fa-solid fa-play" style="margin-left: 4px;"></i>';
-}
-
-window.seekAudio = function(value) {
-  if (audioContext.duration && isFinite(audioContext.duration)) {
-    audioContext.currentTime = (value / 100) * audioContext.duration;
-  }
-};
-
-window.playNext = function() {
-  if (isShuffle && queueList.length > 0) {
-    queueIndex = Math.floor(Math.random() * queueList.length);
-    playPoem(queueList[queueIndex], true);
-  } else if (queueIndex < queueList.length - 1) {
-    queueIndex++;
-    playPoem(queueList[queueIndex], true);
-  } else {
-    // If end of queue, loop back to start
-    if (queueList.length > 0) {
-      queueIndex = 0;
-      playPoem(queueList[queueIndex], true);
-    }
-  }
-};
-
-window.playPrev = function() {
-  if (audioContext.currentTime > 3) {
-    audioContext.currentTime = 0;
-  } else if (queueIndex > 0) {
-    queueIndex--;
-    playPoem(queueList[queueIndex], true);
-  } else {
-    audioContext.currentTime = 0;
-  }
-};
-
-window.toggleShuffle = function() {
-  isShuffle = !isShuffle;
-  const fpBtn = document.getElementById('fp-shuffle-btn');
-  if (fpBtn) {
-    fpBtn.style.color = '#ffd87c';
-    fpBtn.style.opacity = isShuffle ? '1' : '0.5';
-  }
-  const tdBtn = document.getElementById('td-shuffle-btn');
-  if (tdBtn) {
-    tdBtn.style.color = '#ffd87c';
-    tdBtn.style.opacity = isShuffle ? '1' : '0.5';
-  }
-  const catBtn = document.getElementById('category-shuffle-btn');
-  if (catBtn) {
-    catBtn.style.color = '#ffd87c';
-    catBtn.style.opacity = isShuffle ? '1' : '0.5';
-  }
-  const artBtn = document.getElementById('artist-shuffle-btn');
-  if (artBtn) {
-    artBtn.style.color = '#ffd87c';
-    artBtn.style.opacity = isShuffle ? '1' : '0.5';
-  }
-};
-
-window.toggleRepeat = function() {
-  isRepeat = !isRepeat;
-  const btn = document.getElementById('fp-repeat-btn');
-  if (btn) btn.style.color = isRepeat ? 'var(--accent)' : 'rgba(255,255,255,0.5)';
-};
-
-window.closeFullPlayer = function(fromPopState = false) {
-  if (!fromPopState) { history.back(); return; }
-  document.getElementById('full-player-view').classList.remove('open');
-  const miniPlayer = document.getElementById('mini-player');
-  if (currentPoem) {
-    miniPlayer.style.display = 'flex';
-    miniPlayer.classList.add('active');
-  }
-};
-
+// Full player and lyrics
 function openFullPlayer() {
-  history.pushState({ overlay: 'full-player' }, '');
-  if (!currentPoem) return;
-  const fp = document.getElementById('full-player-view');
-  fp.classList.add('open');
-  // hide mini player while full is open
-  document.getElementById('mini-player').classList.remove('active');
+  if (!currentTrack) return;
+  const fp = $('full-player-view');
+  openOverlay(() => { fp.classList.add('open'); $('mini-player').classList.remove('active'); },
+    () => { fp.classList.remove('open'); if (currentTrack) $('mini-player').classList.add('active'); });
+}
+$('mini-player').addEventListener('click', (e) => { if (!e.target.closest('button')) openFullPlayer(); });
+
+window.openLyricsView = () => {
+  const view = $('lyrics-view');
+  openOverlay(() => { view.style.display = 'block'; void view.offsetWidth; view.classList.add('open'); },
+    () => { view.classList.remove('open'); setTimeout(() => { view.style.display = 'none'; }, 350); });
+};
+
+// ═══ Sleep timer ═════════════════════════════════════════════════════════════
+let sleepTimeout = null;
+let sleepEndsAt = 0;
+let sleepAtEnd = false;
+let sleepTicker = null;
+
+function setSleepTimer(value) {
+  clearTimeout(sleepTimeout);
+  clearInterval(sleepTicker);
+  sleepTimeout = null;
+  sleepEndsAt = 0;
+  sleepAtEnd = false;
+  if (value === 'off') {
+    // cleared above
+  } else if (value === 'end') {
+    sleepAtEnd = true;
+    toast('سيتوقف التشغيل بنهاية المقطع الحالي');
+  } else {
+    const minutes = Number(value);
+    sleepEndsAt = Date.now() + minutes * 60000;
+    sleepTimeout = setTimeout(() => { audio.pause(); setSleepTimer('off'); toast('توقف التشغيل (مؤقت النوم)'); }, minutes * 60000);
+    sleepTicker = setInterval(paintSleepTimer, 15000);
+    toast(`سيتوقف التشغيل بعد ${minutes === 60 ? 'ساعة' : `${minutes} دقيقة`}`);
+  }
+  paintSleepTimer();
 }
 
-// Open full player when clicking mini player
-const miniPlayerEl = document.getElementById('mini-player');
-if (miniPlayerEl) {
-  miniPlayerEl.addEventListener('click', (e) => {
-    // Don't open if clicking buttons inside
-    if (e.target.closest('button') || e.target.closest('.control-btn') || e.target.closest('.mp-progress-ring')) return;
-    openFullPlayer();
-  });
+function paintSleepTimer() {
+  let label = '';
+  if (sleepAtEnd) label = 'نهاية المقطع';
+  else if (sleepEndsAt) label = `${Math.max(1, Math.ceil((sleepEndsAt - Date.now()) / 60000))} د`;
+  $('sleep-timer-label').textContent = label || 'متوقف';
+  const badge = $('fp-sleep-badge');
+  badge.style.display = label ? 'flex' : 'none';
+  badge.querySelector('span').textContent = label;
 }
 
-const fpProgressElement = document.getElementById('fp-progress');
-if (fpProgressElement) {
-  fpProgressElement.addEventListener('input', (e) => {
-    isDraggingProgress = true;
-    const progress = e.target.value;
-    e.target.style.background = `linear-gradient(to left, var(--accent) ${progress}%, rgba(255,255,255,0.2) ${progress}%)`;
-    if (audioContext.duration && isFinite(audioContext.duration)) {
-      const seekTime = (progress / 100) * audioContext.duration;
-      const el_fp_current_time = document.getElementById('fp-current-time'); 
-      if (el_fp_current_time) el_fp_current_time.textContent = formatTime(seekTime);
-    }
-  });
-  fpProgressElement.addEventListener('change', (e) => {
-    isDraggingProgress = false;
-    seekAudio(e.target.value);
-  });
+window.openSleepTimerSheet = () => openSheet('sleep-modal');
+document.querySelectorAll('[data-sleep]').forEach((b) => {
+  b.onclick = () => closeOverlayThen(() => setSleepTimer(b.dataset.sleep));
+});
+$('fp-sleep-badge').onclick = () => openSleepTimerSheet();
+
+// ═══ Account ═════════════════════════════════════════════════════════════════
+let authMode = 'login';
+const displayName = () => profile?.display_name || currentUser?.user_metadata?.full_name || currentUser?.email?.split('@')[0] || '';
+const avatarUrl = () => profile?.avatar_url || currentUser?.user_metadata?.avatar_url || initialAvatar(displayName());
+
+async function loadProfile() {
+  profile = null;
+  if (!currentUser || currentUser.is_anonymous) return;
+  const { data } = await supabase.from('profiles').select('display_name,avatar_url').eq('id', currentUser.id).maybeSingle();
+  profile = data || null;
 }
 
-// === RESTORED LIBRARY VIEWS ===
-window.renderLibraryContent = function(filter = 'all') {
-  const container = document.getElementById('library-content');
-  container.innerHTML = '';
+async function initAuth() {
+  const { data: { session } } = await supabase.auth.getSession();
+  currentUser = session?.user ?? null;
+  await loadProfile();
+  updateProfileUI();
+  if (currentUser) syncFromCloud();
 
-  const grid = document.createElement('div');
-  grid.className = 'library-grid animate-in';
-
-  let items = [
-    { id: 'likes', title: '\u0627\u0644\u0645\u0642\u0627\u0637\u0639 \u0627\u0644\u0645\u0641\u0636\u0644\u0629', subtitle: `${LibraryStore.likes.length} \u0645\u0642\u0637\u0639`, icon: 'fa-heart' },
-    { id: 'downloads', title: '\u0627\u0644\u0645\u0642\u0627\u0637\u0639 \u0627\u0644\u0645\u062d\u0645\u0644\u0629', subtitle: `${LibraryStore.downloads.length} \u0645\u0642\u0637\u0639 \u0641\u064a \u0627\u0644\u062c\u0647\u0627\u0632`, icon: 'fa-download' },
-    { id: 'playlists', title: '\u0642\u0648\u0627\u0626\u0645 \u0627\u0644\u062a\u0634\u063a\u064a\u0644', subtitle: `${LibraryStore.playlists.length} \u0642\u0627\u0626\u0645\u0629`, icon: 'fa-list' },
-    { id: 'artists', title: '\u0627\u0644\u0631\u0648\u0627\u062f\u064a\u062f', subtitle: `${globalReciters.length} \u0631\u0627\u062f\u0648\u062f`, icon: 'fa-user' }
-  ];
-
-  if (filter !== 'all') {
-    items = items.filter(item => item.id === filter);
-  }
-
-  items.forEach(item => {
-    const card = document.createElement('div');
-    card.className = 'library-card';
-    card.innerHTML = `
-      <i class="fa-solid ${item.icon}"></i>
-      <div class="library-card-title">${item.title}</div>
-      <div class="library-card-subtitle">${item.subtitle}</div>
-    `;
-    card.onclick = () => openPlaylistDetail(item.id, item.title, item.subtitle);
-    grid.appendChild(card);
+  supabase.auth.onAuthStateChange(async (event, s) => {
+    const before = currentUser?.id;
+    currentUser = s?.user ?? null;
+    if (currentUser?.id === before && event !== 'USER_UPDATED') return;
+    await loadProfile();
+    updateProfileUI();
+    if (currentUser) syncFromCloud();
+    else {
+      // Signed out: back to this device's guest data
+      lib.likes = new Set(store.get('sawt_likes', []).map(String));
+      lib.playlists = store.get('sawt_playlists', []);
+      lib.follows = new Set(store.get('sawt_artists', []));
+      refreshLikeButtons();
+      refreshOpenViews();
+    }
   });
 
-  // If filter is playlists or all, show custom playlists
-  if (filter === 'all' || filter === 'playlists') {
-    LibraryStore.playlists.forEach(pl => {
-      const card = document.createElement('div');
-      card.className = 'library-card';
-      card.innerHTML = `
-        <i class="fa-solid fa-music"></i>
-        <div class="library-card-title">${pl.name}</div>
-        <div class="library-card-subtitle">${pl.tracks.length} \u0645\u0642\u0637\u0639</div>
-      `;
-      card.onclick = () => openPlaylistDetail(`playlist_${pl.id}`, pl.name, `${pl.tracks.length} \u0645\u0642\u0637\u0639`);
-      grid.appendChild(card);
-    });
-  }
-
-  container.appendChild(grid);
-};
-
-window.promptCreatePlaylist = function() {
-  history.pushState({ overlay: 'create-playlist' }, '');
-  document.getElementById('new-playlist-name').value = '';
-  document.getElementById('create-playlist-modal').style.display = 'flex';
-};
-
-window.submitCreatePlaylist = async function() {
-  const input = document.getElementById('new-playlist-name');
-  const name = input.value.trim();
-  if (name) {
-    await LibraryStore.addPlaylist(name);
-    document.getElementById('create-playlist-modal').style.display = 'none';
-    const activeChip = document.querySelector('.filter-chip.active');
-    if (activeChip && document.getElementById('library-view').style.display !== 'none') {
-      renderLibraryContent(activeChip.dataset.filter);
-    }
-    if (document.getElementById('playlist-modal').style.display === 'flex') {
-      const currentTrack = currentPoem ? currentPoem.id : null;
-      if (currentTrack) window.openPlaylistModal(currentTrack);
-    }
-  } else {
-    input.focus();
-  }
-};
-
-window.openPlaylistModal = function(trackId) {
-  history.pushState({ overlay: 'playlist-modal' }, '');
-  const modal = document.getElementById('playlist-modal');
-  const list = document.getElementById('playlist-modal-list');
-  list.innerHTML = '';
-  
-  if (LibraryStore.playlists.length === 0) {
-    list.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 20px;">\u0644\u0627 \u062a\u0648\u062c\u062f \u0642\u0648\u0627\u0626\u0645 \u062a\u0634\u063a\u064a\u0644. \u0642\u0645 \u0628\u0625\u0646\u0634\u0627\u0621 \u0648\u0627\u062d\u062f\u0629 \u0623\u0648\u0644\u0627\u064b.</div>';
-  } else {
-    LibraryStore.playlists.forEach(pl => {
-      const item = document.createElement('div');
-      item.style.padding = '12px';
-      item.style.borderBottom = '1px solid #333';
-      item.style.cursor = 'pointer';
-      item.innerHTML = `
-        <i class="fa-solid fa-music" style="margin-left: 10px; color: var(--accent);"></i>
-        ${pl.name} <span style="color: var(--text-secondary); font-size: 12px; float: left;">${pl.tracks.length} \u0645\u0642\u0637\u0639</span>
-      `;
-      item.onclick = () => {
-        if (LibraryStore.addTrackToPlaylist(pl.id, trackId)) {
-          modal.style.display = 'none';
-          const btn = document.getElementById('fp-playlist-btn');
-          if (btn) {
-            btn.style.color = '#FFA500';
-            setTimeout(() => btn.style.color = 'white', 1000);
-          }
-        } else {
-          alert('\u0627\u0644\u0645\u0642\u0637\u0639 \u0645\u0648\u062c\u0648\u062f \u0628\u0627\u0644\u0641\u0639\u0644 \u0641\u064a \u0647\u0630\u0647 \u0627\u0644\u0642\u0627\u0626\u0645\u0629!');
-        }
-      };
-      list.appendChild(item);
-    });
-  }
-  modal.style.display = 'flex';
-};
-
-window.openPlaylistDetail = function(id, title, subtitle) {
-  document.getElementById('library-view').style.display = 'none';
-  const detailView = document.getElementById('playlist-detail-view');
-  detailView.style.display = 'block';
-  
-  const el_playlist_title = document.getElementById('playlist-title'); if (el_playlist_title) el_playlist_title.textContent = title;
-  const el_playlist_subtitle = document.getElementById('playlist-subtitle'); if (el_playlist_subtitle) el_playlist_subtitle.textContent = subtitle;
-  
-  const tracksContainer = document.getElementById('playlist-tracks');
-  tracksContainer.innerHTML = '';
-  
-  if (id === 'playlists') {
-    tracksContainer.className = 'library-grid';
-    LibraryStore.playlists.forEach(pl => {
-      const card = document.createElement('div');
-      card.className = 'album-card animate-in';
-      card.innerHTML = `
-        <img src="https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=500" class="album-cover" />
-        <div class="album-title">${pl.name}</div>
-        <div class="square-subtitle" style="text-align: center;">${pl.tracks.length} \u0645\u0642\u0637\u0639</div>
-      `;
-      card.onclick = () => openPlaylistDetail(`playlist_${pl.id}`, pl.name, `${pl.tracks.length} \u0645\u0642\u0637\u0639`);
-      tracksContainer.appendChild(card);
-    });
-  } else if (id === 'artists') {
-    tracksContainer.className = 'library-grid';
-    globalReciters.forEach(r => {
-      const card = document.createElement('div');
-      card.className = 'album-card animate-in';
-      card.innerHTML = `
-        <img src="${r.image}" class="album-cover" style="border-radius: 50%;" />
-        <div class="album-title">${r.name}</div>
-        <div class="square-subtitle" style="text-align: center;">\u0641\u0646\u0627\u0646</div>
-      `;
-      card.onclick = () => openArtistDetail(r.name);
-      tracksContainer.appendChild(card);
-    });
-  } else {
-    tracksContainer.className = 'track-list';
-    let listPoems = [];
-    if (id === 'likes') {
-      listPoems = globalPoems.filter(p => LibraryStore.likes.includes(p.id));
-    } else if (id === 'downloads') {
-      listPoems = globalPoems.filter(p => LibraryStore.downloads.includes(p.id));
-    } else if (id && id.toString().startsWith('playlist_')) {
-      const plId = id.split('_')[1];
-      const pl = LibraryStore.playlists.find(x => x.id === plId);
-      if (pl) listPoems = globalPoems.filter(p => pl.tracks.includes(p.id));
-    } else {
-      listPoems = [...globalPoems].sort(() => 0.5 - Math.random()).slice(0, 15);
-    }
-    
-    if (listPoems.length === 0) {
-      tracksContainer.innerHTML = '<div style="text-align: center; color: var(--text-secondary); margin-top: 40px;">\u0644\u0627 \u062a\u0648\u062c\u062f \u0645\u0642\u0627\u0637\u0639 \u0647\u0646\u0627 \u0628\u0639\u062f</div>';
-    } else {
-      listPoems.forEach((track, index) => {
-        const el = document.createElement('div');
-        el.className = 'track-item animate-in';
-        el.innerHTML = `
-          <div class="track-number">${index + 1}</div>
-          <img src="${track.coverImage || track.image}" class="track-img" />
-          <div class="track-info">
-            <div class="track-title">${track.title || track.name}</div>
-            <div class="track-artist">${track.reciterName || '\u0645\u062c\u0647\u0648\u0644'}</div>
-          </div>
-          <i class="fa-solid fa-ellipsis-vertical" style="color: var(--text-secondary); padding: 10px;" onclick="openTrackOptions(event, \`${track.id}\`)"></i>
-        `;
-        el.onclick = () => playPoem(track);
-        tracksContainer.appendChild(el);
-      });
-    }
-  }
-};
-
-// === RESTORED SEARCH VIEWS ===
-function getCategoryFirstImage(categoryTitle) {
-  let found = globalPoems.find(p => p.title.includes(categoryTitle) || p.category === categoryTitle);
-  if (!found && categoryTitle === '\u0639\u0632\u0627\u0621') found = globalPoems.find(p => p.title.includes('\u0644\u0637\u0645') || p.title.includes('\u0634\u0648\u0631'));
-  if (!found && categoryTitle === '\u0645\u0648\u0627\u0644\u064a\u062f') found = globalPoems.find(p => p.title.includes('\u0645\u0648\u0644\u062f') || p.title.includes('\u0645\u064a\u0644\u0627\u062f') || p.title.includes('\u0641\u0631\u062d'));
-  if (!found && categoryTitle === '\u0623\u062f\u0639\u064a\u0629') found = globalPoems.find(p => p.title.includes('\u062f\u0639\u0627\u0621') || p.title.includes('\u0632\u064a\u0627\u0631\u0629') || p.title.includes('\u0645\u0646\u0627\u062c\u0627\u0629'));
-  return found ? found.coverImage : 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=500';
+  // Offer sign-in once, on the first visit
+  if (!currentUser && !store.get('sawt_auth_skipped', false)) setTimeout(() => openAuthModal(), 1200);
 }
 
-window.renderSearchContent = function() {
-  const searchInput = document.getElementById('main-search-input');
-  if (searchInput) {
-    searchInput.oninput = (e) => {
-      const q = e.target.value.toLowerCase();
-      const resultsContainer = document.getElementById('search-results');
-      if (q.length > 0) {
-        document.getElementById('genre-grid').style.display = 'none';
-        const titleEl = document.getElementById('search-section-title');
-        if (titleEl) titleEl.style.display = 'none';
-        resultsContainer.style.display = 'block';
-        resultsContainer.innerHTML = '';
-        
-        const qWords = q.split(' ').filter(w => w.trim() !== '');
-        const results = globalPoems.filter(p => {
-          const textToSearch = (p.title + ' ' + p.reciterName).toLowerCase();
-          return qWords.every(word => textToSearch.includes(word));
-        });
-        
-        if (results.length > 0) {
-          results.forEach(track => {
-            const el = document.createElement('div');
-            el.className = 'track-item animate-in';
-            el.innerHTML = `
-              <img src="${track.coverImage || track.image}" class="track-img" />
-              <div class="track-info">
-                <div class="track-title">${track.title || track.name}</div>
-                <div class="track-artist">${track.reciterName || '\u0645\u062c\u0647\u0648\u0644'}</div>
-              </div>
-              <i class="fa-solid fa-ellipsis-vertical" style="color: var(--text-secondary); padding: 10px;" onclick="openTrackOptions(event, \`${track.id}\`)"></i>
-            `;
-            el.onclick = () => openTrackDetail(track);
-            resultsContainer.appendChild(el);
-          });
-        } else {
-          resultsContainer.innerHTML = '<div style="text-align:center; padding: 20px; color: var(--text-secondary);">\u0644\u0645 \u064a\u062a\u0645 \u0627\u0644\u0639\u062b\u0648\u0631 \u0639\u0644\u0649 \u0646\u062a\u0627\u0626\u062c</div>';
-        }
-      } else {
-        document.getElementById('genre-grid').style.display = 'grid';
-        const titleEl = document.getElementById('search-section-title');
-        if (titleEl) titleEl.style.display = 'block';
-        resultsContainer.style.display = 'none';
-      }
-    };
-  }
-
-  const catContainer = document.getElementById('genre-grid');
-  if (catContainer) {
-    catContainer.innerHTML = '';
-    const categories = [
-      { id: 'latmiyat', title: 'عزاء', color: '#E13300' },
-      { id: 'mawalid', title: 'مواليد', color: '#1E3264' },
-      { id: 'adeya', title: 'أدعية', color: '#E8115B' },
-      { id: 'quran', title: 'قرآن كريم', color: '#148A08' },
-      { id: 'shor', title: 'شور', color: '#8C1932' },
-      { id: 'nae', title: 'نعي', color: '#006450' },
-      { id: 'ziyarat', title: 'زيارات', color: '#8400E7' },
-      { id: 'husseini', title: 'قصائد حسينية', color: '#E91429' }
-    ];
-    
-    categories.forEach(cat => {
-      const card = document.createElement('div');
-      card.className = 'genre-card';
-      card.style.backgroundColor = cat.color;
-      const imgUrl = getCategoryFirstImage(cat.title);
-      card.innerHTML = `
-        <div class="genre-card-title">${cat.title}</div>
-        <img src="${imgUrl}" class="genre-card-img" onerror="this.src='https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=200'" />
-      `;
-      card.onclick = () => openCategoryDetail(cat.title, imgUrl);
-      catContainer.appendChild(card);
-    });
-  }
-};
-
-window.openCategoryDetail = function(categoryName, bgImage) {
-  history.pushState({ overlay: 'category-view' }, '');
-  document.getElementById('search-view').style.display = 'none';
-  const cv = document.getElementById('category-view');
-  if (cv) {
-    cv.style.display = 'block';
-    const nameEl = document.getElementById('category-detail-name');
-    if (nameEl) nameEl.textContent = categoryName;
-    const imgEl = document.getElementById('category-detail-image');
-    if (imgEl) imgEl.src = bgImage;
-    const gradientEl = document.getElementById('category-detail-gradient');
-    if (gradientEl) gradientEl.style.display = 'block';
-    
-    const tc = document.getElementById('category-tracks');
-    tc.innerHTML = '';
-    
-    let filtered = [];
-    if (categoryName === 'عزاء') filtered = globalPoems.filter(p => p.title.includes('لطم') || p.title.includes('شور') || p.title.includes('عزاء') || p.category === 'عزاء');
-    else if (categoryName === 'مواليد') filtered = globalPoems.filter(p => p.title.includes('مولد') || p.title.includes('ميلاد') || p.title.includes('فرح') || p.title.includes('مواليد'));
-    else if (categoryName === 'أدعية') filtered = globalPoems.filter(p => p.title.includes('دعاء') || p.title.includes('مناجاة'));
-    else if (categoryName === 'زيارات') filtered = globalPoems.filter(p => p.title.includes('زيار'));
-    else if (categoryName === 'قرآن كريم') filtered = globalPoems.filter(p => p.title.includes('قرآن') || p.title.includes('سورة') || p.title.includes('تلاوة'));
-    else if (categoryName === 'نعي') filtered = globalPoems.filter(p => p.title.includes('نعي') || p.title.includes('مجلس'));
-    else if (categoryName === 'شور') filtered = globalPoems.filter(p => p.title.includes('شور'));
-    else if (categoryName === 'قصائد حسينية') filtered = globalPoems.filter(p => p.title.includes('قصيد') || p.title.includes('حسين'));
-    else filtered = globalPoems.filter(p => p.title.includes(categoryName));
-    
-    if (filtered.length === 0) filtered = [...globalPoems].sort(() => 0.5 - Math.random()).slice(0, 10);
-    
-    filtered.forEach((track, index) => {
-      const el = document.createElement('div');
-      el.className = 'track-item animate-in';
-      el.innerHTML = `
-        <div class="track-number">${index + 1}</div>
-        <img src="${track.coverImage || track.image}" class="track-img" />
-        <div class="track-info">
-          <div class="track-title">${track.title || track.name}</div>
-          <div class="track-artist">${track.reciterName || '\u0645\u062c\u0647\u0648\u0644'}</div>
-        </div>
-        <i class="fa-solid fa-ellipsis-vertical" style="color: var(--text-secondary); padding: 10px;" onclick="openTrackOptions(event, \`${track.id}\`)"></i>
-      `;
-      el.onclick = () => playPoem(track);
-      tc.appendChild(el);
-    });
-    
-    const catShuffleBtn = document.getElementById('category-shuffle-btn');
-    if (catShuffleBtn) {
-      catShuffleBtn.style.color = '#ffd87c';
-      catShuffleBtn.style.opacity = isShuffle ? '1' : '0.5';
-    }
-
-    const catLikeBtn = document.getElementById('category-like-btn');
-    if (catLikeBtn) {
-      catLikeBtn.className = 'fa-regular fa-heart';
-      catLikeBtn.style.color = 'white';
-      catLikeBtn.onclick = () => {
-        const isLiked = catLikeBtn.classList.contains('fa-solid');
-        catLikeBtn.className = isLiked ? 'fa-regular fa-heart' : 'fa-solid fa-heart';
-        catLikeBtn.style.color = isLiked ? 'white' : '#E91E63';
-        if (!isLiked) alert('تمت الإضافة إلى مفضلتك');
-      };
-    }
-
-    const catDlBtn = document.getElementById('category-download-btn');
-    if (catDlBtn) {
-      catDlBtn.onclick = () => alert('تم بدء تنزيل جميع المقاطع');
-    }
-
-    const catOptBtn = document.getElementById('category-options-btn');
-    if (catOptBtn) {
-      catOptBtn.onclick = () => alert('تم نسخ الرابط بنجاح');
-    }
-
-    const playAllBtn = document.getElementById('category-play-all');
-    if (playAllBtn) {
-      playAllBtn.onclick = () => {
-        if (filtered.length > 0) {
-          queueList = [...filtered];
-          queueIndex = 0;
-          playPoem(filtered[0], true);
-          
-          // Update similarList manually
-          let reciterTracks = [...globalPoems].filter(p => p.reciterName === filtered[0].reciterName && p.audioUrl !== filtered[0].audioUrl).sort(() => 0.5 - Math.random());
-          if (reciterTracks.length < 5) {
-            const otherTracks = [...globalPoems].filter(p => p.reciterName !== filtered[0].reciterName && p.audioUrl !== filtered[0].audioUrl).sort(() => 0.5 - Math.random());
-            reciterTracks = [...reciterTracks, ...otherTracks];
-          }
-          similarList = reciterTracks.slice(0, 5);
-        }
-      };
-    }
-  }
-};
-
-// === RESTORED NAVIGATION ===
-window.goHome = function() {
-  document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
-  document.getElementById('home-view').style.display = 'block';
-  document.querySelector('.main-container').scrollTo(0, 0);
-  document.querySelectorAll('.nav-item').forEach((n, i) => {
-    if (i === 0) n.classList.add('active'); else n.classList.remove('active');
+function updateProfileUI() {
+  const signedIn = !!currentUser && !currentUser.is_anonymous;
+  const name = signedIn ? displayName() || 'مستخدم' : 'ضيف';
+  $('profile-display-name').textContent = name;
+  $('profile-email').textContent = signedIn ? currentUser.email || '—' : 'غير مسجل';
+  $('profile-status-badge').innerHTML = signedIn
+    ? `${icon('check')} حساب مسجّل`
+    : 'سجّل الدخول لحفظ مكتبتك على كل أجهزتك';
+  $('profile-guest-section').style.display = signedIn ? 'none' : 'block';
+  $('profile-logout-section').style.display = signedIn ? 'block' : 'none';
+  $('profile-edit-name').style.display = signedIn ? 'flex' : 'none';
+  $('profile-email-row').style.display = signedIn ? 'flex' : 'none';
+  $('profile-camera-btn').style.display = signedIn ? 'flex' : 'none';
+  $('profile-avatar-img').src = signedIn ? avatarUrl() : `${import.meta.env.BASE_URL}icon-192.png`;
+  document.querySelectorAll('.avatar-btn').forEach((b) => {
+    b.innerHTML = signedIn ? `<img src="${esc(avatarUrl())}" alt="" />` : icon('user');
   });
-};
+  $('stat-listened').textContent = formatCount(lib.history.length);
+  $('stat-likes').textContent = formatCount(lib.likes.size);
+  $('stat-playlists').textContent = formatCount(lib.playlists.length);
+  paintSleepTimer();
+}
 
-window.goSearch = function() {
-  document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
-  document.getElementById('search-view').style.display = 'block';
-  document.querySelector('.main-container').scrollTo(0, 0);
-  document.querySelectorAll('.nav-item').forEach((n, i) => {
-    if (i === 1) n.classList.add('active'); else n.classList.remove('active');
-  });
-  renderSearchContent();
-};
-
-window.goLibrary = function() {
-  document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
-  document.getElementById('library-view').style.display = 'block';
-  document.querySelector('.main-container').scrollTo(0, 0);
-  document.querySelectorAll('.nav-item').forEach((n, i) => {
-    if (i === 2) n.classList.add('active'); else n.classList.remove('active');
-  });
-  renderLibraryContent(document.querySelector('.filter-chip.active')?.dataset.filter || 'all');
-};
-
-window.openArtistDetail = function(artistName) {
-  history.pushState({ overlay: 'artist-view' }, '');
-  document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
-  document.getElementById('artist-view').style.display = 'block';
-  document.querySelector('.main-container').scrollTo(0, 0);
-  
-  const artist = globalReciters.find(r => r.name === artistName);
-  const artistTracks = globalPoems.filter(p => p.reciterName === artistName);
-  
-  const el_artist_detail_name = document.getElementById('artist-detail-name'); if (el_artist_detail_name) el_artist_detail_name.textContent = artistName;
-  const el_artist_detail_stats = document.getElementById('artist-detail-stats'); if (el_artist_detail_stats) el_artist_detail_stats.textContent = artistTracks.length + ' مقطع مسموع';
-  
-  if (artist && artist.image) {
-    document.getElementById('artist-detail-image').src = artist.image;
-  } else if (artistTracks.length > 0) {
-    document.getElementById('artist-detail-image').src = artistTracks[0].coverImage;
-  }
-  
-  const trackListContainer = document.getElementById('artist-tracks');
-  trackListContainer.innerHTML = '';
-  
-  if (artistTracks.length === 0) {
-    trackListContainer.innerHTML = '<div style="text-align: center; color: var(--text-secondary); margin-top: 40px;">لا توجد مقاطع لهذا الرادود</div>';
-  } else {
-    artistTracks.forEach((track, index) => {
-      const el = document.createElement('div');
-      el.className = 'track-item animate-in';
-      el.innerHTML = `
-        <div class="track-number">${index + 1}</div>
-        <img src="${track.coverImage || track.image}" class="track-img" />
-        <div class="track-info">
-          <div class="track-title">${track.title || track.name}</div>
-          <div class="track-artist">${track.reciterName || 'مجهول'}</div>
-        </div>
-        <i class="fa-solid fa-ellipsis-vertical" style="color: var(--text-secondary); padding: 10px;" onclick="openTrackOptions(event, \`${track.id}\`)"></i>
-      `;
-      el.onclick = () => openTrackDetail(track);
-      trackListContainer.appendChild(el);
-    });
-  }
-  
-  const playAllBtn = document.getElementById('artist-play-all');
-  if(playAllBtn) {
-    playAllBtn.onclick = () => {
-      if (artistTracks.length > 0) {
-        queueList = [...artistTracks];
-        queueIndex = 0;
-        playPoem(queueList[0]);
-      }
-    };
-  }
-  
-  const artistLikeBtn = document.getElementById('artist-like-btn');
-  if (artistLikeBtn) {
-    // Reset state
-    artistLikeBtn.className = 'fa-regular fa-heart';
-    artistLikeBtn.style.color = 'white';
-    artistLikeBtn.onclick = () => {
-      const isLiked = artistLikeBtn.classList.contains('fa-solid');
-      artistLikeBtn.className = isLiked ? 'fa-regular fa-heart' : 'fa-solid fa-heart';
-      artistLikeBtn.style.color = isLiked ? 'white' : '#E91E63';
-      if (!isLiked) alert('تمت الإضافة إلى مفضلتك');
-    };
-  }
-
-  const artistDlBtn = document.getElementById('artist-download-btn');
-  if (artistDlBtn) {
-    artistDlBtn.onclick = () => alert('تم بدء تنزيل جميع المقاطع');
-  }
-
-  const artistOptBtn = document.getElementById('artist-options-btn');
-  if (artistOptBtn) {
-    artistOptBtn.onclick = () => alert('تم نسخ الرابط بنجاح');
-  }
-  
-  const artShuffleBtn = document.getElementById('artist-shuffle-btn');
-  if (artShuffleBtn) {
-    artShuffleBtn.style.color = '#ffd87c';
-    artShuffleBtn.style.opacity = isShuffle ? '1' : '0.5';
-  }
-};
-
-window.goProfile = function() {
-  document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
-  document.getElementById('profile-view').style.display = 'block';
-  document.querySelector('.main-container').scrollTo(0, 0);
-  document.querySelectorAll('.nav-item').forEach((n, i) => {
-    if (i === 3) n.classList.add('active'); else n.classList.remove('active');
-  });
-};
-
-// Initialize listeners for library filters
-const filterChips = document.querySelectorAll('.filter-chip');
-filterChips.forEach(chip => {
-  chip.onclick = () => {
-    filterChips.forEach(c => c.classList.remove('active'));
-    chip.classList.add('active');
-    renderLibraryContent(chip.dataset.filter);
-  };
+window.editDisplayName = () => openPrompt({
+  title: 'تعديل الاسم', value: displayName(), placeholder: 'اسمك',
+  onSubmit: async (name) => {
+    const { error } = await supabase.from('profiles').update({ display_name: name.slice(0, 100) }).eq('id', currentUser.id);
+    if (error) { toast('تعذر حفظ الاسم'); return; }
+    await supabase.auth.updateUser({ data: { full_name: name } });
+    profile = { ...(profile || {}), display_name: name };
+    updateProfileUI();
+    toast('تم حفظ الاسم');
+  },
 });
 
-// Boot App
-initAuth();
-fetchAppData();
+window.openAvatarUpload = () => {
+  if (!currentUser) { openAuthModal(); return; }
+  $('avatar-file-input').click();
+};
 
-// Register Service Worker for PWA
+// The photo goes to the site's storage (Cloudflare R2) through its upload endpoint
+window.handleAvatarUpload = async (event) => {
+  const file = event.target.files[0];
+  event.target.value = '';
+  if (!file || !currentUser) return;
+  if (file.size > 10 * 1024 * 1024) { toast('الصورة أكبر من 10 ميغابايت'); return; }
+  const img = $('profile-avatar-img');
+  img.style.opacity = '0.4';
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const ext = (file.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+    const res = await fetch(`${SITE_URL}/api/upload?kind=image&ext=${ext}`, {
+      method: 'POST',
+      headers: { 'Content-Type': file.type, Authorization: `Bearer ${session.access_token}` },
+      body: file,
+    });
+    if (!res.ok) throw new Error(`upload ${res.status}`);
+    const { url } = await res.json();
+    const { error } = await supabase.from('profiles').update({ avatar_url: url }).eq('id', currentUser.id);
+    if (error) throw error;
+    profile = { ...(profile || {}), avatar_url: url };
+    updateProfileUI();
+    toast('تم تحديث الصورة');
+  } catch (err) {
+    console.error('Avatar upload error:', err);
+    toast('تعذر رفع الصورة');
+  } finally {
+    img.style.opacity = '1';
+  }
+};
+
+window.openAuthModal = () => {
+  resetAuthForm();
+  $('auth-modal').style.display = 'flex';
+  void $('auth-modal').offsetWidth;
+  $('auth-sheet').classList.add('open');
+};
+function closeAuthModal() {
+  $('auth-sheet').classList.remove('open');
+  setTimeout(() => { $('auth-modal').style.display = 'none'; }, 400);
+}
+$('auth-modal').addEventListener('click', (e) => { if (e.target.id === 'auth-modal') skipAuth(); });
+
+window.skipAuth = () => { store.set('sawt_auth_skipped', true); closeAuthModal(); };
+
+function paintAuthMode() {
+  const signup = authMode === 'signup';
+  $('auth-name-field').style.display = signup ? 'block' : 'none';
+  $('auth-btn-text').textContent = signup ? 'إنشاء الحساب' : 'دخول';
+  $('auth-toggle-text').textContent = signup ? 'لديك حساب؟' : 'ليس لديك حساب؟';
+  $('auth-toggle-btn').textContent = signup ? 'دخول' : 'إنشاء حساب';
+  $('auth-title').textContent = signup ? 'إنشاء حساب جديد' : 'أهلاً بك في صوت الأحزان';
+  $('auth-password').autocomplete = signup ? 'new-password' : 'current-password';
+}
+window.toggleAuthMode = () => { authMode = authMode === 'login' ? 'signup' : 'login'; paintAuthMode(); $('auth-message').style.display = 'none'; };
+
+function resetAuthForm() {
+  ['auth-email', 'auth-password', 'auth-name'].forEach((id) => { $(id).value = ''; });
+  $('auth-message').style.display = 'none';
+  authMode = 'login';
+  paintAuthMode();
+}
+
+function showAuthMessage(msg, isError = true) {
+  const el = $('auth-message');
+  el.textContent = msg;
+  el.className = isError ? 'auth-msg error' : 'auth-msg ok';
+  el.style.display = 'block';
+}
+
+function setAuthLoading(loading) {
+  $('auth-submit-btn').disabled = loading;
+  $('auth-btn-spinner').style.display = loading ? 'inline-flex' : 'none';
+}
+
+window.signInWithGoogle = async () => {
+  $('auth-message').style.display = 'none';
+  const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: APP_URL } });
+  if (error) { showAuthMessage('فشل تسجيل الدخول بواسطة جوجل'); console.error(error); }
+};
+
+window.submitAuth = async () => {
+  const email = $('auth-email').value.trim();
+  const password = $('auth-password').value;
+  const name = $('auth-name').value.trim();
+  if (!email || !password) { showAuthMessage('يرجى تعبئة جميع الحقول'); return; }
+  if (password.length < 6) { showAuthMessage('كلمة المرور يجب أن تكون 6 أحرف على الأقل'); return; }
+
+  setAuthLoading(true);
+  $('auth-message').style.display = 'none';
+  try {
+    if (authMode === 'signup') {
+      const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name || email.split('@')[0] } } });
+      if (error) throw error;
+      if (data.session) { closeAuthModal(); toast('أهلاً بك! تم إنشاء حسابك'); }
+      else showAuthMessage('تم إنشاء الحساب! تفقد بريدك لتفعيله ثم سجّل الدخول.', false);
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      closeAuthModal();
+      toast('تم تسجيل الدخول');
+    }
+  } catch (err) {
+    const m = err.message || '';
+    showAuthMessage(
+      m.includes('Invalid login') ? 'البريد الإلكتروني أو كلمة المرور غير صحيحة'
+        : m.includes('already registered') ? 'هذا البريد الإلكتروني مسجل مسبقاً'
+          : m.includes('Email not confirmed') ? 'يرجى تأكيد البريد الإلكتروني أولاً'
+            : 'حدث خطأ، يرجى المحاولة مجدداً');
+  }
+  setAuthLoading(false);
+};
+
+window.doLogout = async () => {
+  await supabase.auth.signOut();
+  toast('تم تسجيل الخروج');
+};
+
+window.toggleAuthPasswordVisibility = () => {
+  const input = $('auth-password');
+  const show = input.type === 'password';
+  input.type = show ? 'text' : 'password';
+  setIcon($('auth-eye-icon'), show ? 'eye-off' : 'eye');
+};
+
+// ═══ Links into the app ══════════════════════════════════════════════════════
+// ?track=<id> | ?reciter=<id> | ?q=<search> (the website forwards phones here)
+function handleDeepLink() {
+  const params = new URLSearchParams(location.search);
+  const trackId = params.get('track');
+  const reciterId = params.get('reciter');
+  const q = params.get('q');
+  if (!trackId && !reciterId && !q) return;
+  history.replaceState(null, '', location.pathname); // don't reopen on refresh
+  if (trackId) {
+    const track = trackById.get(trackId);
+    if (track) openTrackDetail(track);
+    else {
+      supabase.from('audio_library').select(TRACK_COLUMNS).eq('id', trackId).maybeSingle()
+        .then(({ data }) => { if (data) openTrackDetail(mapTrack(data)); });
+    }
+  } else if (reciterId) {
+    const r = reciters.find((x) => x.dbId === reciterId);
+    if (r) openArtistDetail(r.name);
+  } else if (q) {
+    goSearch();
+    $('main-search-input').value = q;
+    runSearch();
+  }
+}
+
+// ═══ Boot ════════════════════════════════════════════════════════════════════
+startIcons();
+$('fp-autoplay-switch').classList.toggle('on', isAutoplay);
+initAuth();
+loadData();
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').then(registration => {
-      console.log('SW registered: ', registration);
-    }).catch(registrationError => {
-      console.log('SW registration failed: ', registrationError);
-    });
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch((e) => console.warn('SW registration failed:', e));
   });
 }
-
-window.addEventListener('popstate', (e) => {
-  const trackOpts = document.getElementById('track-options-modal');
-  if (trackOpts && trackOpts.style.display !== 'none') {
-    closeTrackOptions(null, true);
-    return;
-  }
-  
-  const createPl = document.getElementById('create-playlist-modal');
-  if (createPl && createPl.style.display !== 'none') {
-    createPl.style.display = 'none';
-    return;
-  }
-  
-  const plModal = document.getElementById('playlist-modal');
-  if (plModal && plModal.style.display !== 'none') {
-    if(typeof closePlaylistModal === 'function') closePlaylistModal(true);
-    else plModal.style.display = 'none';
-    return;
-  }
-  
-  const fullPlayer = document.getElementById('full-player-view');
-  if (fullPlayer && fullPlayer.classList.contains('open')) {
-    closeFullPlayer(true);
-  }
-  
-  const lyricsView = document.getElementById('lyrics-view');
-  if (lyricsView && lyricsView.style.display === 'block') {
-    lyricsView.style.transform = 'translateY(100%)';
-    setTimeout(() => { lyricsView.style.display = 'none'; }, 350);
-    return;
-  }
-  
-  const artistView = document.getElementById('artist-view');
-  if (artistView && artistView.style.display === 'block') {
-    artistView.style.display = 'none';
-    return;
-  }
-  
-  const tdView = document.getElementById('track-detail-view');
-  if (tdView && tdView.style.display === 'block') {
-    tdView.style.display = 'none';
-    return;
-  }
-  
-  const catView = document.getElementById('category-view');
-  if (catView && catView.style.display === 'block') {
-    catView.style.display = 'none';
-    document.getElementById('search-view').style.display = 'block';
-    return;
-  }
-});
-
-window.openTrackDetail = function(poemOrId) {
-  let poem = poemOrId;
-  if (typeof poemOrId === 'string' || typeof poemOrId === 'number') {
-    poem = globalPoems.find(p => String(p.id) === String(poemOrId));
-  }
-  if (!poem) return;
-  history.pushState({ overlay: 'track-detail' }, '');
-  const tdView = document.getElementById('track-detail-view');
-  if (tdView) tdView.style.display = 'block';
-  
-  const tdCover = document.getElementById('td-cover');
-  tdCover.src = poem.coverImage || poem.image;
-  
-  // Set blurred background blob color dynamically based on cover? Or just leave it #337183 for now as per design.
-  
-  const el_td_title = document.getElementById('td-title'); if (el_td_title) el_td_title.textContent = poem.title;
-  const artistEl = document.getElementById('td-artist');
-  artistEl.textContent = poem.reciterName || 'مجهول';
-  artistEl.onclick = () => openArtistDetail(poem.reciterName);
-  
-  const artistImg = document.getElementById('td-artist-img');
-  if (artistImg) {
-    const artist = globalReciters.find(a => a.name === poem.reciterName);
-    artistImg.src = artist && artist.image ? artist.image : 'https://i.pravatar.cc/150?img=11';
-    artistImg.onclick = () => openArtistDetail(poem.reciterName);
-  }
-  
-  const playBtn = document.getElementById('td-play-btn');
-  playBtn.onclick = () => {
-    if (currentPoem && currentPoem.id === poem.id) {
-      togglePlay();
-    } else {
-      playPoem(poem);
-    }
-  };
-  
-  // Initialize icon states
-  playBtn.innerHTML = (currentPoem && currentPoem.id === poem.id && isPlaying) 
-    ? '<i class="fa-solid fa-pause"></i>' 
-    : '<i class="fa-solid fa-play" style="margin-left: 4px;"></i>';
-    
-  const tdShuffleBtn = document.getElementById('td-shuffle-btn');
-  if (tdShuffleBtn) {
-    tdShuffleBtn.style.color = '#ffd87c';
-    tdShuffleBtn.style.opacity = isShuffle ? '1' : '0.5';
-  }
-  
-  const likeBtn = document.getElementById('td-like-btn');
-  const updateLikeBtn = () => {
-    const isLiked = LibraryStore.likes.includes(poem.id);
-    likeBtn.className = isLiked ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
-    likeBtn.style.color = isLiked ? '#57B560' : 'white';
-  };
-  updateLikeBtn();
-  likeBtn.onclick = () => {
-    LibraryStore.toggleLike(poem.id);
-    updateLikeBtn();
-  };
-  
-  const dlBtn = document.getElementById('td-download-btn');
-  const updateDlBtn = () => {
-    const isDl = LibraryStore.downloads.includes(poem.id);
-    dlBtn.style.color = isDl ? '#57B560' : 'white';
-  };
-  updateDlBtn();
-  dlBtn.onclick = async () => {
-    dlBtn.className = 'fa-solid fa-spinner fa-spin';
-    await LibraryStore.toggleDownload(poem.id);
-    dlBtn.className = 'fa-solid fa-arrow-down';
-    updateDlBtn();
-  };
-  
-  const optionsBtn = document.getElementById('td-options-btn');
-  optionsBtn.onclick = (e) => openTrackOptions(e, poem.id);
-  
-  const similarContainer = document.getElementById('td-similar-list');
-  similarContainer.innerHTML = '';
-  const similar = [...globalPoems].filter(p => p.id !== poem.id && (p.reciterName === poem.reciterName || p.category === poem.category)).sort(() => 0.5 - Math.random()).slice(0, 5);
-  if (similar.length === 0) similar.push(...[...globalPoems].filter(p => p.id !== poem.id).slice(0, 5));
-  
-  similar.forEach(track => {
-    const el = document.createElement('div');
-    el.className = 'track-item animate-in';
-    el.innerHTML = `
-      <img src="${track.coverImage || track.image}" class="track-img" />
-      <div class="track-info">
-        <div class="track-title">${track.title || track.name}</div>
-        <div class="track-artist">${track.reciterName || 'مجهول'}</div>
-      </div>
-      <i class="fa-solid fa-ellipsis-vertical" style="color: rgba(255,255,255,0.5); padding: 10px;" onclick="openTrackOptions(event, '${track.id}')"></i>
-    `;
-    el.onclick = () => {
-      openTrackDetail(track);
-    };
-    similarContainer.appendChild(el);
-  });
-
-  // Trending Works
-  const trendingContainer = document.getElementById('td-trending-list');
-  const trendingTitle = document.getElementById('td-trending-title');
-  if (trendingContainer && trendingTitle) {
-    trendingContainer.innerHTML = '';
-      const trending = [...globalPoems]
-        .filter(p => p.reciterName === poem.reciterName && p.id !== poem.id)
-        .sort(() => 0.5 - Math.random())
-        .slice(0, 10);
-        
-      if (trending.length > 0) {
-        trendingTitle.textContent = `الأعمال الرائجة لـ ${poem.reciterName || 'الرادود'}`;
-        trending.forEach(track => {
-          const el = document.createElement('div');
-          el.className = 'album-card reciter-card';
-          el.style.width = '32vw';
-          el.style.maxWidth = '140px';
-          el.style.flexShrink = '0';
-          
-          el.innerHTML = `
-            <img src="${track.coverImage || track.image}" style="width: 100%; aspect-ratio: 1; border-radius: 8px; object-fit: cover;" />
-            <div style="font-size: 14px; font-weight: bold; margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: right;">${track.title || track.name}</div>
-          `;
-        el.onclick = () => playPoem(track);
-        trendingContainer.appendChild(el);
-      });
-      trendingTitle.parentElement.style.display = 'block';
-    } else {
-      trendingTitle.parentElement.style.display = 'none';
-    }
-  }
-
-  // Fans Also Like
-  const fansContainer = document.getElementById('td-fans-like-list');
-  if (fansContainer) {
-    fansContainer.innerHTML = '';
-    const otherReciters = [...globalReciters]
-      .filter(r => r.name !== poem.reciterName)
-      .sort(() => 0.5 - Math.random())
-      .slice(0, 6);
-      
-    if (otherReciters.length > 0) {
-      otherReciters.forEach(r => {
-        const card = document.createElement('div');
-        card.className = 'square-card animate-in';
-        card.style.flexShrink = '0';
-        card.innerHTML = `
-          <img src="${r.image}" alt="${r.name}" class="square-cover" style="border-radius: 50%;" />
-          <div class="square-title" style="text-align: center; font-size: 14px; margin-top: 8px; color: white;">${r.name}</div>
-        `;
-        card.onclick = () => openArtistDetail(r.name);
-        fansContainer.appendChild(card);
-      });
-      fansContainer.parentElement.style.display = 'block';
-    } else {
-      fansContainer.parentElement.style.display = 'none';
-    }
-  }
-};
