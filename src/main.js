@@ -7,7 +7,10 @@ const APP_URL = new URL(import.meta.env.BASE_URL, location.origin).href;
 const FALLBACK_COVER = `${import.meta.env.BASE_URL}icon-512.png`;
 const AUDIO_CACHE = 'sawt-alahzan-audio-cache-v1';
 const PAGE_SIZE = 1000; // Supabase returns at most 1000 rows per request
-const TRACK_COLUMNS = 'id,title,file_name,reciter_name,reciter_id,image_url,file_url,category,lyrics,duration,listen_count,created_at';
+// Lyrics are left out of the library download (they can be long, and are only
+// needed for the track being viewed or played), see loadLyrics()
+const TRACK_COLUMNS = 'id,title,file_name,reciter_name,reciter_id,image_url,file_url,category,duration,listen_count';
+const NO_LYRICS = 'الكلمات غير متوفرة لهذا المقطع';
 
 // Same groups as the website's category pages (the database mixes Arabic and
 // English values for the same category)
@@ -94,8 +97,18 @@ function seededShuffle(list, seed) {
   }
   return a;
 }
-const todaySeed = () => Number(new Date().toISOString().slice(0, 10).replace(/-/g, ''));
+// The listener's own date, so "today" changes at their midnight
+const todaySeed = () => { const d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); };
 const shuffled = (list) => seededShuffle(list, Math.floor(Math.random() * 233280));
+
+// Cards and rows are divs: give them a button role and a tab stop so they work
+// from the keyboard and screen readers too (Enter/Space handled in one place below)
+function clickable(el, onClick) {
+  el.setAttribute('role', 'button');
+  el.tabIndex = 0;
+  el.onclick = onClick;
+  return el;
+}
 
 let toastTimer;
 function toast(message) {
@@ -141,13 +154,30 @@ function mapTrack(row) {
     coverImage: row.image_url || '',
     audioUrl: row.file_url || '',
     category: row.category || '',
-    lyrics: typeof row.lyrics === 'string' ? row.lyrics.trim() : '',
     duration: formatDuration(row.duration),
     listens: row.listen_count || 0,
   };
+  // undefined = not fetched yet; '' = the track has none
+  if ('lyrics' in row) track.lyrics = typeof row.lyrics === 'string' ? row.lyrics.trim() : '';
   if (existing) { Object.assign(existing, track); return existing; }
   trackById.set(track.id, track);
   return track;
+}
+
+const lyricsRequests = new Map();
+function loadLyrics(track) {
+  if (track.lyrics !== undefined) return Promise.resolve(track.lyrics);
+  if (!lyricsRequests.has(track.id)) {
+    lyricsRequests.set(track.id, supabase.from('audio_library').select('lyrics').eq('id', track.id).maybeSingle()
+      .then(({ data, error }) => {
+        if (error) throw error;
+        track.lyrics = typeof data?.lyrics === 'string' ? data.lyrics.trim() : '';
+        return track.lyrics;
+      })
+      .catch(() => '') // offline or failed: tried again next time
+      .finally(() => lyricsRequests.delete(track.id)));
+  }
+  return lyricsRequests.get(track.id);
 }
 
 async function fetchTrackPage(from) {
@@ -160,40 +190,79 @@ async function fetchTrackPage(from) {
   return { rows: data || [], count };
 }
 
+let loadState = 'idle'; // loading → ready, or failed (retried when the connection returns)
+
 async function loadData() {
+  if (loadState === 'loading' || loadState === 'ready') return;
+  loadState = 'loading';
   showLoading();
+  let first, popular, recRes;
   try {
-    const [first, popular, recRes] = await Promise.all([
+    [first, popular, recRes] = await Promise.all([
       fetchTrackPage(0),
       supabase.from('audio_library').select(TRACK_COLUMNS).order('listen_count', { ascending: false }).limit(40),
       supabase.from('reciters').select('id,name,image_url').limit(1000),
     ]);
-    allTracks = first.rows.map(mapTrack);
-    popularTracks = (popular.data || []).map(mapTrack);
-    buildReciters(recRes.data || []);
-    renderHome();
-    resolveDataReady();
-    restoreLastTrack();
-    handleDeepLink();
+  } catch (err) {
+    console.error('Error fetching data:', err);
+    loadState = 'failed';
+    showOfflineHome();
+    return;
+  }
+  loadState = 'ready';
+  allTracks = first.rows.map(mapTrack);
+  popularTracks = (popular.data || []).map(mapTrack);
+  buildReciters(recRes.data || []);
+  renderHome();
+  resolveDataReady();
+  restoreLastTrack();
+  // Back online after the offline screen: redraw whatever page is open
+  if (currentTab !== 'home' || navStack.some((e) => e.type === 'page')) refreshOpenViews();
+  handleDeepLink();
 
-    // The rest of the library, in parallel, without holding up the first screen
+  // The rest of the library, in parallel, without holding up the first screen
+  try {
     const pages = [];
     for (let from = PAGE_SIZE; from < (first.count || 0); from += PAGE_SIZE) pages.push(fetchTrackPage(from));
     const rest = await Promise.all(pages);
     rest.forEach((p) => allTracks.push(...p.rows.map(mapTrack)));
     fullyLoaded = true;
-    buildReciters(recRes.data || []);
-    const atTop = document.querySelector('.main-container').scrollTop < 40;
-    if (navStack.some((e) => e.type === 'page') || currentTab !== 'home' || atTop) refreshOpenViews();
   } catch (err) {
-    console.error('Error fetching data:', err);
-    $('sections-container').innerHTML = `
-      <div class="empty-state">
-        <p>تعذّر تحميل المقاطع. تأكد من اتصالك بالإنترنت.</p>
-        <button class="primary-btn" style="width: auto; padding: 12px 28px;" onclick="location.reload()">إعادة المحاولة</button>
-      </div>`;
+    console.warn('Could not load the whole library:', err);
+  }
+  buildReciters(recRes.data || []);
+  backfillDownloadMeta();
+  const atTop = document.querySelector('.main-container').scrollTop < 40;
+  if (navStack.some((e) => e.type === 'page') || currentTab !== 'home' || atTop) refreshOpenViews();
+}
+
+// No connection (or the server is unreachable): what was downloaded still plays
+function showOfflineHome() {
+  const saved = downloadedTracks();
+  const container = $('sections-container');
+  container.innerHTML = `
+    <div class="offline-banner animate-in">
+      ${icon('wifi-off')}
+      <div style="flex: 1;">
+        <div class="offline-title">${navigator.onLine ? 'تعذّر الاتصال بالخادم' : 'لا يوجد اتصال بالإنترنت'}</div>
+        <div class="muted">${saved.length ? 'يمكنك الاستماع إلى تنزيلاتك الآن' : 'تأكد من اتصالك ثم حاول مجدداً'}</div>
+      </div>
+      <button class="chip-btn">إعادة المحاولة</button>
+    </div>`;
+  container.querySelector('button').onclick = () => loadData();
+  if (saved.length) {
+    const list = document.createElement('div');
+    list.className = 'track-list';
+    container.appendChild(section('تنزيلاتك', list));
+    renderTrackList(list, saved);
+    restoreLastTrack();
   }
 }
+
+window.addEventListener('offline', () => toast('انقطع الاتصال بالإنترنت، تنزيلاتك متاحة للاستماع'));
+window.addEventListener('online', () => {
+  if (loadState === 'failed') { toast('عاد الاتصال بالإنترنت'); loadData(); }
+});
 
 // Reciters come from the reciters table (real photos); names that only appear
 // on tracks are added too, using a cover of theirs as the photo.
@@ -237,11 +306,16 @@ const lib = {
       store.set('sawt_likes', [...this.likes]);
       store.set('sawt_playlists', this.playlists);
       store.set('sawt_artists', [...this.follows]);
+    } else {
+      // Reciters known only by name (no database id) can't be followed in the account
+      store.set(localFollowsKey(), [...this.follows].filter((n) => !reciterByName.get(n)?.dbId));
     }
     store.set('sawt_downloads', [...this.downloads]);
     store.set('sawt_history', this.history);
   },
 };
+
+const localFollowsKey = () => `sawt_artists_${currentUser.id}`;
 
 // The phone app stores track ids as "cloud_<id>"; both apps share these tables
 const cloudId = (id) => `cloud_${id}`;
@@ -251,9 +325,10 @@ async function syncFromCloud() {
   await dataReady;
   if (!currentUser) return;
   const uid = currentUser.id;
-  // A guest's likes and playlists move into the account on first sign-in
+  // A guest's likes, playlists and follows move into the account on first sign-in
   const guestLikes = store.get('sawt_likes', []).map(String);
   const guestPlaylists = store.get('sawt_playlists', []);
+  const guestFollows = store.get('sawt_artists', []);
   // Supabase reports failures in `error` (it doesn't throw): the guest copy is
   // cleared only once the account has it, so a failed upload is retried next time
   try {
@@ -269,6 +344,16 @@ async function syncFromCloud() {
       if (error) throw error;
       store.set('sawt_playlists', []);
     }
+    if (guestFollows.length) {
+      const ids = guestFollows.map((n) => reciterByName.get(n)?.dbId).filter(Boolean);
+      if (ids.length) {
+        const { error } = await supabase.from('follows').upsert(ids.map((id) => ({ follower_id: uid, followed_reciter_id: Number(id) })), { onConflict: 'follower_id,followed_reciter_id', ignoreDuplicates: true });
+        if (error) throw error;
+      }
+      const nameOnly = guestFollows.filter((n) => !reciterByName.get(n)?.dbId);
+      store.set(localFollowsKey(), [...new Set([...store.get(localFollowsKey(), []), ...nameOnly])]);
+      store.set('sawt_artists', []);
+    }
   } catch (e) { console.warn('Could not move guest data:', e); }
 
   const [fav, pls, fol] = await Promise.all([
@@ -280,7 +365,7 @@ async function syncFromCloud() {
   if (!pls.error) lib.playlists = (pls.data || []).map((r) => ({ id: r.id, name: r.title, tracks: (r.tracks || []).map(fromCloudId) }));
   if (!fol.error) {
     const ids = new Set((fol.data || []).map((r) => String(r.followed_reciter_id)));
-    lib.follows = new Set(reciters.filter((r) => r.dbId && ids.has(r.dbId)).map((r) => r.name));
+    lib.follows = new Set([...reciters.filter((r) => r.dbId && ids.has(r.dbId)).map((r) => r.name), ...store.get(localFollowsKey(), [])]);
   }
   refreshLikeButtons();
   refreshOpenViews();
@@ -299,7 +384,13 @@ async function toggleLike(track) {
       ? supabase.from('favorites').upsert({ user_id: currentUser.id, poem_id: cloudId(track.id) }, { onConflict: 'user_id,poem_id', ignoreDuplicates: true })
       : supabase.from('favorites').delete().eq('user_id', currentUser.id).eq('poem_id', cloudId(track.id));
     const { error } = await q;
-    if (error) console.warn('Could not save like:', error);
+    if (error) {
+      console.warn('Could not save like:', error);
+      if (liked) lib.likes.delete(track.id); else lib.likes.add(track.id);
+      refreshLikeButtons();
+      toast('تعذر حفظ التغيير، تحقق من اتصالك');
+      return !liked;
+    }
   }
   return liked;
 }
@@ -321,9 +412,13 @@ async function createPlaylist(name) {
 }
 
 async function deletePlaylist(pl) {
+  if (currentUser) {
+    const { error } = await supabase.from('user_playlists').delete().eq('user_id', currentUser.id).eq('id', pl.id);
+    if (error) { console.warn('Could not delete playlist:', error); toast('تعذر حذف القائمة، تحقق من اتصالك'); return false; }
+  }
   lib.playlists = lib.playlists.filter((p) => p.id !== pl.id);
   lib.saveLocal();
-  if (currentUser) await supabase.from('user_playlists').delete().eq('user_id', currentUser.id).eq('id', pl.id);
+  return true;
 }
 
 async function toggleFollow(reciter) {
@@ -335,18 +430,52 @@ async function toggleFollow(reciter) {
       ? supabase.from('follows').upsert({ follower_id: currentUser.id, followed_reciter_id: Number(reciter.dbId) }, { onConflict: 'follower_id,followed_reciter_id', ignoreDuplicates: true })
       : supabase.from('follows').delete().eq('follower_id', currentUser.id).eq('followed_reciter_id', Number(reciter.dbId));
     const { error } = await q;
-    if (error) console.warn('Could not save follow:', error);
+    if (error) {
+      console.warn('Could not save follow:', error);
+      if (following) lib.follows.delete(reciter.name); else lib.follows.add(reciter.name);
+      toast('تعذر حفظ التغيير، تحقق من اتصالك');
+      return !following;
+    }
   }
   toast(following ? `تتابع الآن ${reciter.name}` : `ألغيت متابعة ${reciter.name}`);
   return following;
 }
 
-// Offline listening: the file goes into the cache the service worker serves from
+// Offline listening: the file and its covers go into the cache the service
+// worker serves from, and the track's details are kept on the device so the
+// downloads can be listed and played with no connection at all.
+const DOWNLOAD_META = 'sawt_download_meta';
+const downloadMeta = store.get(DOWNLOAD_META, {});
+// The cover sizes the list, the mini player and the full player ask for
+const coverUrls = (track) => (track.coverImage ? [...new Set([48, 50, 400].map((w) => thumb(track.coverImage, w)))] : []);
+
+function rememberDownload(track) {
+  const { id, title, reciterName, reciterDbId, coverImage, audioUrl, category, duration, listens, lyrics } = track;
+  downloadMeta[id] = { id, title, reciterName, reciterDbId, coverImage, audioUrl, category, duration, listens, lyrics };
+  store.set(DOWNLOAD_META, downloadMeta);
+}
+
+// Downloads made before their details were stored
+function backfillDownloadMeta() {
+  [...lib.downloads].forEach((id) => { if (!downloadMeta[id] && trackById.has(id)) rememberDownload(trackById.get(id)); });
+}
+
+function downloadedTrack(id) {
+  if (!trackById.has(id) && downloadMeta[id]) trackById.set(id, { ...downloadMeta[id] });
+  return trackById.get(id);
+}
+const downloadedTracks = () => [...lib.downloads].map(downloadedTrack).filter(Boolean);
+
 async function toggleDownload(track) {
   if (lib.downloads.has(track.id)) {
     lib.downloads.delete(track.id);
+    delete downloadMeta[track.id];
     lib.saveLocal();
-    try { const cache = await caches.open(AUDIO_CACHE); await cache.delete(track.audioUrl); } catch { /* ignore */ }
+    store.set(DOWNLOAD_META, downloadMeta);
+    try {
+      const cache = await caches.open(AUDIO_CACHE);
+      await Promise.all([track.audioUrl, ...coverUrls(track)].map((u) => cache.delete(u)));
+    } catch { /* ignore */ }
     toast('حُذف التنزيل');
     return false;
   }
@@ -357,8 +486,16 @@ async function toggleDownload(track) {
     const res = await fetch(track.audioUrl, { mode: 'cors' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     await cache.put(track.audioUrl, res);
+    // Covers and lyrics are extras: if they fail, the download still counts
+    await Promise.all([
+      loadLyrics(track),
+      ...coverUrls(track).map((u) => fetch(u, { mode: 'cors' }).then((r) => r.ok && cache.put(u, r)).catch(() => {})),
+    ]);
     lib.downloads.add(track.id);
+    rememberDownload(track);
     lib.saveLocal();
+    // Ask the browser not to clear downloads when the device runs low on space
+    navigator.storage?.persist?.()?.catch(() => {});
     toast('تم التنزيل، يمكنك الاستماع بدون إنترنت');
     return true;
   } catch (e) {
@@ -488,7 +625,7 @@ function renderTrackList(container, list, { numbered = false, emptyText = 'لا 
           <div class="track-artist">${meta}</div>
         </div>
         <button class="icon-btn row-more" aria-label="خيارات">${icon('more')}</button>`;
-      el.onclick = () => playFromList(list, index);
+      clickable(el, () => playFromList(list, index));
       el.querySelector('.row-more').onclick = (e) => { e.stopPropagation(); openTrackOptions(track, { playlist }); };
       frag.appendChild(el);
     });
@@ -527,8 +664,7 @@ function squareCard(track, onClick) {
     <img src="${esc(thumb(track.coverImage, 160))}" alt="" class="square-cover" loading="lazy" />
     <div class="square-title">${esc(track.title)}</div>
     <div class="square-subtitle">${esc(track.reciterName)}</div>`;
-  card.onclick = onClick || (() => openTrackDetail(track));
-  return card;
+  return clickable(card, onClick || (() => openTrackDetail(track)));
 }
 
 function reciterCard(r) {
@@ -538,8 +674,7 @@ function reciterCard(r) {
     <img src="${esc(thumb(r.image, 160))}" alt="" class="square-cover round" loading="lazy" />
     <div class="square-title" style="text-align: center;">${esc(r.name)}</div>
     <div class="square-subtitle" style="text-align: center;">${formatCount(r.count)} مقطع</div>`;
-  card.onclick = () => openArtistDetail(r.name);
-  return card;
+  return clickable(card, () => openArtistDetail(r.name));
 }
 
 function scroller(items, make) {
@@ -564,7 +699,7 @@ function showLoading() {
 
 function greeting() {
   const h = new Date().getHours();
-  return h >= 5 && h < 12 ? 'صباح الخير' : h < 18 ? 'مساء الخير' : 'طاب مساؤك';
+  return h >= 5 && h < 12 ? 'صباح الخير' : h >= 12 && h < 18 ? 'مساء الخير' : 'طاب مساؤك';
 }
 
 function renderHome() {
@@ -583,7 +718,7 @@ function renderHome() {
     const card = document.createElement('div');
     card.className = 'recent-card';
     card.innerHTML = `<img src="${esc(thumb(t.coverImage, 70))}" alt="" class="recent-img" /><div class="recent-title">${esc(t.title)}</div>`;
-    card.onclick = () => openTrackDetail(t);
+    clickable(card, () => openTrackDetail(t));
     grid.appendChild(card);
   });
   container.appendChild(grid);
@@ -596,8 +731,7 @@ function renderHome() {
     card.innerHTML = `
       <img src="${esc(thumb(t.coverImage, 320))}" alt="" loading="lazy" />
       <div class="wide-card-text"><div class="ellipsis wide-title">${esc(t.title)}</div><div class="ellipsis muted">${esc(t.reciterName)}</div></div>`;
-    card.onclick = () => openTrackDetail(t);
-    return card;
+    return clickable(card, () => openTrackDetail(t));
   }), () => openListPage('مضاف حديثاً', allTracks.slice(0, 100))));
 
   // 3. Top reciters (with a real photo first)
@@ -657,7 +791,7 @@ function columnsScroller(list) {
         <img src="${esc(thumb(t.coverImage, 48))}" alt="" loading="lazy" />
         <div class="mini-row-text"><div class="ellipsis">${esc(t.title)}</div><div class="ellipsis muted">${esc(t.reciterName)}${t.listens ? ` • ${formatCount(t.listens)} استماع` : ''}</div></div>
         <button class="icon-btn row-more" aria-label="خيارات">${icon('more')}</button>`;
-      item.onclick = () => playFromList(list, c * 5 + i);
+      clickable(item, () => playFromList(list, c * 5 + i));
       item.querySelector('.row-more').onclick = (e) => { e.stopPropagation(); openTrackOptions(t); };
       col.appendChild(item);
     });
@@ -673,7 +807,7 @@ function openListPage(title, list, playlist = null) {
   openPage('playlist-detail-view', () => renderListPage(title, typeof list === 'function' ? list() : list, playlist));
 }
 const openLikesPage = () => openListPage('المقاطع المفضلة', () => [...lib.likes].map((id) => trackById.get(id)).filter(Boolean).reverse());
-const openDownloadsPage = () => openListPage('التنزيلات', () => [...lib.downloads].map((id) => trackById.get(id)).filter(Boolean));
+const openDownloadsPage = () => openListPage('التنزيلات', downloadedTracks);
 const openPlaylistPage = (pl) => openListPage(pl.name, () => pl.tracks.map((id) => trackById.get(id)).filter(Boolean), pl);
 
 function renderListPage(title, list, playlist) {
@@ -687,11 +821,16 @@ function renderListPage(title, list, playlist) {
   $('playlist-play-all').onclick = () => playFromList(list, 0, { shuffleStart: isShuffle });
   const del = $('playlist-delete-btn');
   del.style.display = playlist ? 'flex' : 'none';
-  del.onclick = async () => {
-    if (!playlist || !confirm(`حذف قائمة "${playlist.name}"؟`)) return;
-    await deletePlaylist(playlist);
-    toast('حُذفت القائمة');
-    history.back();
+  del.onclick = () => {
+    if (!playlist) return;
+    openConfirm({
+      title: `حذف قائمة "${playlist.name}"؟`, text: 'لا يمكن التراجع عن هذا.', okText: 'حذف',
+      onConfirm: async () => {
+        if (!(await deletePlaylist(playlist))) return;
+        toast('حُذفت القائمة');
+        history.back();
+      },
+    });
   };
 }
 
@@ -767,9 +906,12 @@ function renderTrackDetail(track) {
   const cat = categoryOf(track);
   $('td-meta').innerHTML = [cat && esc(cat.title), track.duration && `<span dir="ltr">${track.duration}</span>`, `${formatCount(track.listens)} استماع`].filter(Boolean).join(' • ');
 
-  const lyrics = $('td-lyrics-section');
-  lyrics.style.display = track.lyrics ? 'block' : 'none';
-  $('td-lyrics').textContent = track.lyrics;
+  const paintLyrics = () => {
+    $('td-lyrics-section').style.display = track.lyrics ? 'block' : 'none';
+    $('td-lyrics').textContent = track.lyrics || '';
+  };
+  paintLyrics();
+  loadLyrics(track).then(() => { if ($('td-play-btn').dataset.trackId === track.id) paintLyrics(); });
 
   const playBtn = $('td-play-btn');
   playBtn.dataset.trackId = track.id;
@@ -825,8 +967,7 @@ function renderSearchHome() {
     card.innerHTML = `
       <div class="genre-card-title">${esc(cat.title)}<div class="genre-card-count">${formatCount(inCat.length)} مقطع</div></div>
       ${inCat[0] ? `<img src="${esc(thumb(inCat[0].coverImage, 65))}" class="genre-card-img" alt="" loading="lazy" />` : ''}`;
-    card.onclick = () => openCategoryDetail(cat);
-    grid.appendChild(card);
+    grid.appendChild(clickable(card, () => openCategoryDetail(cat)));
   });
 }
 
@@ -885,8 +1026,7 @@ function renderLibrary() {
     el.className = 'library-card';
     el.innerHTML = `${cover ? `<img src="${esc(thumb(cover, 80))}" alt="" class="library-card-cover" />` : icon(iconName)}
       <div class="library-card-title ellipsis">${esc(title)}</div><div class="library-card-subtitle muted">${esc(subtitle)}</div>`;
-    el.onclick = onClick;
-    grid.appendChild(el);
+    grid.appendChild(clickable(el, onClick));
   };
 
   if (filter === 'all') card('heart', 'المقاطع المفضلة', `${formatCount(lib.likes.size)} مقطع`, openLikesPage);
@@ -933,6 +1073,15 @@ function openPrompt({ title, hint = '', value = '', placeholder = '', onSubmit }
   $('prompt-submit').onclick = submit;
   input.onkeydown = (e) => { if (e.key === 'Enter') submit(); };
   openOverlay(() => { modal.style.display = 'flex'; setTimeout(() => input.focus(), 50); }, () => { modal.style.display = 'none'; });
+}
+
+function openConfirm({ title, text = '', okText, onConfirm }) {
+  const modal = $('confirm-modal');
+  $('confirm-title').textContent = title;
+  $('confirm-text').textContent = text;
+  $('confirm-ok').textContent = okText;
+  $('confirm-ok').onclick = () => closeOverlayThen(onConfirm);
+  openOverlay(() => { modal.style.display = 'flex'; $('confirm-ok').focus(); }, () => { modal.style.display = 'none'; });
 }
 
 window.promptCreatePlaylist = (thenAddTrack = null) => {
@@ -1040,6 +1189,8 @@ let repeatMode = 'off';    // off → all → one
 let isAutoplay = store.get('sawt_autoplay', true);
 let countedListen = null;  // track id whose listen was already counted
 let hls = null;
+let wantsToPlay = false;   // false for a track restored paused at startup
+let failedInARow = 0;
 
 async function loadSource(url) {
   if (hls) { hls.destroy(); hls = null; }
@@ -1059,6 +1210,7 @@ async function playTrack(track, { autoplay = true, startAt = 0 } = {}) {
   if (!track.audioUrl) { toast('هذا المقطع لا يحتوي على ملف صوتي'); return; }
   currentTrack = track;
   countedListen = null;
+  wantsToPlay = autoplay;
   await loadSource(track.audioUrl);
   if (startAt) audio.addEventListener('loadedmetadata', () => { audio.currentTime = startAt; }, { once: true });
   updateNowPlaying();
@@ -1095,14 +1247,14 @@ window.togglePlay = (event) => {
   event?.stopPropagation?.();
   if (!currentTrack) return;
   if (audio.paused) {
-    if (!audio.currentSrc) playTrack(currentTrack);
+    if (!audio.currentSrc || audio.error) playTrack(currentTrack); // (re)load a file that failed
     else audio.play().catch(() => {});
   } else audio.pause();
 };
 const togglePlay = window.togglePlay;
 
 // Next track: from the queue; at its end repeat-all wraps, autoplay continues
-// with similar tracks, otherwise playback stops.
+// with similar tracks, otherwise playback stops. Returns whether a track started.
 window.playNext = (fromEnded = false) => {
   if (queueIndex < queue.length - 1) {
     queueIndex++;
@@ -1111,13 +1263,14 @@ window.playNext = (fromEnded = false) => {
   } else if (isAutoplay && currentTrack) {
     const played = new Set(queue.map((t) => t.id));
     const more = similarTo(currentTrack, 40).filter((t) => !played.has(t.id));
-    if (!more.length) return;
+    if (!more.length) return false;
     queue.push(...more.slice(0, 10));
     queueIndex++;
   } else {
-    if (!fromEnded && queue.length) queueIndex = 0; else return;
+    if (!fromEnded && queue.length) queueIndex = 0; else return false;
   }
   playTrack(queue[queueIndex]);
+  return true;
 };
 
 window.playPrev = () => {
@@ -1138,7 +1291,7 @@ window.toggleShuffle = () => {
     }
     updateQueueUI();
   }
-  document.querySelectorAll('.shuffle-toggle').forEach((b) => b.classList.toggle('on', isShuffle));
+  document.querySelectorAll('.shuffle-toggle').forEach((b) => { b.classList.toggle('on', isShuffle); b.setAttribute('aria-pressed', String(isShuffle)); });
   toast(isShuffle ? 'التشغيل العشوائي مفعّل' : 'التشغيل العشوائي متوقف');
 };
 
@@ -1146,6 +1299,7 @@ window.toggleRepeat = () => {
   repeatMode = repeatMode === 'off' ? 'all' : repeatMode === 'all' ? 'one' : 'off';
   const btn = $('fp-repeat-btn');
   btn.classList.toggle('on', repeatMode !== 'off');
+  btn.setAttribute('aria-pressed', String(repeatMode !== 'off'));
   setIcon(btn.querySelector('.ic'), repeatMode === 'one' ? 'repeat-one' : 'repeat');
   toast({ off: 'التكرار متوقف', all: 'تكرار القائمة', one: 'تكرار المقطع الحالي' }[repeatMode]);
 };
@@ -1153,8 +1307,13 @@ window.toggleRepeat = () => {
 window.toggleAutoplay = () => {
   isAutoplay = !isAutoplay;
   store.set('sawt_autoplay', isAutoplay);
-  $('fp-autoplay-switch').classList.toggle('on', isAutoplay);
+  paintAutoplay();
 };
+function paintAutoplay() {
+  const sw = $('fp-autoplay-switch');
+  sw.classList.toggle('on', isAutoplay);
+  sw.setAttribute('aria-checked', String(isAutoplay));
+}
 
 // Radio: shuffle of the current reciter's work, then similar tracks
 window.startRadio = () => {
@@ -1174,9 +1333,10 @@ audio.addEventListener('ended', () => {
   if (repeatMode === 'one') { audio.currentTime = 0; audio.play().catch(() => {}); return; }
   playNext(true);
 });
-audio.addEventListener('play', paintPlayButtons);
+audio.addEventListener('play', () => { wantsToPlay = true; paintPlayButtons(); });
 audio.addEventListener('pause', () => { paintPlayButtons(); saveLastPosition(); });
 audio.addEventListener('playing', () => {
+  failedInARow = 0;
   // One listen per play (same counter as the website and the phone app)
   if (currentTrack && countedListen !== currentTrack.id) {
     countedListen = currentTrack.id;
@@ -1186,8 +1346,18 @@ audio.addEventListener('playing', () => {
     });
   }
 });
+// A file that won't play (missing, or offline and not downloaded) is skipped,
+// a few in a row at most so a dead connection doesn't run through the queue
 audio.addEventListener('error', () => {
-  if (currentTrack && audio.error) toast('تعذر تشغيل هذا المقطع');
+  if (!currentTrack || !audio.error || !wantsToPlay) return; // a restored track reports when played
+  if (failedInARow < 3 && playNext(true)) {
+    failedInARow++;
+    toast('تعذر تشغيل المقطع، انتقلنا إلى التالي');
+  } else {
+    failedInARow = 0;
+    audio.pause(); // a failed load still counts as "playing": show the play button again
+    toast(navigator.onLine ? 'تعذر تشغيل هذا المقطع' : 'لا يوجد اتصال، وهذا المقطع غير منزّل');
+  }
 });
 
 let lastSaved = 0;
@@ -1265,8 +1435,8 @@ function updateNowPlaying() {
   $('fp-title').textContent = t.title;
   $('fp-artist').textContent = t.reciterName;
   $('fp-artist').onclick = () => closeOverlayThen(() => openArtistDetail(t.reciterName));
-  $('fp-lyrics-preview').textContent = t.lyrics || 'الكلمات غير متوفرة لهذا المقطع';
-  $('lyrics-content').textContent = t.lyrics || 'الكلمات غير متوفرة لهذا المقطع';
+  paintPlayerLyrics(t, t.lyrics === undefined);
+  loadLyrics(t).then(() => { if (currentTrack === t) paintPlayerLyrics(t, false); });
   $('ly-title').textContent = t.title;
   $('ly-artist').textContent = t.reciterName;
   $('mp-like-btn').dataset.trackId = t.id;
@@ -1292,6 +1462,12 @@ function updateNowPlaying() {
   }
 }
 
+function paintPlayerLyrics(t, loading) {
+  const text = loading ? 'جارٍ تحميل الكلمات...' : t.lyrics || NO_LYRICS;
+  $('fp-lyrics-preview').textContent = text;
+  $('lyrics-content').textContent = text;
+}
+
 function updateQueueUI() {
   const box = $('fp-queue-list');
   box.innerHTML = '';
@@ -1306,8 +1482,7 @@ function updateQueueUI() {
     row.innerHTML = `
       <img src="${esc(thumb(t.coverImage, 45))}" class="track-img" style="width: 45px; height: 45px;" alt="" />
       <div class="track-info"><div class="track-title">${esc(t.title)}</div><div class="track-artist">${esc(t.reciterName)}</div></div>`;
-    row.onclick = () => { queueIndex += i + 1; playTrack(queue[queueIndex]); };
-    box.appendChild(row);
+    box.appendChild(clickable(row, () => { queueIndex += i + 1; playTrack(queue[queueIndex]); }));
   });
 }
 
@@ -1315,6 +1490,7 @@ function refreshLikeButtons() {
   document.querySelectorAll('#mp-like-btn, #fp-like-btn, #td-like-btn').forEach((btn) => {
     const liked = !!btn.dataset.trackId && lib.likes.has(btn.dataset.trackId);
     btn.classList.toggle('liked', liked);
+    btn.setAttribute('aria-pressed', String(liked));
     setIcon(btn.querySelector('.ic'), 'heart', { fill: liked });
   });
 }
@@ -1395,7 +1571,8 @@ $('fp-sleep-badge').onclick = () => openSleepTimerSheet();
 // ═══ Account ═════════════════════════════════════════════════════════════════
 let authMode = 'login';
 const displayName = () => profile?.display_name || currentUser?.user_metadata?.full_name || currentUser?.email?.split('@')[0] || '';
-const avatarUrl = () => profile?.avatar_url || currentUser?.user_metadata?.avatar_url || initialAvatar(displayName());
+const avatarUrl = () => profile?.avatar_url || currentUser?.user_metadata?.custom_avatar_url
+  || currentUser?.user_metadata?.avatar_url || initialAvatar(displayName());
 
 async function loadProfile() {
   profile = null;
@@ -1414,7 +1591,10 @@ async function initAuth() {
   supabase.auth.onAuthStateChange(async (event, s) => {
     const before = currentUser?.id;
     currentUser = s?.user ?? null;
-    if (currentUser?.id === before && event !== 'USER_UPDATED') return;
+    if (currentUser?.id === before) {
+      if (event === 'USER_UPDATED') updateProfileUI(); // name or photo changed
+      return;
+    }
     await loadProfile();
     updateProfileUI();
     if (currentUser) syncFromCloud();
@@ -1428,8 +1608,11 @@ async function initAuth() {
     }
   });
 
-  // Offer sign-in once, on the first visit
-  if (!currentUser && !store.get('sawt_auth_skipped', false)) setTimeout(() => openAuthModal(), 1200);
+  // Offer sign-in once, on the first visit (checked when it would show: the
+  // listener may have signed in or dismissed it in the meantime)
+  setTimeout(() => {
+    if (!currentUser && !store.get('sawt_auth_skipped', false) && $('auth-modal').style.display !== 'flex') openAuthModal();
+  }, 1200);
 }
 
 function updateProfileUI() {
@@ -1492,6 +1675,9 @@ window.handleAvatarUpload = async (event) => {
     const { url } = await res.json();
     const { error } = await supabase.from('profiles').update({ avatar_url: url }).eq('id', currentUser.id);
     if (error) throw error;
+    // Also on the account itself: kept even where the profile row doesn't exist.
+    // A separate key, since Google sign-in rewrites avatar_url with its own photo
+    await supabase.auth.updateUser({ data: { custom_avatar_url: url } });
     profile = { ...(profile || {}), avatar_url: url };
     updateProfileUI();
     toast('تم تحديث الصورة');
@@ -1623,9 +1809,31 @@ function handleDeepLink() {
   }
 }
 
+// ═══ Keyboard ════════════════════════════════════════════════════════════════
+document.addEventListener('keydown', (e) => {
+  const t = e.target;
+  const typing = t.matches?.('input, textarea, select, [contenteditable]');
+  if ((e.key === 'Enter' || e.key === ' ') && t.matches?.('[role="button"]:not(button), [role="switch"]')) {
+    e.preventDefault();
+    t.click();
+  } else if (e.key === 'Escape') {
+    if ($('auth-modal').style.display === 'flex') skipAuth();
+    else if (navStack.at(-1)?.type === 'overlay') history.back();
+  } else if (e.key === ' ' && !typing && !t.closest?.('button, a, [role="button"], [role="switch"]') && currentTrack) {
+    e.preventDefault(); // Space plays / pauses, as in other players
+    togglePlay();
+  }
+});
+
 // ═══ Boot ════════════════════════════════════════════════════════════════════
+// A cover that can't load (missing file, or offline) shows the app icon instead
+document.addEventListener('error', (e) => {
+  const img = e.target;
+  if (img.tagName === 'IMG' && img.getAttribute('src') && img.getAttribute('src') !== FALLBACK_COVER) img.src = FALLBACK_COVER;
+}, true);
+
 startIcons();
-$('fp-autoplay-switch').classList.toggle('on', isAutoplay);
+paintAutoplay();
 initAuth();
 loadData();
 

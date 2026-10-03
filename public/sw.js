@@ -1,11 +1,19 @@
 // Service worker for the installed app.
 //  - The app's own files: network first, cached copy when offline.
-//  - Tracks the listener downloaded (AUDIO_CACHE, filled by the page): served
-//    from the cache, including the byte ranges the audio player asks for.
+//  - Tracks (and their covers) the listener downloaded (AUDIO_CACHE, filled by
+//    the page): served from the cache, including the byte ranges the audio
+//    player asks for, whichever host the file lives on.
+//  - Fonts: cached copy first, so text keeps its typeface offline.
 //  - The database and everything else are left alone, so data is always fresh.
 const APP_CACHE = 'sawt-alahzan-app-v3';
 const AUDIO_CACHE = 'sawt-alahzan-audio-cache-v1';
-const MEDIA_HOST = 'soutalahzan.com'; // R2: audio files and covers
+// Where audio files and covers are stored: R2 (own domain and r2.dev) and
+// Supabase Storage (older uploads)
+const MEDIA_HOSTS = new Set(['soutalahzan.com', 'pub-8168942d67ae4c1fb48c404f11458b4a.r2.dev']);
+const SUPABASE_HOST = 'ckhtndmrcypkqrpjlzli.supabase.co';
+const FONT_HOSTS = new Set(['fonts.googleapis.com', 'fonts.gstatic.com']);
+const isMedia = (url) => MEDIA_HOSTS.has(url.hostname)
+  || (url.hostname === SUPABASE_HOST && url.pathname.startsWith('/storage/'));
 
 self.addEventListener('install', () => self.skipWaiting());
 
@@ -62,8 +70,19 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Downloaded tracks and covers (on the media host); everything else passes through
-  if (url.hostname !== MEDIA_HOST) return;
+  if (FONT_HOSTS.has(url.hostname)) {
+    event.respondWith(caches.open(APP_CACHE).then(async (cache) => {
+      const hit = await cache.match(request);
+      const fresh = fetch(request).then((res) => { if (res.ok) cache.put(request, res.clone()); return res; });
+      if (!hit) return fresh;
+      event.waitUntil(fresh.catch(() => {})); // refresh in the background
+      return hit;
+    }));
+    return;
+  }
+
+  // Downloaded tracks and covers; everything else (the database included) passes through
+  if (!isMedia(url)) return;
   event.respondWith(
     caches.open(AUDIO_CACHE)
       .then((cache) => cache.match(request.url))

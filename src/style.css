@@ -91,6 +91,13 @@ header { display: flex; justify-content: space-between; align-items: center; mar
 .loading .ic svg { animation: spin 0.9s linear infinite; }
 .empty-state { text-align: center; color: var(--text-secondary); padding: 40px 16px; line-height: 1.9; }
 
+.offline-banner {
+  display: flex; align-items: center; gap: 14px; padding: 16px; margin-bottom: 26px; border-radius: 14px;
+  background: var(--accent-soft); border: 1px solid rgba(240, 91, 40, 0.3); font-size: 13px; line-height: 1.6;
+}
+.offline-banner > .ic { font-size: 26px; color: var(--accent); }
+.offline-title { font-size: 15px; font-weight: 800; }
+
 .recent-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .recent-card {
   display: flex; align-items: center; background-color: var(--dark-surface); border-radius: 6px;

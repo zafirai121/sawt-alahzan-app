@@ -7,7 +7,7 @@ import {
   EllipsisVertical, Heart, CircleArrowDown, CircleCheck, Shuffle, Repeat, Repeat1, Play, Pause,
   SkipBack, SkipForward, Settings, Camera, Music, ListMusic, List, ListPlus, Mic, Mail, SquarePen,
   LogOut, Maximize2, LoaderCircle, Eye, EyeOff, Share, Radio, Clock3, UserPlus, UserCheck, X,
-  Download, Trash2, Timer, Disc3,
+  Download, Trash2, Timer, Disc3, WifiOff,
 } from 'lucide';
 
 const ICONS = {
@@ -19,7 +19,7 @@ const ICONS = {
   playlist: ListMusic, list: List, 'list-plus': ListPlus, mic: Mic, mail: Mail, edit: SquarePen,
   logout: LogOut, expand: Maximize2, spinner: LoaderCircle, eye: Eye, 'eye-off': EyeOff,
   share: Share, radio: Radio, clock: Clock3, follow: UserPlus, following: UserCheck, close: X,
-  trash: Trash2, timer: Timer, disc: Disc3,
+  trash: Trash2, timer: Timer, disc: Disc3, 'wifi-off': WifiOff,
 };
 
 const escAttr = (v) => String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
