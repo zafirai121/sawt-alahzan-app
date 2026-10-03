@@ -85,7 +85,7 @@ header { display: flex; justify-content: space-between; align-items: center; mar
 .section-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; gap: 10px; }
 .section-title { font-size: 21px; font-weight: 800; }
 .sub-title { font-size: 18px; font-weight: 800; margin-bottom: 18px; }
-.link-btn { background: none; border: none; color: var(--accent); font-weight: 700; font-size: 14px; cursor: pointer; padding: 4px; }
+.link-btn { background: none; border: none; color: var(--accent); font-weight: 700; font-size: 14px; cursor: pointer; padding: 4px; white-space: nowrap; flex-shrink: 0; }
 
 .loading { display: flex; justify-content: center; padding: 100px 0; font-size: 40px; color: var(--accent); }
 .loading .ic svg { animation: spin 0.9s linear infinite; }
@@ -169,6 +169,7 @@ header { display: flex; justify-content: space-between; align-items: center; mar
   padding: 7px 16px; font-size: 14px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
 }
 .pill-btn.on { border-color: var(--accent); color: var(--accent); }
+.pill-btn.small { padding: 5px 14px; font-size: 13px; flex-shrink: 0; }
 
 /* Reciter / category heroes */
 .hero-view { position: relative; margin: -10px -12px 0; }
@@ -286,7 +287,7 @@ header { display: flex; justify-content: space-between; align-items: center; mar
 .outline-btn { background: transparent; border: 1.5px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); font-weight: 600; }
 .chip-btn {
   background: rgba(255,255,255,0.1); border: none; color: white; padding: 6px 14px; border-radius: 20px; font-size: 13px;
-  cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0;
 }
 
 /* ─── Mini player ─── */
@@ -338,6 +339,9 @@ header { display: flex; justify-content: space-between; align-items: center; mar
   position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; overflow-y: auto;
   padding: max(4vh, env(safe-area-inset-top)) 5vw calc(3vh + var(--safe-bottom));
 }
+/* A column that scrolls: its sections keep their own height (a horizontal
+   scroller would otherwise be squeezed to a sliver to fit the screen) */
+.fp-scroll > * { flex-shrink: 0; }
 .fp-heading { text-align: center; font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.8); }
 .fp-sleep-badge {
   justify-content: center; align-items: center; gap: 4px; margin-top: 4px; font-size: 12px; color: var(--accent); cursor: pointer;
@@ -350,7 +354,7 @@ header { display: flex; justify-content: space-between; align-items: center; mar
 .fp-title-row h2 { font-size: 23px; font-weight: 800; margin-bottom: 4px; }
 .fp-artist { color: rgba(255,255,255,0.6); font-size: 16px; cursor: pointer; }
 .fp-like { font-size: 26px; }
-.fp-times { display: flex; justify-content: space-between; font-size: 12px; color: rgba(255,255,255,0.55); margin-top: 10px; direction: ltr; }
+.fp-times { display: flex; justify-content: space-between; font-size: 12px; color: rgba(255,255,255,0.55); margin-top: 2px; direction: ltr; }
 /* Playback controls and progress stay left-to-right, as in every music player (they are not mirrored for RTL) */
 .fp-controls { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 4vh; direction: ltr; }
 .fp-controls .icon-btn { font-size: 22px; }
@@ -372,12 +376,75 @@ header { display: flex; justify-content: space-between; align-items: center; mar
 .switch.on { background: var(--accent); }
 .switch.on .switch-knob { right: 2px; }
 
-/* Progress slider: filled part in the accent color */
+/* About the reciter: a photo card, then name, numbers, follow and a short text */
+.fp-about { padding: 0; overflow: hidden; cursor: pointer; }
+.fp-about-photo { position: relative; aspect-ratio: 16 / 10; background: var(--dark-surface); }
+.fp-about-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fp-about-photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 40%); }
+.fp-about-label { position: absolute; top: 14px; right: 16px; z-index: 1; font-size: 15px; font-weight: 800; text-shadow: 0 2px 8px rgba(0,0,0,0.6); }
+.fp-about-body { padding: 16px 18px 18px; }
+.fp-about-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
+.fp-about-name { font-size: 18px; font-weight: 800; }
+.fp-about-stats { font-size: 13px; margin-top: 2px; }
+.fp-about-text {
+  font-size: 14px; line-height: 1.8; color: rgba(255,255,255,0.8);
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+/* Credits: name over role, a follow button for the reciter */
+.credits-list { display: flex; flex-direction: column; gap: 16px; }
+.credit-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-width: 0; }
+.credit-text { min-width: 0; }
+.credit-name { font-size: 15px; font-weight: 700; }
+.credit-role { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.credits-group { margin-bottom: 22px; }
+.credits-group h3 { font-size: 15px; font-weight: 800; margin-bottom: 12px; }
+.credits-group .credit-row + .credit-row { margin-top: 14px; }
+.credits-report {
+  display: flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 13px; font-weight: 700;
+  text-decoration: none; padding: 6px 0;
+}
+
+/* Explore: tall cards, the cover over a blurred copy of itself */
+.fp-explore { margin-bottom: 26px; }
+.fp-section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 14px; }
+.fp-section-head h3 { font-size: 18px; font-weight: 800; min-width: 0; }
+.explore-scroller { gap: 12px; scroll-snap-type: x mandatory; }
+.explore-card {
+  position: relative; flex-shrink: 0; width: 42vw; max-width: 170px; aspect-ratio: 9 / 15; border-radius: 12px;
+  overflow: hidden; cursor: pointer; background: var(--dark-surface); scroll-snap-align: start; isolation: isolate;
+}
+.explore-card:active { transform: scale(0.98); }
+.explore-bg { position: absolute; inset: -20%; width: 140%; height: 140%; object-fit: cover; filter: blur(22px) brightness(0.6); z-index: -1; }
+.explore-cover { position: absolute; top: 14%; left: 10%; width: 80%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; box-shadow: 0 10px 24px rgba(0,0,0,0.5); }
+.explore-shade { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 45%); }
+.explore-play {
+  position: absolute; top: 10px; left: 10px; width: 30px; height: 30px; border-radius: 50%; background: rgba(0,0,0,0.55);
+  display: flex; align-items: center; justify-content: center; font-size: 13px;
+}
+.explore-text { position: absolute; bottom: 12px; right: 12px; left: 12px; }
+.explore-title {
+  font-size: 14px; font-weight: 800; line-height: 1.35;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.explore-sub { font-size: 12px; color: rgba(255,255,255,0.7); margin-top: 3px; }
+
+/* Progress slider: a finger-sized (28px) touch area around a 4px line whose
+   played part is in the accent colour */
 input[type=range] {
-  -webkit-appearance: none; appearance: none; height: 4px; border-radius: 2px; outline: none; cursor: pointer; direction: ltr;
+  -webkit-appearance: none; appearance: none; height: 28px; margin: 0; background: transparent; cursor: pointer; direction: ltr;
+}
+input[type=range]::-webkit-slider-runnable-track {
+  height: 4px; border-radius: 2px;
   background: linear-gradient(to right, var(--accent) var(--pct, 0%), rgba(255,255,255,0.2) var(--pct, 0%));
 }
-input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: white; }
+input[type=range]::-moz-range-track { height: 4px; border-radius: 2px; background: rgba(255,255,255,0.2); }
+input[type=range]::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--accent); }
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 14px; height: 14px; margin-top: -5px; border-radius: 50%; background: white;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4); transition: transform 0.15s;
+}
+input[type=range]:active::-webkit-slider-thumb { transform: scale(1.3); }
 input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border: none; border-radius: 50%; background: white; }
 
 /* ─── Lyrics ─── */

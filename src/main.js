@@ -8,7 +8,7 @@ const FALLBACK_COVER = `${import.meta.env.BASE_URL}icon-512.png`;
 const AUDIO_CACHE = 'sawt-alahzan-audio-cache-v1';
 const PAGE_SIZE = 1000; // Supabase returns at most 1000 rows per request
 // Lyrics are left out of the library download (they can be long, and are only
-// needed for the track being viewed or played), see loadLyrics()
+// needed for the track being viewed or played), see loadDetails()
 const TRACK_COLUMNS = 'id,title,file_name,reciter_name,reciter_id,image_url,file_url,category,duration,listen_count';
 const NO_LYRICS = 'الكلمات غير متوفرة لهذا المقطع';
 
@@ -165,20 +165,46 @@ function mapTrack(row) {
   return track;
 }
 
-const lyricsRequests = new Map();
-function loadLyrics(track) {
-  if (track.lyrics !== undefined) return Promise.resolve(track.lyrics);
-  if (!lyricsRequests.has(track.id)) {
-    lyricsRequests.set(track.id, supabase.from('audio_library').select('lyrics').eq('id', track.id).maybeSingle()
+// A track's full row (lyrics, date added, and who wrote / composed it when the
+// row says so), fetched when the track is opened or played
+const CREDIT_FIELDS = [
+  ['الكلمات', ['poet', 'poet_name', 'lyricist', 'writer']],
+  ['الألحان', ['composer', 'composer_name', 'melody']],
+  ['الإنتاج', ['producer', 'production', 'studio']],
+];
+const textOf = (row, keys) => keys.map((k) => row?.[k]).find((v) => typeof v === 'string' && v.trim())?.trim();
+const detailRequests = new Map();
+function loadDetails(track) {
+  if (track.detailed) return Promise.resolve(track);
+  if (!detailRequests.has(track.id)) {
+    detailRequests.set(track.id, supabase.from('audio_library').select('*').eq('id', track.id).maybeSingle()
       .then(({ data, error }) => {
         if (error) throw error;
         track.lyrics = typeof data?.lyrics === 'string' ? data.lyrics.trim() : '';
-        return track.lyrics;
+        track.addedAt = data?.created_at || '';
+        track.credits = CREDIT_FIELDS.map(([role, keys]) => ({ role, name: textOf(data, keys) })).filter((c) => c.name);
+        track.detailed = true;
+        return track;
       })
-      .catch(() => '') // offline or failed: tried again next time
-      .finally(() => lyricsRequests.delete(track.id)));
+      .catch(() => track) // offline or failed: tried again next time
+      .finally(() => detailRequests.delete(track.id)));
   }
-  return lyricsRequests.get(track.id);
+  return detailRequests.get(track.id);
+}
+
+// A reciter's bio, when the reciters table carries one
+const reciterBios = new Map(); // db id → text ('' = none)
+function loadReciterBio(r) {
+  if (!r?.dbId) return Promise.resolve('');
+  if (reciterBios.has(r.dbId)) return Promise.resolve(reciterBios.get(r.dbId));
+  return supabase.from('reciters').select('*').eq('id', Number(r.dbId)).maybeSingle()
+    .then(({ data, error }) => {
+      if (error) throw error;
+      const bio = textOf(data, ['bio', 'about', 'description']) || '';
+      reciterBios.set(r.dbId, bio);
+      return bio;
+    })
+    .catch(() => '');
 }
 
 async function fetchTrackPage(from) {
@@ -440,6 +466,7 @@ async function toggleFollow(reciter) {
   if (following) lib.follows.add(reciter.name); else lib.follows.delete(reciter.name);
   lib.saveLocal();
   libraryChanged();
+  paintFollowButtons();
   if (currentUser && reciter.dbId) {
     const q = following
       ? supabase.from('follows').upsert({ follower_id: currentUser.id, followed_reciter_id: Number(reciter.dbId) }, { onConflict: 'follower_id,followed_reciter_id', ignoreDuplicates: true })
@@ -449,6 +476,7 @@ async function toggleFollow(reciter) {
       console.warn('Could not save follow:', error);
       if (following) lib.follows.delete(reciter.name); else lib.follows.add(reciter.name);
       libraryChanged();
+      paintFollowButtons();
       toast('تعذر حفظ التغيير، تحقق من اتصالك');
       return !following;
     }
@@ -466,8 +494,8 @@ const downloadMeta = store.get(DOWNLOAD_META, {});
 const coverUrls = (track) => (track.coverImage ? [...new Set([48, 50, 400].map((w) => thumb(track.coverImage, w)))] : []);
 
 function rememberDownload(track) {
-  const { id, title, reciterName, reciterDbId, coverImage, audioUrl, category, duration, listens, lyrics } = track;
-  downloadMeta[id] = { id, title, reciterName, reciterDbId, coverImage, audioUrl, category, duration, listens, lyrics };
+  const { id, title, reciterName, reciterDbId, coverImage, audioUrl, category, duration, listens, lyrics, addedAt, credits } = track;
+  downloadMeta[id] = { id, title, reciterName, reciterDbId, coverImage, audioUrl, category, duration, listens, lyrics, addedAt, credits };
   store.set(DOWNLOAD_META, downloadMeta);
 }
 
@@ -505,7 +533,7 @@ async function toggleDownload(track) {
     await cache.put(track.audioUrl, res);
     // Covers and lyrics are extras: if they fail, the download still counts
     await Promise.all([
-      loadLyrics(track),
+      loadDetails(track),
       ...coverUrls(track).map((u) => fetch(u, { mode: 'cors' }).then((r) => r.ok && cache.put(u, r)).catch(() => {})),
     ]);
     lib.downloads.add(track.id);
@@ -939,13 +967,10 @@ function renderArtist(name) {
   renderTrackList($('artist-tracks'), list, { numbered: true });
   $('artist-play-all').onclick = () => playFromList(list, 0, { shuffleStart: isShuffle });
   const follow = $('artist-follow-btn');
-  const paintFollow = () => {
-    const on = lib.follows.has(name);
-    follow.classList.toggle('on', on);
-    follow.innerHTML = `${icon(on ? 'following' : 'follow')} <span>${on ? 'تتابعه' : 'متابعة'}</span>`;
-  };
-  paintFollow();
-  follow.onclick = async () => { await toggleFollow(r); paintFollow(); };
+  follow.dataset.follow = name;
+  follow.dataset.followIcon = '';
+  follow.onclick = () => toggleFollow(r);
+  paintFollowButtons();
   $('artist-share-btn').onclick = () => share(`${name} | صوت الأحزان`, `استمع إلى قصائد ${name}`, r.dbId ? `${SITE_URL}/reciter?id=${r.dbId}` : APP_URL);
 }
 
@@ -981,7 +1006,7 @@ function renderTrackDetail(track) {
     $('td-lyrics').textContent = track.lyrics || '';
   };
   paintLyrics();
-  loadLyrics(track).then(() => { if ($('td-play-btn').dataset.trackId === track.id) paintLyrics(); });
+  loadDetails(track).then(() => { if ($('td-play-btn').dataset.trackId === track.id) paintLyrics(); });
 
   const playBtn = $('td-play-btn');
   playBtn.dataset.trackId = track.id;
@@ -1514,7 +1539,12 @@ function updateNowPlaying() {
   $('fp-artist').textContent = t.reciterName;
   $('fp-artist').onclick = () => closeOverlayThen(() => openArtistDetail(t.reciterName));
   paintPlayerLyrics(t, t.lyrics === undefined);
-  loadLyrics(t).then(() => { if (currentTrack === t) paintPlayerLyrics(t, false); });
+  paintPlayerExtras(t);
+  loadDetails(t).then(() => {
+    if (currentTrack !== t) return;
+    paintPlayerLyrics(t, false);
+    paintCredits(t, reciterForTrack(t));
+  });
   $('ly-title').textContent = t.title;
   $('ly-artist').textContent = t.reciterName;
   $('mp-like-btn').dataset.trackId = t.id;
@@ -1524,7 +1554,10 @@ function updateNowPlaying() {
 
   const similar = $('fp-similar-list');
   similar.innerHTML = '';
-  similarTo(t, 8).forEach((s) => similar.appendChild(squareCard(s, () => playFromList([s, ...similarTo(s, 20)], 0))));
+  // The reciter's own work is under "explore" above: similar = other reciters
+  const others = similarTo(t, 40).filter((x) => x.reciterName !== t.reciterName);
+  (others.length >= 3 ? others : similarTo(t, 8)).slice(0, 8)
+    .forEach((x) => similar.appendChild(squareCard(x, () => playFromList([x, ...similarTo(x, 20)], 0))));
   updateQueueUI();
   refreshLikeButtons();
   paintPlayButtons();
@@ -1542,8 +1575,132 @@ function updateNowPlaying() {
 
 function paintPlayerLyrics(t, loading) {
   const text = loading ? 'جارٍ تحميل الكلمات...' : t.lyrics || NO_LYRICS;
+  $('fp-lyrics-box').style.display = loading || t.lyrics ? '' : 'none';
   $('fp-lyrics-preview').textContent = text;
   $('lyrics-content').textContent = text;
+}
+
+// ─── Full player: about the reciter, credits, more of their work ───
+const UNKNOWN_RECITER = 'مجهول';
+const reciterForTrack = (t) => reciterOf(t) || { name: t.reciterName, dbId: t.reciterDbId, image: '', count: 0 };
+
+function paintPlayerExtras(t) {
+  const r = reciterForTrack(t);
+  const known = r.name !== UNKNOWN_RECITER;
+  const works = [...tracksOf(t.reciterName)].sort((a, b) => b.listens - a.listens);
+  const openReciter = () => closeOverlayThen(() => openArtistDetail(t.reciterName));
+
+  // 1. About the reciter: photo, numbers, bio (or their best-known work)
+  $('fp-about').style.display = known ? '' : 'none';
+  $('fp-about-img').src = thumb(r.image || t.coverImage, 400);
+  $('fp-about-name').textContent = r.name;
+  $('fp-about-stats').textContent = `${formatCount(works.length)} مقطع • ${formatCount(works.reduce((sum, x) => sum + x.listens, 0))} استماع`;
+  const famous = works.slice(0, 3).map((x) => `«${x.title}»`).join('، ');
+  const paintBio = (bio) => {
+    const text = bio || (famous && `أشهر أعماله في صوت الأحزان: ${famous}.`);
+    $('fp-about-text').textContent = text;
+    $('fp-about-text').style.display = text ? '' : 'none';
+  };
+  paintBio(reciterBios.get(r.dbId));
+  if (known) loadReciterBio(r).then((bio) => { if (bio && currentTrack === t) paintBio(bio); });
+  $('fp-about').onclick = openReciter;
+  const follow = $('fp-about-follow');
+  follow.dataset.follow = r.name;
+  follow.onclick = (e) => { e.stopPropagation(); toggleFollow(r); };
+
+  // 2. Credits
+  paintCredits(t, r);
+
+  // 3. Explore: the reciter's most listened work
+  const explore = works.filter((x) => x.id !== t.id).slice(0, 10);
+  $('fp-explore').style.display = known && explore.length >= 2 ? '' : 'none';
+  $('fp-explore-title').textContent = `فلنستكشف الإبداعات: من ${r.name}`;
+  $('fp-explore-all').onclick = openReciter;
+  const list = $('fp-explore-list');
+  list.innerHTML = '';
+  list.scrollLeft = 0;
+  explore.forEach((x, i) => list.appendChild(exploreCard(x, () => playFromList(explore, i))));
+  paintFollowButtons();
+}
+
+function creditRow(name, role, reciter = null) {
+  const row = document.createElement('div');
+  row.className = 'credit-row';
+  row.innerHTML = `<div class="credit-text"><div class="credit-name ellipsis">${esc(name)}</div><div class="credit-role">${esc(role)}</div></div>`;
+  if (reciter) {
+    const b = document.createElement('button');
+    b.className = 'pill-btn small';
+    b.dataset.follow = reciter.name;
+    b.onclick = (e) => { e.stopPropagation(); toggleFollow(reciter); };
+    row.appendChild(b);
+  }
+  return row;
+}
+
+function paintCredits(t, r) {
+  const box = $('fp-credits-list');
+  box.innerHTML = '';
+  if (r.name !== UNKNOWN_RECITER) box.appendChild(creditRow(r.name, 'الأداء • رادود رئيسي', r));
+  (t.credits || []).forEach((c) => box.appendChild(creditRow(c.name, c.role)));
+  box.appendChild(creditRow('صوت الأحزان', 'المصدر'));
+  $('fp-credits-all').onclick = () => openCredits(t, r);
+  paintFollowButtons();
+}
+
+// "Show all": every detail the library has about the track
+function openCredits(t, r) {
+  $('credits-track').textContent = `${t.title} — ${t.reciterName}`;
+  const box = $('credits-full');
+  box.innerHTML = '';
+  const group = (title, rows) => {
+    const g = document.createElement('div');
+    g.className = 'credits-group';
+    g.innerHTML = `<h3>${esc(title)}</h3>`;
+    rows.forEach((row) => g.appendChild(row));
+    box.appendChild(g);
+  };
+  if (r.name !== UNKNOWN_RECITER) group('الأداء', [creditRow(r.name, 'رادود رئيسي', r)]);
+  const writers = t.credits || [];
+  group('الكلمات والألحان', writers.length ? writers.map((c) => creditRow(c.name, c.role)) : [creditRow('غير مذكور', 'الشاعر • الملحّن')]);
+  const cat = categoryOf(t);
+  const about = [];
+  if (cat) about.push(creditRow(cat.title, 'التصنيف'));
+  if (t.duration) about.push(creditRow(t.duration, 'المدة'));
+  if (t.addedAt && !Number.isNaN(Date.parse(t.addedAt))) {
+    about.push(creditRow(new Date(t.addedAt).toLocaleDateString('ar', { year: 'numeric', month: 'long', day: 'numeric' }), 'تاريخ الإضافة'));
+  }
+  about.push(creditRow(formatCount(t.listens), 'مرات الاستماع'));
+  group('عن المقطع', about);
+  group('المصدر', [creditRow('صوت الأحزان', 'النشر')]);
+  paintFollowButtons();
+  openSheet('credits-modal');
+}
+
+function exploreCard(t, onClick) {
+  const card = document.createElement('div');
+  card.className = 'explore-card';
+  const img = esc(thumb(t.coverImage, 160));
+  card.innerHTML = `
+    <img src="${img}" alt="" class="explore-bg" loading="lazy" />
+    <img src="${img}" alt="" class="explore-cover" loading="lazy" />
+    <div class="explore-shade"></div>
+    <span class="explore-play">${icon('play', { fill: true })}</span>
+    <div class="explore-text">
+      <div class="explore-title">${esc(t.title)}</div>
+      <div class="explore-sub">${t.listens ? `${formatCount(t.listens)} استماع` : esc(t.reciterName)}</div>
+    </div>`;
+  return clickable(card, onClick);
+}
+
+// Every follow button on screen (reciter page, player, credits) shows the same state
+function paintFollowButtons() {
+  document.querySelectorAll('[data-follow]').forEach((b) => {
+    const on = lib.follows.has(b.dataset.follow);
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', String(on));
+    const label = on ? 'تتابعه' : 'متابعة';
+    b.innerHTML = 'followIcon' in b.dataset ? `${icon(on ? 'following' : 'follow')} <span>${label}</span>` : label;
+  });
 }
 
 function updateQueueUI() {
@@ -1565,6 +1722,7 @@ function updateQueueUI() {
 }
 
 function refreshLikeButtons() {
+  paintFollowButtons();
   document.querySelectorAll('#mp-like-btn, #fp-like-btn, #td-like-btn').forEach((btn) => {
     const liked = !!btn.dataset.trackId && lib.likes.has(btn.dataset.trackId);
     btn.classList.toggle('liked', liked);

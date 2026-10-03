@@ -308,6 +308,42 @@
             <div id="fp-lyrics-preview" class="fp-lyrics-preview"></div>
           </div>
 
+          <!-- 1. About the reciter -->
+          <section id="fp-about" class="fp-card fp-about" role="button" tabindex="0" aria-label="عرض صفحة الرادود">
+            <div class="fp-about-photo">
+              <img id="fp-about-img" src="" alt="" />
+              <span class="fp-about-label">لمحة عن الرادود</span>
+            </div>
+            <div class="fp-about-body">
+              <div class="fp-about-head">
+                <div style="min-width: 0;">
+                  <div id="fp-about-name" class="fp-about-name ellipsis"></div>
+                  <div id="fp-about-stats" class="muted fp-about-stats"></div>
+                </div>
+                <button class="pill-btn" id="fp-about-follow"></button>
+              </div>
+              <p id="fp-about-text" class="fp-about-text"></p>
+            </div>
+          </section>
+
+          <!-- 2. Credits -->
+          <section id="fp-credits" class="fp-card">
+            <div class="fp-card-head">
+              <span>لائحة الشكر</span>
+              <button class="link-btn" id="fp-credits-all">عرض الكل</button>
+            </div>
+            <div id="fp-credits-list" class="credits-list"></div>
+          </section>
+
+          <!-- 3. Explore the reciter's work -->
+          <section id="fp-explore" class="fp-explore">
+            <div class="fp-section-head">
+              <h3 id="fp-explore-title"></h3>
+              <button class="link-btn" id="fp-explore-all">عرض الكل</button>
+            </div>
+            <div id="fp-explore-list" class="horizontal-scroller explore-scroller"></div>
+          </section>
+
           <h3 style="margin: 10px 0 15px; font-size: 18px;">مقاطع مشابهة</h3>
           <div class="horizontal-scroller" id="fp-similar-list" style="margin-bottom: 30px;"></div>
 
@@ -402,6 +438,19 @@
         <button class="sheet-item" id="opt-download"><i class="ic" data-icon="download" id="opt-download-icon"></i><span id="opt-download-text">تنزيل للاستماع بدون إنترنت</span></button>
         <button class="sheet-item" id="opt-artist"><i class="ic" data-icon="mic"></i><span>عرض صفحة الرادود</span></button>
         <button class="sheet-item" id="opt-share"><i class="ic" data-icon="share"></i><span>مشاركة</span></button>
+      </div>
+    </div>
+
+    <!-- Credits, in full -->
+    <div id="credits-modal" class="sheet-backdrop" style="display: none;" onclick="history.back()">
+      <div class="sheet" onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="credits-title">
+        <div class="sheet-handle"></div>
+        <h2 id="credits-title" class="modal-title" style="border: none; margin-bottom: 2px;">لائحة الشكر</h2>
+        <div id="credits-track" class="muted ellipsis" style="font-size: 14px; margin-bottom: 18px;"></div>
+        <div id="credits-full"></div>
+        <a id="credits-report" class="credits-report" href="https://web.soutalahzan.com/contact" target="_blank" rel="noopener">
+          <span>الإبلاغ عن خطأ في المعلومات</span><i class="ic" data-icon="chevron-left"></i>
+        </a>
       </div>
     </div>
 

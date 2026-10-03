@@ -24,7 +24,9 @@ const ICONS = {
 
 const escAttr = (v) => String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
 
-// SVG markup for an icon; `fill` paints the shape (play, pause, liked heart)
+// SVG markup for an icon; `fill` paints the shape (play, pause, liked heart).
+// The outline stays: some glyphs have parts that are lines only (the bar of
+// skip back / forward).
 export function iconSvg(name, { fill = false, strokeWidth = 2 } = {}) {
   const node = ICONS[name];
   if (!node) return '';
@@ -32,7 +34,7 @@ export function iconSvg(name, { fill = false, strokeWidth = 2 } = {}) {
     .map(([tag, attrs]) => `<${tag} ${Object.entries(attrs).map(([k, v]) => `${k}="${escAttr(v)}"`).join(' ')}/>`)
     .join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" ` +
-    `fill="${fill ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="${fill ? 0 : strokeWidth}" ` +
+    `fill="${fill ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="${strokeWidth}" ` +
     `stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"${name === 'spinner' ? ' class="ic-spin"' : ''}>${children}</svg>`;
 }
 
