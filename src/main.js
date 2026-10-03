@@ -254,15 +254,19 @@ async function syncFromCloud() {
   // A guest's likes and playlists move into the account on first sign-in
   const guestLikes = store.get('sawt_likes', []).map(String);
   const guestPlaylists = store.get('sawt_playlists', []);
+  // Supabase reports failures in `error` (it doesn't throw): the guest copy is
+  // cleared only once the account has it, so a failed upload is retried next time
   try {
     if (guestLikes.length) {
-      await supabase.from('favorites').upsert(guestLikes.map((id) => ({ user_id: uid, poem_id: cloudId(id) })), { onConflict: 'user_id,poem_id', ignoreDuplicates: true });
+      const { error } = await supabase.from('favorites').upsert(guestLikes.map((id) => ({ user_id: uid, poem_id: cloudId(id) })), { onConflict: 'user_id,poem_id', ignoreDuplicates: true });
+      if (error) throw error;
       store.set('sawt_likes', []);
     }
     if (guestPlaylists.length) {
-      await supabase.from('user_playlists').upsert(guestPlaylists.map((p) => ({
+      const { error } = await supabase.from('user_playlists').upsert(guestPlaylists.map((p) => ({
         user_id: uid, id: safePlaylistId(p.id), title: p.name, tracks: (p.tracks || []).map((t) => cloudId(t)),
       })), { onConflict: 'user_id,id' });
+      if (error) throw error;
       store.set('sawt_playlists', []);
     }
   } catch (e) { console.warn('Could not move guest data:', e); }
@@ -1140,7 +1144,6 @@ window.toggleShuffle = () => {
 
 window.toggleRepeat = () => {
   repeatMode = repeatMode === 'off' ? 'all' : repeatMode === 'all' ? 'one' : 'off';
-  audio.loop = repeatMode === 'one';
   const btn = $('fp-repeat-btn');
   btn.classList.toggle('on', repeatMode !== 'off');
   setIcon(btn.querySelector('.ic'), repeatMode === 'one' ? 'repeat-one' : 'repeat');
@@ -1164,8 +1167,11 @@ window.startRadio = () => {
   toast(`راديو ${currentTrack.reciterName}`);
 };
 
+// Repeat-one replays here rather than with audio.loop, which never fires
+// 'ended' and so kept the "end of current track" sleep timer from stopping
 audio.addEventListener('ended', () => {
   if (sleepAtEnd) { setSleepTimer('off'); return; }
+  if (repeatMode === 'one') { audio.currentTime = 0; audio.play().catch(() => {}); return; }
   playNext(true);
 });
 audio.addEventListener('play', paintPlayButtons);
