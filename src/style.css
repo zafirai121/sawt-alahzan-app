@@ -293,13 +293,13 @@ header { display: flex; justify-content: space-between; align-items: center; mar
 /* ─── Mini player ─── */
 .mini-player {
   position: fixed; bottom: calc(var(--nav-height) + var(--safe-bottom) + 6px); left: 8px; right: 8px;
-  background: #2a2a2a; border-radius: 10px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between;
-  transform: translateY(150%); transition: transform 0.3s ease; z-index: 100; cursor: pointer; overflow: hidden;
+  background: var(--np-mini, #2a2a2a); border-radius: 10px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between;
+  transform: translateY(150%); transition: transform 0.3s ease, background-color 0.8s ease; z-index: 100; cursor: pointer; overflow: hidden;
   box-shadow: 0 6px 20px rgba(0,0,0,0.5);
 }
 .mini-player.active { transform: translateY(0); }
 .mp-progress-line { position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: rgba(255,255,255,0.15); direction: ltr; }
-#mp-progress-fill { height: 100%; width: 0; background: var(--accent); transition: width 0.25s linear; }
+#mp-progress-fill { height: 100%; width: 0; background: #fff; transition: width 0.25s linear; }
 .player-info { display: flex; align-items: center; flex: 1; min-width: 0; gap: 10px; }
 .player-cover { width: 44px; height: 44px; border-radius: 6px; object-fit: cover; background: var(--dark-surface); flex-shrink: 0; }
 .player-text { display: flex; flex-direction: column; min-width: 0; }
@@ -331,9 +331,18 @@ header { display: flex; justify-content: space-between; align-items: center; mar
   display: flex; flex-direction: column; transform: translateY(100%); overflow: hidden;
 }
 .full-player.open { transform: translateY(0); }
+/* The cover's colour (set from main.js) fading into the dark: measured on
+   Spotify's now-playing screen, the colour loses about as much as it has
+   travelled down the screen, ending in a dark tinted by it, not plain black */
 .fp-bg {
-  position: absolute; inset: 0; z-index: 0; background-size: cover; background-position: center;
-  filter: blur(80px) brightness(0.35); transform: scale(1.3);
+  position: absolute; inset: 0; z-index: 0;
+  background-color: var(--np-top, #4a3427); transition: background-color 0.8s ease;
+}
+.fp-bg::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(180deg,
+    rgba(18,18,18,0) 0%, rgba(18,18,18,0.24) 29%, rgba(18,18,18,0.5) 52%, rgba(18,18,18,0.65) 67%,
+    rgba(18,18,18,0.76) 79%, rgba(18,18,18,0.86) 88%, rgba(18,18,18,0.9) 100%);
 }
 .fp-scroll {
   position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; overflow-y: auto;
@@ -365,6 +374,13 @@ header { display: flex; justify-content: space-between; align-items: center; mar
 }
 .fp-play-circle:active { transform: scale(0.95); }
 .fp-card { width: 100%; background: rgba(255,255,255,0.07); border-radius: 16px; padding: 18px; margin-bottom: 20px; }
+#fp-lyrics-box { background: var(--np-card, rgba(255,255,255,0.07)); transition: background-color 0.8s ease; }
+
+/* Under the controls: connect a device | share, queue */
+.fp-actions { display: flex; justify-content: space-between; align-items: center; margin: -1.5vh 0 3.5vh; }
+.fp-actions-group { display: flex; align-items: center; gap: 18px; }
+.fp-actions .icon-btn { font-size: 22px; padding: 8px; color: rgba(255,255,255,0.92); }
+#fp-devices-btn.on { color: var(--accent); }
 .fp-card-head { display: flex; justify-content: space-between; align-items: center; font-size: 15px; font-weight: 800; margin-bottom: 12px; gap: 10px; }
 .fp-lyrics-preview {
   font-size: 17px; line-height: 1.8; font-weight: 700; white-space: pre-wrap; overflow: hidden; max-height: 92px;
@@ -446,15 +462,22 @@ input[type=range]::-webkit-slider-thumb {
 }
 input[type=range]:active::-webkit-slider-thumb { transform: scale(1.3); }
 input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border: none; border-radius: 50%; background: white; }
+/* Over the cover's colour the played part is white, as in Spotify: orange
+   would clash with most covers */
+#fp-progress::-webkit-slider-runnable-track {
+  background: linear-gradient(to right, #fff var(--pct, 0%), rgba(255,255,255,0.25) var(--pct, 0%));
+}
+#fp-progress::-moz-range-progress { background: #fff; }
+#fp-progress::-moz-range-track { background: rgba(255,255,255,0.25); }
 
 /* ─── Lyrics ─── */
 .lyrics-view {
-  position: fixed; inset: 0; overflow-y: auto; background: #121212; z-index: 3000; padding-bottom: 120px;
+  position: fixed; inset: 0; overflow-y: auto; background: var(--np-card, #121212); z-index: 3000; padding-bottom: 120px;
   transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.1, 0.9, 0.2, 1);
 }
 .lyrics-view.open { transform: translateY(0); }
 .lyrics-head {
-  position: sticky; top: 0; background: rgba(18,18,18,0.92); backdrop-filter: blur(12px); padding: 14px 16px;
+  position: sticky; top: 0; background: var(--np-card, rgba(18,18,18,0.92)); backdrop-filter: blur(12px); padding: 14px 16px;
   display: flex; justify-content: space-between; align-items: center; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 .lyrics-content { padding: 30px 24px; font-size: 24px; font-weight: 800; line-height: 1.9; white-space: pre-wrap; }
@@ -496,6 +519,23 @@ input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border: none; b
 .sheet-item:active { background: rgba(255,255,255,0.06); }
 .sheet-item > .ic { font-size: 21px; }
 .sheet-item .ic.liked { color: var(--liked); }
+
+/* Queue sheet */
+.queue-label { font-size: 15px; font-weight: 800; margin: 2px 0 12px; }
+#queue-now { margin-bottom: 22px; }
+
+/* Devices sheet */
+.device-row, .device-tip {
+  display: flex; align-items: center; gap: 16px; width: 100%; padding: 14px 10px; background: none; border: none;
+  color: white; text-align: right; border-radius: 12px; font: inherit;
+}
+button.device-row { cursor: pointer; }
+.device-row > .ic, .device-tip > .ic { font-size: 24px; flex-shrink: 0; color: var(--text-secondary); }
+.device-row.current { background: var(--accent-soft); }
+.device-row.current > .ic, .device-row.current .device-name { color: var(--accent); }
+.device-name { font-size: 16px; font-weight: 700; }
+.device-sub { font-size: 13px; color: var(--text-secondary); margin-top: 2px; line-height: 1.6; }
+.device-tip { border-top: 1px solid rgba(255,255,255,0.08); margin-top: 10px; padding-top: 18px; border-radius: 0; }
 
 /* ─── Sign in ─── */
 .auth-modal { position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.75); backdrop-filter: blur(10px); flex-direction: column; justify-content: flex-end; }

@@ -7,8 +7,31 @@ import {
   EllipsisVertical, Heart, CircleArrowDown, CircleCheck, Shuffle, Repeat, Repeat1, Play, Pause,
   SkipBack, SkipForward, Settings, Camera, Music, ListMusic, List, ListPlus, Mic, Mail, SquarePen,
   LogOut, Maximize2, LoaderCircle, Eye, EyeOff, Share, Radio, Clock3, UserPlus, UserCheck, X,
-  Download, Trash2, Timer, Disc3, WifiOff,
+  Download, Trash2, Timer, Disc3, WifiOff, Cast, Smartphone, Bluetooth,
 } from 'lucide';
+
+// Drawn to match Spotify's now-playing row: the queue (a "now playing" pill
+// over two lines), share (three linked dots) and connect to a device (a
+// screen outline and a speaker)
+const Queue = [
+  ['rect', { x: '4.5', y: '3.5', width: '15.5', height: '5', rx: '2.5' }],
+  ['path', { d: 'M3.5 14h16.5' }],
+  ['path', { d: 'M3.5 19.5h16.5' }],
+];
+const ShareNodes = [
+  ['circle', { cx: '18', cy: '5', r: '2.6' }],
+  ['circle', { cx: '6', cy: '12', r: '2.6' }],
+  ['circle', { cx: '18', cy: '19', r: '2.6' }],
+  ['path', { d: 'M8.3 13.3l7.4 4.4' }],
+  ['path', { d: 'M15.7 6.3l-7.4 4.4' }],
+];
+const Devices = [
+  ['path', { d: 'M9 4.5H4.5a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h2' }],
+  ['path', { d: 'M9 19.5h.01' }],
+  ['rect', { x: '11.5', y: '3', width: '9.5', height: '18', rx: '2' }],
+  ['circle', { cx: '16.25', cy: '14.5', r: '2.5' }],
+  ['path', { d: 'M16.25 7.5h.01' }],
+];
 
 const ICONS = {
   home: House, search: Search, library: Library, user: User, plus: Plus,
@@ -20,6 +43,7 @@ const ICONS = {
   logout: LogOut, expand: Maximize2, spinner: LoaderCircle, eye: Eye, 'eye-off': EyeOff,
   share: Share, radio: Radio, clock: Clock3, follow: UserPlus, following: UserCheck, close: X,
   trash: Trash2, timer: Timer, disc: Disc3, 'wifi-off': WifiOff,
+  queue: Queue, 'share-nodes': ShareNodes, devices: Devices, cast: Cast, smartphone: Smartphone, bluetooth: Bluetooth,
 };
 
 const escAttr = (v) => String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;');

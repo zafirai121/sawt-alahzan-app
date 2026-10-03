@@ -1,5 +1,6 @@
 import { supabase, isPasswordRecovery } from './supabaseClient.js';
 import { icon, setIcon, startIcons } from './icons.js';
+import { dominantHsl, playerShades } from './color.js';
 
 // ═══ Constants ═══════════════════════════════════════════════════════════════
 const SITE_URL = 'https://web.soutalahzan.com';
@@ -1260,11 +1261,13 @@ function openTrackOptions(track, { playlist = null } = {}) {
     if ($('full-player-view').classList.contains('open')) closeOverlayThen(() => openArtistDetail(track.reciterName));
     else openArtistDetail(track.reciterName);
   });
-  $('opt-share').onclick = () => closeOverlayThen(() => share(track.title, `استمع إلى ${track.title} بصوت ${track.reciterName}`, `${SITE_URL}/track?id=${track.id}`));
+  $('opt-share').onclick = () => closeOverlayThen(() => shareTrack(track));
   openSheet('track-options-modal');
 }
 
 window.openCurrentTrackOptions = () => { if (currentTrack) openTrackOptions(currentTrack); };
+const shareTrack = (t) => share(t.title, `استمع إلى ${t.title} بصوت ${t.reciterName}`, `${SITE_URL}/track?id=${t.id}`);
+window.shareCurrentTrack = () => { if (currentTrack) shareTrack(currentTrack); };
 
 // Shared links point at the website: it shows a preview in chats/search and
 // sends phones back into this app on the same track.
@@ -1534,7 +1537,7 @@ function updateNowPlaying() {
   $('mp-title').textContent = t.title;
   $('mp-reciter').textContent = t.reciterName;
   $('fp-cover').src = thumb(t.coverImage, 400);
-  $('fp-bg').style.backgroundImage = `url("${thumb(t.coverImage, 160).replace(/["\\]/g, encodeURIComponent)}")`;
+  paintPlayerColor(t);
   $('fp-title').textContent = t.title;
   $('fp-artist').textContent = t.reciterName;
   $('fp-artist').onclick = () => closeOverlayThen(() => openArtistDetail(t.reciterName));
@@ -1704,6 +1707,7 @@ function paintFollowButtons() {
 }
 
 function updateQueueUI() {
+  if ($('queue-modal').style.display === 'flex') renderQueueSheet();
   const box = $('fp-queue-list');
   box.innerHTML = '';
   const upcoming = queue.slice(queueIndex + 1, queueIndex + 6);
@@ -1750,8 +1754,8 @@ if ('mediaSession' in navigator) {
 function openFullPlayer() {
   if (!currentTrack) return;
   const fp = $('full-player-view');
-  openOverlay(() => { fp.classList.add('open'); $('mini-player').classList.remove('active'); },
-    () => { fp.classList.remove('open'); if (currentTrack) $('mini-player').classList.add('active'); });
+  openOverlay(() => { fp.classList.add('open'); $('mini-player').classList.remove('active'); setThemeColor(nowShades?.top); },
+    () => { fp.classList.remove('open'); if (currentTrack) $('mini-player').classList.add('active'); setThemeColor(); });
 }
 $('mini-player').addEventListener('click', (e) => { if (!e.target.closest('button')) openFullPlayer(); });
 
@@ -1759,6 +1763,134 @@ window.openLyricsView = () => {
   const view = $('lyrics-view');
   openOverlay(() => { view.style.display = 'block'; void view.offsetWidth; view.classList.add('open'); },
     () => { view.classList.remove('open'); setTimeout(() => { view.style.display = 'none'; }, 350); });
+};
+
+// ─── Now-playing colour ───
+// Taken from the cover (see color.js) and laid behind the player as a gradient
+// into the dark, as Spotify does; the mini player, the lyrics card and the
+// phone's status bar take shades of it.
+const coverShades = new Map(); // cover url → shades
+let nowShades = null;
+let shadesFor = null;          // the track the colour is being worked out for
+
+// When the cover can't be read (no permission from its server, offline): a calm
+// colour of its own for each reciter, so the player is never plain
+const FALLBACK_HUES = [0.02, 0.08, 0.3, 0.45, 0.55, 0.62, 0.75, 0.9];
+function fallbackShades(t) {
+  let h = 0;
+  for (const ch of t.reciterName) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return playerShades([FALLBACK_HUES[h % FALLBACK_HUES.length], 0.35, 0.28]);
+}
+
+// A small copy of the cover, at a size no <img> on the page uses (so it isn't
+// served from the cache without the cross-origin permission reading pixels needs)
+function colorSampleUrl(url) {
+  try {
+    if (IMAGE_HOSTS.has(new URL(url).hostname)) return `https://soutalahzan.com/cdn-cgi/image/width=48,quality=70,format=auto,fit=scale-down/${url}`;
+  } catch { /* not a full URL */ }
+  return url;
+}
+
+function coverShadesFor(t) {
+  const url = t.coverImage;
+  if (!url) return Promise.resolve(fallbackShades(t));
+  if (coverShades.has(url)) return Promise.resolve(coverShades.get(url));
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      let shades = null;
+      try { const hsl = dominantHsl(img); if (hsl) shades = playerShades(hsl); } catch { /* pixels not readable */ }
+      if (shades) coverShades.set(url, shades);
+      resolve(shades || fallbackShades(t));
+    };
+    img.onerror = () => resolve(fallbackShades(t));
+    img.src = colorSampleUrl(url);
+  });
+}
+
+function paintPlayerColor(t) {
+  shadesFor = t;
+  coverShadesFor(t).then((sh) => {
+    if (shadesFor !== t) return;
+    nowShades = sh;
+    const root = document.documentElement.style;
+    root.setProperty('--np-top', sh.top);
+    root.setProperty('--np-mini', sh.mini);
+    root.setProperty('--np-card', sh.card);
+    if ($('full-player-view').classList.contains('open')) setThemeColor(sh.top);
+  });
+}
+
+function setThemeColor(color = '#121212') {
+  document.querySelector('meta[name="theme-color"]').setAttribute('content', color || '#121212');
+}
+
+// ─── Listening queue ───
+function queueRow(t, onClick) {
+  const row = document.createElement('div');
+  row.className = 'track-item';
+  row.dataset.trackId = t.id;
+  row.innerHTML = `
+    <img src="${esc(thumb(t.coverImage, 45))}" class="track-img" alt="" />
+    <div class="track-info"><div class="track-title">${esc(t.title)}</div><div class="track-artist">${esc(t.reciterName)}</div></div>`;
+  return onClick ? clickable(row, onClick) : row;
+}
+
+function renderQueueSheet() {
+  if (!currentTrack) return;
+  $('queue-now').replaceChildren(queueRow(currentTrack));
+  const box = $('queue-next');
+  box.innerHTML = '';
+  const upcoming = queue.slice(queueIndex + 1, queueIndex + 101);
+  $('queue-next-label').textContent = upcoming.length ? `التالي (${formatCount(queue.length - queueIndex - 1)})` : 'التالي';
+  if (!upcoming.length) {
+    box.innerHTML = `<div class="muted" style="padding: 6px 0 12px;">${isAutoplay ? 'ستُشغَّل مقاطع مشابهة تلقائياً' : 'لا توجد مقاطع تالية'}</div>`;
+  }
+  upcoming.forEach((t, i) => box.appendChild(queueRow(t, () => { queueIndex += i + 1; playTrack(queue[queueIndex]); })));
+  markPlayingRows();
+}
+
+window.openQueue = () => {
+  if (!currentTrack) return;
+  renderQueueSheet();
+  openSheet('queue-modal');
+};
+
+// ─── Connect to a device: Cast (Chrome) or AirPlay (Safari) where offered ───
+// Bluetooth needs nothing from the page: the phone routes the sound itself.
+document.body.appendChild(audio); // remote playback needs the element in the page
+audio.hidden = true;
+audio.setAttribute('x-webkit-airplay', 'allow');
+const remote = audio.remote;
+let remoteOffered = !!audio.webkitShowPlaybackTargetPicker;
+try {
+  remote?.watchAvailability((available) => { remoteOffered = available; })
+    .catch(() => { remoteOffered = true; }); // can't watch: a prompt may still find devices
+} catch { /* no remote playback */ }
+
+function paintRemote() {
+  const connected = remote?.state === 'connected';
+  $('fp-devices-btn').classList.toggle('on', connected);
+  $('device-this').classList.toggle('current', !connected);
+  $('device-this-sub').textContent = connected ? 'الصوت يُشغَّل على جهاز آخر' : 'يتم التشغيل عليه الآن';
+  const other = $('device-remote');
+  other.style.display = remoteOffered || connected ? 'flex' : 'none';
+  other.classList.toggle('current', connected);
+  $('device-remote-name').textContent = connected ? 'متصل بجهاز آخر' : 'البحث عن أجهزة قريبة';
+  $('device-remote-sub').textContent = connected ? 'اضغط لقطع الاتصال أو اختيار جهاز آخر' : 'تلفاز أو سماعة ذكية على شبكة الـ Wi-Fi نفسها';
+}
+remote?.addEventListener?.('connect', () => { paintRemote(); toast('تم الاتصال بالجهاز'); });
+remote?.addEventListener?.('disconnect', () => { paintRemote(); toast('عاد التشغيل إلى هذا الجهاز'); });
+
+window.openDevices = () => { paintRemote(); openSheet('devices-modal'); };
+$('device-remote').onclick = () => {
+  if (audio.webkitShowPlaybackTargetPicker) { audio.webkitShowPlaybackTargetPicker(); return; }
+  if (!remote) return;
+  remote.prompt().catch((e) => {
+    if (e.name === 'NotFoundError') toast('لم يُعثر على أجهزة قريبة');
+    else if (e.name !== 'AbortError' && e.name !== 'NotAllowedError') toast('لا يمكن الاتصال بجهاز آخر من هذا المتصفح');
+  });
 };
 
 // ═══ Sleep timer ═════════════════════════════════════════════════════════════
