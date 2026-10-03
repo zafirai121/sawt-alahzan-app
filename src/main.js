@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient.js';
+import { supabase, isPasswordRecovery } from './supabaseClient.js';
 import { icon, setIcon, startIcons } from './icons.js';
 
 // ═══ Constants ═══════════════════════════════════════════════════════════════
@@ -156,6 +156,7 @@ function mapTrack(row) {
     category: row.category || '',
     duration: formatDuration(row.duration),
     listens: row.listen_count || 0,
+    searchKey: undefined, // see searchKey()
   };
   // undefined = not fetched yet; '' = the track has none
   if ('lyrics' in row) track.lyrics = typeof row.lyrics === 'string' ? row.lyrics.trim() : '';
@@ -210,6 +211,7 @@ async function loadData() {
     return;
   }
   loadState = 'ready';
+  dataVersion++;
   allTracks = first.rows.map(mapTrack);
   popularTracks = (popular.data || []).map(mapTrack);
   buildReciters(recRes.data || []);
@@ -226,12 +228,16 @@ async function loadData() {
     for (let from = PAGE_SIZE; from < (first.count || 0); from += PAGE_SIZE) pages.push(fetchTrackPage(from));
     const rest = await Promise.all(pages);
     rest.forEach((p) => allTracks.push(...p.rows.map(mapTrack)));
+    // A track uploaded while the pages load shifts them by one: the same track
+    // can then arrive twice (mapTrack hands back the same object)
+    allTracks = [...new Set(allTracks)];
     fullyLoaded = true;
   } catch (err) {
     console.warn('Could not load the whole library:', err);
   }
   buildReciters(recRes.data || []);
   backfillDownloadMeta();
+  dataVersion++;
   const atTop = document.querySelector('.main-container').scrollTop < 40;
   if (navStack.some((e) => e.type === 'page') || currentTab !== 'home' || atTop) refreshOpenViews();
 }
@@ -286,6 +292,9 @@ function buildReciters(rows) {
   reciters = [...map.values()].sort((a, b) => b.count - a.count);
   reciterByName = map;
 }
+
+// Normalised "title reciter", worked out once per track rather than per keystroke
+const searchKey = (t) => (t.searchKey ??= normalize(`${t.title} ${t.reciterName}`));
 
 const tracksOf = (name) => allTracks.filter((t) => t.reciterName === name);
 const reciterOf = (track) => reciterByName.get(track.reciterName);
@@ -367,6 +376,7 @@ async function syncFromCloud() {
     const ids = new Set((fol.data || []).map((r) => String(r.followed_reciter_id)));
     lib.follows = new Set([...reciters.filter((r) => r.dbId && ids.has(r.dbId)).map((r) => r.name), ...store.get(localFollowsKey(), [])]);
   }
+  libVersion++;
   refreshLikeButtons();
   refreshOpenViews();
 }
@@ -378,6 +388,7 @@ async function toggleLike(track) {
   if (liked) lib.likes.add(track.id); else lib.likes.delete(track.id);
   lib.saveLocal();
   refreshLikeButtons();
+  libraryChanged();
   toast(liked ? 'أُضيف إلى المفضلة' : 'أُزيل من المفضلة');
   if (currentUser) {
     const q = liked
@@ -388,6 +399,7 @@ async function toggleLike(track) {
       console.warn('Could not save like:', error);
       if (liked) lib.likes.delete(track.id); else lib.likes.add(track.id);
       refreshLikeButtons();
+      libraryChanged();
       toast('تعذر حفظ التغيير، تحقق من اتصالك');
       return !liked;
     }
@@ -397,6 +409,7 @@ async function toggleLike(track) {
 
 async function savePlaylist(pl) {
   lib.saveLocal();
+  libraryChanged();
   if (!currentUser) return;
   const { error } = await supabase.from('user_playlists').upsert(
     { user_id: currentUser.id, id: pl.id, title: pl.name, tracks: pl.tracks.map(cloudId) },
@@ -418,6 +431,7 @@ async function deletePlaylist(pl) {
   }
   lib.playlists = lib.playlists.filter((p) => p.id !== pl.id);
   lib.saveLocal();
+  libraryChanged();
   return true;
 }
 
@@ -425,6 +439,7 @@ async function toggleFollow(reciter) {
   const following = !lib.follows.has(reciter.name);
   if (following) lib.follows.add(reciter.name); else lib.follows.delete(reciter.name);
   lib.saveLocal();
+  libraryChanged();
   if (currentUser && reciter.dbId) {
     const q = following
       ? supabase.from('follows').upsert({ follower_id: currentUser.id, followed_reciter_id: Number(reciter.dbId) }, { onConflict: 'follower_id,followed_reciter_id', ignoreDuplicates: true })
@@ -433,6 +448,7 @@ async function toggleFollow(reciter) {
     if (error) {
       console.warn('Could not save follow:', error);
       if (following) lib.follows.delete(reciter.name); else lib.follows.add(reciter.name);
+      libraryChanged();
       toast('تعذر حفظ التغيير، تحقق من اتصالك');
       return !following;
     }
@@ -472,6 +488,7 @@ async function toggleDownload(track) {
     delete downloadMeta[track.id];
     lib.saveLocal();
     store.set(DOWNLOAD_META, downloadMeta);
+    libraryChanged();
     try {
       const cache = await caches.open(AUDIO_CACHE);
       await Promise.all([track.audioUrl, ...coverUrls(track)].map((u) => cache.delete(u)));
@@ -494,6 +511,7 @@ async function toggleDownload(track) {
     lib.downloads.add(track.id);
     rememberDownload(track);
     lib.saveLocal();
+    libraryChanged();
     // Ask the browser not to clear downloads when the device runs low on space
     navigator.storage?.persist?.()?.catch(() => {});
     toast('تم التنزيل، يمكنك الاستماع بدون إنترنت');
@@ -523,17 +541,39 @@ let afterPop = null;
 // While a tab switch rewinds history, new pages/overlays wait for it to finish
 let rewinding = false;
 let waiting = [];
+// Back returns to where the listener was: each page remembers its scroll, and
+// is only redrawn if its view was reused since or the library changed
+let dataVersion = 0;     // bumped when tracks load (first screen, then the whole library)
+let libVersion = 0;      // bumped when likes, playlists, downloads or follows change
+let tabScroll = 0;       // the tab's scroll when a page was opened over it
+const viewShows = {};    // view id → the page entry whose content it holds
+const tabDrawnAt = {};   // tab → what it was drawn from (see tabStamp)
+const tabStamp = () => `${dataVersion}|${libVersion}|${lib.history[0]?.id || ''}`;
+const pageStamp = (e) => `${dataVersion}|${e.library ? libVersion : ''}`;
+const mainEl = () => document.querySelector('.main-container');
+const topPage = () => [...navStack].reverse().find((e) => e.type === 'page');
 
-function showView(viewId) {
+function showView(viewId, scrollTop = 0) {
   document.querySelectorAll('.view').forEach((v) => { v.style.display = v.id === viewId ? 'block' : 'none'; });
-  document.querySelector('.main-container').scrollTo(0, 0);
+  mainEl().scrollTo(0, scrollTop);
 }
 
-function openPage(viewId, render) {
-  if (rewinding) { waiting.push(() => openPage(viewId, render)); return; }
-  render();
+function drawPage(entry) {
+  entry.render();
+  entry.drawn = pageStamp(entry);
+  viewShows[entry.viewId] = entry;
+}
+
+// `library`: the page shows the listener's own things (likes, a playlist, a
+// track's like/download state) and is redrawn as soon as they change
+function openPage(viewId, render, { library = false } = {}) {
+  if (rewinding) { waiting.push(() => openPage(viewId, render, { library })); return; }
+  const from = topPage();
+  if (from) from.scrollTop = mainEl().scrollTop; else tabScroll = mainEl().scrollTop;
+  const entry = { type: 'page', viewId, render, library };
+  drawPage(entry);
   showView(viewId);
-  navStack.push({ type: 'page', viewId, render });
+  navStack.push(entry);
   history.pushState({ depth: navStack.length }, '');
 }
 
@@ -561,12 +601,21 @@ window.addEventListener('popstate', () => {
     }
     return;
   }
+  // An entry left over from before a reload (this session starts from a clean
+  // one, see Boot): step over it instead of a back press that does nothing
+  if (!navStack.length && history.state?.depth) { history.back(); return; }
   const top = navStack.pop();
   if (top?.type === 'overlay') {
     top.hide();
   } else if (top?.type === 'page') {
-    const prev = [...navStack].reverse().find((e) => e.type === 'page');
-    if (prev) { prev.render(); showView(prev.viewId); } else showView(TABS[currentTab]);
+    const prev = topPage();
+    if (prev) {
+      if (viewShows[prev.viewId] !== prev || prev.drawn !== pageStamp(prev)) drawPage(prev);
+      showView(prev.viewId, prev.scrollTop || 0);
+    } else {
+      if (tabDrawnAt[currentTab] !== tabStamp()) renderTab();
+      showView(TABS[currentTab], tabScroll);
+    }
   }
   if (afterPop) { const fn = afterPop; afterPop = null; fn(); }
 });
@@ -585,24 +634,38 @@ function goTab(tab) {
   document.querySelectorAll('.nav-item').forEach((n, i) => n.classList.toggle('active', Object.keys(TABS)[i] === tab));
 }
 
-window.goHome = () => goTab('home');
-window.goSearch = () => { goTab('search'); renderSearchHome(); };
-window.goLibrary = () => { goTab('library'); renderLibrary(); };
-window.goProfile = () => { goTab('profile'); updateProfileUI(); };
+window.goHome = () => { goTab('home'); if (tabDrawnAt.home !== tabStamp()) renderHome(); };
+window.goSearch = () => { goTab('search'); renderTab(); };
+window.goLibrary = () => { goTab('library'); renderTab(); };
+window.goProfile = () => { goTab('profile'); renderTab(); };
 
-function refreshOpenViews() {
-  const top = [...navStack].reverse().find((e) => e.type === 'page');
-  if (top) top.render();
-  else if (currentTab === 'home') renderHome();
+function renderTab() {
+  if (currentTab === 'home') renderHome();
   else if (currentTab === 'library') renderLibrary();
   else if (currentTab === 'search') { renderSearchHome(); runSearch(); }
   else if (currentTab === 'profile') updateProfileUI();
+  tabDrawnAt[currentTab] = tabStamp();
+}
+
+function refreshOpenViews() {
+  const top = topPage();
+  if (top) drawPage(top); else renderTab();
+}
+
+// After a like, playlist, download or follow change: redraw the screens that
+// list them (a long list elsewhere keeps its place; it's redrawn on return)
+function libraryChanged() {
+  libVersion++;
+  const top = topPage();
+  if (top?.library) drawPage(top);
+  else if (!top && (currentTab === 'library' || currentTab === 'profile')) renderTab();
 }
 
 // ═══ Shared list rendering ═══════════════════════════════════════════════════
 // Track rows: tap plays the list from that row; ⋮ opens the options sheet.
 // Long lists render in chunks as you scroll.
 function renderTrackList(container, list, { numbered = false, emptyText = 'لا توجد مقاطع هنا بعد', playlist = null } = {}) {
+  container._io?.disconnect(); // the previous drawing's "load more" watcher
   container.innerHTML = '';
   if (!list.length) {
     container.innerHTML = `<div class="empty-state">${esc(emptyText)}</div>`;
@@ -638,8 +701,9 @@ function renderTrackList(container, list, { numbered = false, emptyText = 'لا 
       container.appendChild(sentinel);
       const io = new IntersectionObserver((entries) => {
         if (entries.some((e) => e.isIntersecting)) { io.disconnect(); sentinel.remove(); addChunk(); }
-      }, { root: document.querySelector('.main-container'), rootMargin: '600px' });
+      }, { root: mainEl(), rootMargin: '600px' });
       io.observe(sentinel);
+      container._io = io;
     }
   };
   addChunk();
@@ -706,10 +770,11 @@ function renderHome() {
   const container = $('sections-container');
   if (!allTracks.length) return;
   container.innerHTML = '';
+  tabDrawnAt.home = tabStamp();
   $('home-greeting').textContent = greeting();
 
   const recent = historyTracks();
-  const liked = [...lib.likes].map((id) => trackById.get(id)).filter(Boolean).reverse();
+  const liked = likedTracks();
 
   // 1. Quick grid: what you played last, otherwise the newest
   const grid = document.createElement('div');
@@ -735,7 +800,7 @@ function renderHome() {
   }), () => openListPage('مضاف حديثاً', allTracks.slice(0, 100))));
 
   // 3. Top reciters (with a real photo first)
-  const topReciters = [...reciters].sort((a, b) => (b.hasPhoto - a.hasPhoto) || (b.count - a.count)).slice(0, 12);
+  const topReciters = reciters.filter((r) => r.count > 0).sort((a, b) => (b.hasPhoto - a.hasPhoto) || (b.count - a.count)).slice(0, 12);
   container.appendChild(section('أشهر الرواديد', scroller(topReciters, reciterCard), () => openAllReciters()));
 
   // 4. The listener's own history
@@ -803,12 +868,16 @@ function columnsScroller(list) {
 // ═══ Pages ═══════════════════════════════════════════════════════════════════
 let playlistPage = null; // { title, list, playlist? }
 
-function openListPage(title, list, playlist = null) {
-  openPage('playlist-detail-view', () => renderListPage(title, typeof list === 'function' ? list() : list, playlist));
+function openListPage(title, list, playlist = null, library = false) {
+  openPage('playlist-detail-view', () => renderListPage(title, typeof list === 'function' ? list() : list, playlist), { library });
 }
-const openLikesPage = () => openListPage('المقاطع المفضلة', () => [...lib.likes].map((id) => trackById.get(id)).filter(Boolean).reverse());
-const openDownloadsPage = () => openListPage('التنزيلات', downloadedTracks);
-const openPlaylistPage = (pl) => openListPage(pl.name, () => pl.tracks.map((id) => trackById.get(id)).filter(Boolean), pl);
+const likedTracks = () => [...lib.likes].map((id) => trackById.get(id)).filter(Boolean).reverse();
+// Once the whole library is in, likes of deleted tracks no longer count
+const likesCount = () => (fullyLoaded ? likedTracks().length : lib.likes.size);
+const playlistTracks = (pl) => pl.tracks.map((id) => trackById.get(id)).filter(Boolean);
+const openLikesPage = () => openListPage('المقاطع المفضلة', likedTracks, null, true);
+const openDownloadsPage = () => openListPage('التنزيلات', downloadedTracks, null, true);
+const openPlaylistPage = (pl) => openListPage(pl.name, () => playlistTracks(pl), pl, true);
 
 function renderListPage(title, list, playlist) {
   playlistPage = { title, list, playlist };
@@ -837,21 +906,22 @@ function renderListPage(title, list, playlist) {
 $('playlist-search').addEventListener('input', (e) => {
   if (!playlistPage) return;
   const q = normalize(e.target.value.trim());
-  const list = q ? playlistPage.list.filter((t) => normalize(`${t.title} ${t.reciterName}`).includes(q)) : playlistPage.list;
+  const list = q ? playlistPage.list.filter((t) => searchKey(t).includes(q)) : playlistPage.list;
   renderTrackList($('playlist-tracks'), list, { numbered: true, playlist: playlistPage.playlist, emptyText: 'لا توجد نتائج' });
 });
 
 function openAllReciters() {
   openPage('playlist-detail-view', () => {
     playlistPage = null;
+    const withTracks = reciters.filter((r) => r.count > 0);
     $('playlist-title').textContent = 'كل الرواديد';
-    $('playlist-subtitle').textContent = `${formatCount(reciters.length)} رادود`;
+    $('playlist-subtitle').textContent = `${formatCount(withTracks.length)} رادود`;
     $('playlist-delete-btn').style.display = 'none';
     $('playlist-search').parentElement.style.display = 'none';
     const grid = $('playlist-tracks');
     grid.className = 'reciter-grid';
     grid.innerHTML = '';
-    reciters.forEach((r) => grid.appendChild(reciterCard(r)));
+    withTracks.forEach((r) => grid.appendChild(reciterCard(r)));
     $('playlist-play-all').onclick = () => playFromList(popularTracks, 0);
   });
 }
@@ -893,7 +963,7 @@ function renderCategory(cat) {
 
 window.openTrackDetail = (trackOrId) => {
   const track = typeof trackOrId === 'object' ? trackOrId : trackById.get(String(trackOrId));
-  if (track) openPage('track-detail-view', () => renderTrackDetail(track));
+  if (track) openPage('track-detail-view', () => renderTrackDetail(track), { library: true });
 };
 
 function renderTrackDetail(track) {
@@ -948,10 +1018,13 @@ function renderTrackDetail(track) {
   fl.parentElement.style.display = fans.length ? 'block' : 'none';
 }
 
-// Same reciter first (most listened), then same category
+// Same reciter first, then the same category (any of its Arabic or English
+// values), in a fixed order per track
 function similarTo(track, n) {
   const same = tracksOf(track.reciterName).filter((t) => t.id !== track.id);
-  const sameCat = track.category ? allTracks.filter((t) => t.category === track.category && t.reciterName !== track.reciterName) : [];
+  const cat = categoryOf(track);
+  const inCat = cat ? (t) => cat.values.includes(t.category) : (t) => !!track.category && t.category === track.category;
+  const sameCat = allTracks.filter((t) => inCat(t) && t.reciterName !== track.reciterName);
   return [...seededShuffle(same, Number(track.id)), ...seededShuffle(sameCat.slice(0, 300), Number(track.id))].slice(0, n);
 }
 
@@ -987,9 +1060,9 @@ function runSearch() {
   if (browsing) return;
 
   const words = normalize(raw).split(/\s+/).filter(Boolean);
-  const matches = (text) => { const n = normalize(text); return words.every((w) => n.includes(w)); };
-  const foundReciters = reciters.filter((r) => matches(r.name)).slice(0, 8);
-  const foundTracks = allTracks.filter((t) => matches(`${t.title} ${t.reciterName}`));
+  const has = (n) => words.every((w) => n.includes(w));
+  const foundReciters = reciters.filter((r) => has(normalize(r.name))).slice(0, 8);
+  const foundTracks = allTracks.filter((t) => has(searchKey(t)));
 
   results.innerHTML = '';
   if (!foundReciters.length && !foundTracks.length) {
@@ -1029,10 +1102,10 @@ function renderLibrary() {
     grid.appendChild(clickable(el, onClick));
   };
 
-  if (filter === 'all') card('heart', 'المقاطع المفضلة', `${formatCount(lib.likes.size)} مقطع`, openLikesPage);
+  if (filter === 'all') card('heart', 'المقاطع المفضلة', `${formatCount(likesCount())} مقطع`, openLikesPage);
   if (filter === 'all' || filter === 'downloads') card('download', 'التنزيلات', `${formatCount(lib.downloads.size)} مقطع على الجهاز`, openDownloadsPage);
   if (filter === 'all' || filter === 'playlists') {
-    lib.playlists.forEach((pl) => card('playlist', pl.name, `${formatCount(pl.tracks.length)} مقطع`, () => openPlaylistPage(pl), trackById.get(pl.tracks[0])?.coverImage));
+    lib.playlists.forEach((pl) => card('playlist', pl.name, `${formatCount(fullyLoaded ? playlistTracks(pl).length : pl.tracks.length)} مقطع`, () => openPlaylistPage(pl), playlistTracks(pl)[0]?.coverImage));
     if (filter === 'playlists' && !lib.playlists.length) {
       const empty = document.createElement('div');
       empty.className = 'empty-state';
@@ -1058,16 +1131,19 @@ function renderLibrary() {
 }
 
 // ═══ Prompts, options, playlists ═════════════════════════════════════════════
-function openPrompt({ title, hint = '', value = '', placeholder = '', onSubmit }) {
+function openPrompt({ title, hint = '', value = '', placeholder = '', type = 'text', minLength = 1, onSubmit }) {
   const modal = $('prompt-modal');
   $('prompt-title').textContent = title;
   $('prompt-hint').textContent = hint;
   const input = $('prompt-input');
+  input.type = type;
+  input.autocomplete = type === 'password' ? 'new-password' : 'off';
+  input.dir = type === 'password' ? 'ltr' : 'auto';
   input.value = value;
   input.placeholder = placeholder;
   const submit = async () => {
-    const v = input.value.trim();
-    if (!v) { input.focus(); return; }
+    const v = type === 'password' ? input.value : input.value.trim();
+    if (v.length < minLength) { input.focus(); return; }
     closeOverlayThen(() => onSubmit(v));
   };
   $('prompt-submit').onclick = submit;
@@ -1091,7 +1167,6 @@ window.promptCreatePlaylist = (thenAddTrack = null) => {
       const pl = await createPlaylist(name);
       if (thenAddTrack) { pl.tracks.push(thenAddTrack.id); await savePlaylist(pl); toast(`أُضيف إلى "${name}"`); }
       else toast('أُنشئت القائمة');
-      if (currentTab === 'library') renderLibrary();
     },
   });
   if ($('playlist-modal').style.display === 'flex') closeOverlayThen(run); else run();
@@ -1149,13 +1224,12 @@ function openTrackOptions(track, { playlist = null } = {}) {
     playlist.tracks = playlist.tracks.filter((id) => id !== track.id);
     await savePlaylist(playlist);
     toast('أُزيل من القائمة');
-    refreshOpenViews();
   });
 
   const dl = lib.downloads.has(track.id);
   setIcon($('opt-download-icon'), dl ? 'check' : 'download');
   $('opt-download-text').textContent = dl ? 'حذف التنزيل' : 'تنزيل للاستماع بدون إنترنت';
-  $('opt-download').onclick = () => closeOverlayThen(() => toggleDownload(track).then(refreshOpenViews));
+  $('opt-download').onclick = () => closeOverlayThen(() => toggleDownload(track));
 
   $('opt-artist').onclick = () => closeOverlayThen(() => {
     if ($('full-player-view').classList.contains('open')) closeOverlayThen(() => openArtistDetail(track.reciterName));
@@ -1192,10 +1266,13 @@ let hls = null;
 let wantsToPlay = false;   // false for a track restored paused at startup
 let failedInARow = 0;
 
+let loadToken = 0;
 async function loadSource(url) {
+  const token = ++loadToken;
   if (hls) { hls.destroy(); hls = null; }
   if (/\.m3u8(\?|$)/i.test(url) && !audio.canPlayType('application/vnd.apple.mpegurl')) {
     const { default: Hls } = await import('hls.js'); // only for the rare streamed track
+    if (token !== loadToken) return; // another track was chosen meanwhile
     if (Hls.isSupported()) {
       hls = new Hls();
       hls.loadSource(url);
@@ -1212,7 +1289,8 @@ async function playTrack(track, { autoplay = true, startAt = 0 } = {}) {
   countedListen = null;
   wantsToPlay = autoplay;
   await loadSource(track.audioUrl);
-  if (startAt) audio.addEventListener('loadedmetadata', () => { audio.currentTime = startAt; }, { once: true });
+  if (currentTrack !== track) return; // another track was chosen meanwhile
+  if (startAt) audio.addEventListener('loadedmetadata', () => { if (currentTrack === track) audio.currentTime = startAt; }, { once: true });
   updateNowPlaying();
   if (autoplay) {
     addToHistory(track);
@@ -1587,6 +1665,7 @@ async function initAuth() {
   await loadProfile();
   updateProfileUI();
   if (currentUser) syncFromCloud();
+  if (isPasswordRecovery && currentUser) askNewPassword();
 
   supabase.auth.onAuthStateChange(async (event, s) => {
     const before = currentUser?.id;
@@ -1603,6 +1682,7 @@ async function initAuth() {
       lib.likes = new Set(store.get('sawt_likes', []).map(String));
       lib.playlists = store.get('sawt_playlists', []);
       lib.follows = new Set(store.get('sawt_artists', []));
+      libVersion++;
       refreshLikeButtons();
       refreshOpenViews();
     }
@@ -1611,7 +1691,7 @@ async function initAuth() {
   // Offer sign-in once, on the first visit (checked when it would show: the
   // listener may have signed in or dismissed it in the meantime)
   setTimeout(() => {
-    if (!currentUser && !store.get('sawt_auth_skipped', false) && $('auth-modal').style.display !== 'flex') openAuthModal();
+    if (!currentUser && !isPasswordRecovery && !store.get('sawt_auth_skipped', false) && $('auth-modal').style.display !== 'flex') openAuthModal();
   }, 1200);
 }
 
@@ -1633,7 +1713,7 @@ function updateProfileUI() {
     b.innerHTML = signedIn ? `<img src="${esc(avatarUrl())}" alt="" />` : icon('user');
   });
   $('stat-listened').textContent = formatCount(lib.history.length);
-  $('stat-likes').textContent = formatCount(lib.likes.size);
+  $('stat-likes').textContent = formatCount(likesCount());
   $('stat-playlists').textContent = formatCount(lib.playlists.length);
   paintSleepTimer();
 }
@@ -1711,6 +1791,7 @@ function paintAuthMode() {
   $('auth-toggle-btn').textContent = signup ? 'دخول' : 'إنشاء حساب';
   $('auth-title').textContent = signup ? 'إنشاء حساب جديد' : 'أهلاً بك في صوت الأحزان';
   $('auth-password').autocomplete = signup ? 'new-password' : 'current-password';
+  $('auth-forgot-btn').style.display = signup ? 'none' : 'inline-block';
 }
 window.toggleAuthMode = () => { authMode = authMode === 'login' ? 'signup' : 'login'; paintAuthMode(); $('auth-message').style.display = 'none'; };
 
@@ -1739,6 +1820,41 @@ window.signInWithGoogle = async () => {
   if (error) { showAuthMessage('فشل تسجيل الدخول بواسطة جوجل'); console.error(error); }
 };
 
+// Supabase's messages are English: the listener gets the Arabic meaning
+function authErrorText(err) {
+  const m = (err?.message || '').toLowerCase();
+  if (m.includes('invalid login')) return 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
+  if (m.includes('already registered') || m.includes('already been registered')) return 'هذا البريد الإلكتروني مسجل مسبقاً، سجّل الدخول بدلاً من ذلك';
+  if (m.includes('not confirmed')) return 'يرجى تأكيد البريد الإلكتروني أولاً من الرسالة التي وصلتك';
+  if (err?.status === 429 || m.includes('rate limit') || m.includes('security purposes')) return 'محاولات كثيرة، انتظر قليلاً ثم حاول مجدداً';
+  if (m.includes('invalid format') || m.includes('valid email')) return 'صيغة البريد الإلكتروني غير صحيحة';
+  if (m.includes('should be different')) return 'اختر كلمة مرور مختلفة عن السابقة';
+  if (m.includes('password')) return 'كلمة المرور ضعيفة، اختر كلمة أطول وأقوى';
+  if (m.includes('fetch') || m.includes('network')) return 'تعذر الاتصال، تحقق من الإنترنت';
+  return 'حدث خطأ، يرجى المحاولة مجدداً';
+}
+
+window.forgotPassword = async () => {
+  const email = $('auth-email').value.trim();
+  if (!email) { showAuthMessage('اكتب بريدك الإلكتروني أولاً، ثم اضغط «نسيت كلمة المرور؟»'); $('auth-email').focus(); return; }
+  setAuthLoading(true);
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: APP_URL });
+  setAuthLoading(false);
+  if (error) showAuthMessage(authErrorText(error));
+  else showAuthMessage('أرسلنا إلى بريدك رابطاً لتعيين كلمة مرور جديدة', false);
+};
+
+// Opened from the reset e-mail's link: the listener is signed in and picks a new password
+function askNewPassword() {
+  openPrompt({
+    title: 'كلمة مرور جديدة', hint: 'اختر كلمة مرور جديدة لحسابك (6 أحرف على الأقل).', type: 'password', minLength: 6,
+    onSubmit: async (password) => {
+      const { error } = await supabase.auth.updateUser({ password });
+      toast(error ? authErrorText(error) : 'تم تغيير كلمة المرور');
+    },
+  });
+}
+
 window.submitAuth = async () => {
   const email = $('auth-email').value.trim();
   const password = $('auth-password').value;
@@ -1752,6 +1868,9 @@ window.submitAuth = async () => {
     if (authMode === 'signup') {
       const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name || email.split('@')[0] } } });
       if (error) throw error;
+      // With e-mail confirmation on, Supabase answers an existing address with a
+      // user that has no identities instead of an error
+      if (data.user && !data.session && data.user.identities?.length === 0) throw new Error('already registered');
       if (data.session) { closeAuthModal(); toast('أهلاً بك! تم إنشاء حسابك'); }
       else showAuthMessage('تم إنشاء الحساب! تفقد بريدك لتفعيله ثم سجّل الدخول.', false);
     } else {
@@ -1761,12 +1880,7 @@ window.submitAuth = async () => {
       toast('تم تسجيل الدخول');
     }
   } catch (err) {
-    const m = err.message || '';
-    showAuthMessage(
-      m.includes('Invalid login') ? 'البريد الإلكتروني أو كلمة المرور غير صحيحة'
-        : m.includes('already registered') ? 'هذا البريد الإلكتروني مسجل مسبقاً'
-          : m.includes('Email not confirmed') ? 'يرجى تأكيد البريد الإلكتروني أولاً'
-            : 'حدث خطأ، يرجى المحاولة مجدداً');
+    showAuthMessage(authErrorText(err));
   }
   setAuthLoading(false);
 };
@@ -1797,11 +1911,11 @@ function handleDeepLink() {
     if (track) openTrackDetail(track);
     else {
       supabase.from('audio_library').select(TRACK_COLUMNS).eq('id', trackId).maybeSingle()
-        .then(({ data }) => { if (data) openTrackDetail(mapTrack(data)); });
+        .then(({ data }) => { if (data) openTrackDetail(mapTrack(data)); else toast('هذا المقطع غير موجود، ربما حُذف'); });
     }
   } else if (reciterId) {
     const r = reciters.find((x) => x.dbId === reciterId);
-    if (r) openArtistDetail(r.name);
+    if (r) openArtistDetail(r.name); else toast('هذا الرادود غير موجود');
   } else if (q) {
     goSearch();
     $('main-search-input').value = q;
@@ -1832,6 +1946,9 @@ document.addEventListener('error', (e) => {
   if (img.tagName === 'IMG' && img.getAttribute('src') && img.getAttribute('src') !== FALLBACK_COVER) img.src = FALLBACK_COVER;
 }, true);
 
+// A reload keeps the old page's history entries behind this one; marking this
+// one clean lets the back button step over them (see popstate)
+history.replaceState(null, '');
 startIcons();
 paintAutoplay();
 initAuth();

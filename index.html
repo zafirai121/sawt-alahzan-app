@@ -457,7 +457,10 @@
           <input id="auth-email" type="email" class="text-input" placeholder="example@email.com" autocomplete="email" dir="ltr" />
         </div>
         <div style="margin-bottom: 22px;">
-          <label class="field-label" for="auth-password">كلمة المرور</label>
+          <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <label class="field-label" for="auth-password">كلمة المرور</label>
+            <button type="button" id="auth-forgot-btn" class="link-btn" onclick="forgotPassword()" style="font-size: 13px;">نسيت كلمة المرور؟</button>
+          </div>
           <div style="position: relative;">
             <input id="auth-password" type="password" class="text-input" placeholder="••••••••" autocomplete="current-password" dir="ltr" style="padding-left: 48px;" />
             <button type="button" class="eye-btn" onclick="toggleAuthPasswordVisibility()" aria-label="إظهار كلمة المرور"><i id="auth-eye-icon" class="ic" data-icon="eye"></i></button>
