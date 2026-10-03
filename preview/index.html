@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>صوت الأحزان (نسخة تجريبية)</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="description" content="تطبيق صوت الأحزان - مكتبتك الشاملة للقصائد والصوتيات الحسينية لكبار الرواديد. استمع وشارك واصنع قوائم التشغيل الخاصة بك." />
+    <meta name="author" content="صوت الأحزان" />
+    <link rel="canonical" href="https://web.soutalahzan.com/" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="صوت الأحزان" />
+    <meta property="og:locale" content="ar_AR" />
+    <meta property="og:url" content="https://web.soutalahzan.com/" />
+    <meta property="og:title" content="صوت الأحزان" />
+    <meta property="og:description" content="تطبيق صوت الأحزان - مكتبتك الشاملة للقصائد والصوتيات الحسينية." />
+    <meta property="og:image" content="https://zafirai121.github.io/sawt-alahzan-app/icon-512.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta name="twitter:card" content="summary" />
+
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#121212" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="صوت الأحزان تجريبي" />
+    <link rel="icon" type="image/png" href="icon-192.png" />
+    <link rel="apple-touch-icon" href="icon-192.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" crossorigin />
+    <script type="module" crossorigin src="/sawt-alahzan-app/preview/assets/index-CvVcY4uh.js"></script>
+    <link rel="stylesheet" crossorigin href="/sawt-alahzan-app/preview/assets/index-BQCEZ8Bc.css">
+  </head>
+  <body>
+    <svg width="0" height="0" style="position: absolute;" aria-hidden="true">
+      <symbol id="google-logo" viewBox="0 0 48 48">
+        <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
+        <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/>
+        <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/>
+        <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
+      </symbol>
+    </svg>
+    <div id="app">
+      <div class="top-gradient"></div>
+
+      <main class="main-container">
+
+        <!-- Home -->
+        <div id="home-view" class="view">
+          <header>
+            <h1 class="greeting" id="home-greeting">صوت الأحزان</h1>
+            <button class="avatar-btn" onclick="goProfile()" aria-label="حسابي"></button>
+          </header>
+          <div id="sections-container"></div>
+        </div>
+
+        <!-- Search -->
+        <div id="search-view" class="view" style="display: none;">
+          <header class="page-header">
+            <button class="avatar-btn" onclick="goProfile()" aria-label="حسابي"></button>
+            <h1 class="search-header">البحث</h1>
+          </header>
+          <div class="search-input-container">
+            <i class="ic search-icon" data-icon="search"></i>
+            <input type="search" id="main-search-input" class="search-input" placeholder="قصائد، رواديد، أو تصنيفات" autocomplete="off" />
+          </div>
+          <div class="section-title" id="search-section-title" style="margin-top: 24px; font-size: 18px;">تصفح الكل</div>
+          <div id="genre-grid" class="genre-grid"></div>
+          <div id="search-results" style="display: none;"></div>
+        </div>
+
+        <!-- Library -->
+        <div id="library-view" class="view" style="display: none;">
+          <header class="page-header">
+            <button class="avatar-btn" onclick="goProfile()" aria-label="حسابي"></button>
+            <h1 class="search-header" style="flex: 1;">مكتبتك</h1>
+            <button class="icon-btn" onclick="promptCreatePlaylist()" aria-label="قائمة جديدة"><i class="ic" data-icon="plus"></i></button>
+          </header>
+          <div class="horizontal-scroller" style="margin: 16px 0;">
+            <button class="filter-chip active" data-filter="all">الكل</button>
+            <button class="filter-chip" data-filter="downloads">التنزيلات</button>
+            <button class="filter-chip" data-filter="playlists">قوائم التشغيل</button>
+            <button class="filter-chip" data-filter="artists">الرواديد</button>
+          </div>
+          <div id="library-content"></div>
+        </div>
+
+        <!-- Playlist / likes / downloads list -->
+        <div id="playlist-detail-view" class="view" style="display: none;">
+          <header class="page-header" style="margin-bottom: 10px;">
+            <button class="icon-btn" onclick="history.back()" aria-label="رجوع"><i class="ic" data-icon="back"></i></button>
+            <h1 id="playlist-title" class="search-header" style="flex: 1;">قائمة التشغيل</h1>
+            <button class="icon-btn" id="playlist-delete-btn" style="display: none;" aria-label="حذف القائمة"><i class="ic" data-icon="trash"></i></button>
+          </header>
+          <div class="list-actions">
+            <div id="playlist-subtitle" class="muted"></div>
+            <div class="list-actions-buttons">
+              <button class="icon-btn shuffle-toggle" onclick="toggleShuffle()" aria-label="تشغيل عشوائي"><i class="ic" data-icon="shuffle"></i></button>
+              <button class="big-play" id="playlist-play-all" aria-label="تشغيل الكل"><i class="ic" data-icon="play" data-fill></i></button>
+            </div>
+          </div>
+          <div class="search-input-container" style="margin-bottom: 20px;">
+            <i class="ic search-icon" data-icon="search" style="color: rgba(255,255,255,0.6);"></i>
+            <input type="search" id="playlist-search" class="search-input dark" placeholder="ابحث في هذه القائمة" autocomplete="off" />
+          </div>
+          <div id="playlist-tracks" class="track-list"></div>
+        </div>
+
+        <!-- Reciter -->
+        <div id="artist-view" class="view hero-view" style="display: none;">
+          <button class="hero-back" onclick="history.back()" aria-label="رجوع"><i class="ic" data-icon="chevron-right"></i></button>
+          <div class="hero-image" style="height: 55vh;">
+            <img id="artist-detail-image" src="" alt="" />
+            <div class="hero-shade"></div>
+            <div class="hero-text">
+              <h1 id="artist-detail-name"></h1>
+              <div id="artist-detail-stats" class="hero-stats"></div>
+            </div>
+          </div>
+          <div class="hero-content">
+            <div class="list-actions">
+              <div class="list-actions-buttons">
+                <button class="pill-btn" id="artist-follow-btn"><i class="ic" data-icon="follow"></i> <span>متابعة</span></button>
+                <button class="icon-btn" id="artist-share-btn" aria-label="مشاركة"><i class="ic" data-icon="share"></i></button>
+              </div>
+              <div class="list-actions-buttons">
+                <button class="icon-btn shuffle-toggle" onclick="toggleShuffle()" aria-label="تشغيل عشوائي"><i class="ic" data-icon="shuffle"></i></button>
+                <button class="big-play" id="artist-play-all" aria-label="تشغيل الكل"><i class="ic" data-icon="play" data-fill></i></button>
+              </div>
+            </div>
+            <h2 class="sub-title">كل القصائد</h2>
+            <div class="track-list" id="artist-tracks"></div>
+          </div>
+        </div>
+
+        <!-- Category -->
+        <div id="category-view" class="view hero-view" style="display: none;">
+          <button class="hero-back" onclick="history.back()" aria-label="رجوع"><i class="ic" data-icon="chevron-right"></i></button>
+          <div class="hero-image" style="height: 36vh;">
+            <img id="category-detail-image" src="" alt="" />
+            <div class="hero-shade"></div>
+            <div class="hero-text">
+              <h1 id="category-detail-name"></h1>
+              <div id="category-detail-stats" class="hero-stats"></div>
+            </div>
+          </div>
+          <div class="hero-content">
+            <div class="list-actions">
+              <div></div>
+              <div class="list-actions-buttons">
+                <button class="icon-btn shuffle-toggle" onclick="toggleShuffle()" aria-label="تشغيل عشوائي"><i class="ic" data-icon="shuffle"></i></button>
+                <button class="big-play" id="category-play-all" aria-label="تشغيل الكل"><i class="ic" data-icon="play" data-fill></i></button>
+              </div>
+            </div>
+            <div class="track-list" id="category-tracks"></div>
+          </div>
+        </div>
+
+        <!-- Track -->
+        <div id="track-detail-view" class="view overlay-view" style="display: none;">
+          <div id="td-bg-blob" class="td-blob"></div>
+          <button class="hero-back" onclick="history.back()" aria-label="رجوع"><i class="ic" data-icon="chevron-right"></i></button>
+          <div class="td-body">
+            <img id="td-cover" src="" alt="" class="td-cover" />
+            <h1 id="td-title" class="td-title"></h1>
+            <div class="td-artist-row" id="td-artist-row" role="button" tabindex="0">
+              <img id="td-artist-img" src="" alt="" />
+              <div id="td-artist"></div>
+            </div>
+            <div id="td-meta" class="muted td-meta"></div>
+
+            <div class="list-actions" style="margin-bottom: 30px;">
+              <div class="list-actions-buttons">
+                <button class="icon-btn" id="td-like-btn" aria-label="إعجاب"><i class="ic" data-icon="heart"></i></button>
+                <button class="icon-btn" id="td-download-btn" aria-label="تنزيل"><i class="ic" data-icon="download"></i></button>
+                <button class="icon-btn" id="td-options-btn" aria-label="خيارات"><i class="ic" data-icon="more"></i></button>
+              </div>
+              <button class="big-play" id="td-play-btn" aria-label="تشغيل"><i class="ic" data-icon="play" data-fill></i></button>
+            </div>
+
+            <div id="td-lyrics-section" style="display: none; margin-bottom: 30px;">
+              <h2 class="sub-title">الكلمات</h2>
+              <div id="td-lyrics" class="lyrics-text"></div>
+            </div>
+
+            <div>
+              <h2 class="sub-title">مقاطع مشابهة</h2>
+              <div id="td-similar-list" class="track-list"></div>
+            </div>
+
+            <div style="margin-top: 30px;">
+              <h2 id="td-trending-title" class="sub-title">الأعمال الرائجة</h2>
+              <div id="td-trending-list" class="horizontal-scroller"></div>
+            </div>
+
+            <div style="margin-top: 30px;">
+              <h2 class="sub-title">المعجبون يحبون أيضاً</h2>
+              <div id="td-fans-like-list" class="horizontal-scroller"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Profile -->
+        <div id="profile-view" class="view" style="display: none; padding-top: 20px;">
+          <header>
+            <h1 class="search-header" style="margin: 0;">حسابي</h1>
+          </header>
+
+          <div class="profile-head">
+            <div style="position: relative;">
+              <img id="profile-avatar-img" src="icon-192.png" alt="" class="profile-avatar" />
+              <button id="profile-camera-btn" class="profile-camera" onclick="openAvatarUpload()" aria-label="تغيير الصورة"><i class="ic" data-icon="camera"></i></button>
+              <input type="file" id="avatar-file-input" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleAvatarUpload(event)" />
+            </div>
+            <h2 id="profile-display-name">ضيف</h2>
+            <div id="profile-status-badge" class="muted"></div>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-box"><i class="ic" data-icon="music"></i><div id="stat-listened">0</div><span>مقطع استمعت إليه</span></div>
+            <div class="stat-box"><i class="ic" data-icon="heart"></i><div id="stat-likes">0</div><span>إعجاب</span></div>
+            <div class="stat-box"><i class="ic" data-icon="playlist"></i><div id="stat-playlists">0</div><span>قائمة تشغيل</span></div>
+          </div>
+
+          <div class="settings-list">
+            <div class="settings-row" id="profile-email-row">
+              <div class="settings-icon"><i class="ic" data-icon="mail"></i></div>
+              <div style="flex: 1; min-width: 0;">
+                <div class="muted" style="font-size: 13px;">البريد الإلكتروني</div>
+                <div id="profile-email" class="ellipsis">غير مسجل</div>
+              </div>
+            </div>
+            <button class="settings-row" id="profile-edit-name" onclick="editDisplayName()">
+              <div class="settings-icon"><i class="ic" data-icon="edit"></i></div>
+              <div style="flex: 1;">تعديل الاسم</div>
+              <i class="ic muted" data-icon="chevron-left"></i>
+            </button>
+            <button class="settings-row" onclick="openSleepTimerSheet()">
+              <div class="settings-icon"><i class="ic" data-icon="timer"></i></div>
+              <div style="flex: 1;">مؤقت النوم</div>
+              <span id="sleep-timer-label" class="muted" style="font-size: 13px;"></span>
+            </button>
+            <a class="settings-row" href="https://web.soutalahzan.com/privacy-policy" target="_blank" rel="noopener">
+              <div class="settings-icon"><i class="ic" data-icon="check"></i></div>
+              <div style="flex: 1;">سياسة الخصوصية</div>
+              <i class="ic muted" data-icon="chevron-left"></i>
+            </a>
+          </div>
+
+          <div style="margin-top: 25px; display: flex; flex-direction: column; gap: 12px;">
+            <div id="profile-guest-section" style="display: none;">
+              <button class="primary-btn" onclick="openAuthModal()" style="margin-bottom: 12px;"><i class="ic" data-icon="user"></i> الدخول بالبريد الإلكتروني</button>
+              <button class="google-btn" onclick="signInWithGoogle()">
+                <svg width="20" height="20" aria-hidden="true"><use href="#google-logo" /></svg>
+                المتابعة باستخدام جوجل
+              </button>
+            </div>
+            <div id="profile-logout-section" style="display: none;">
+              <button class="danger-btn" onclick="doLogout()"><i class="ic" data-icon="logout"></i> تسجيل الخروج</button>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <!-- Full screen player -->
+      <div id="full-player-view" class="full-player">
+        <div id="fp-bg" class="fp-bg"></div>
+        <div class="fp-scroll">
+          <header style="justify-content: space-between; margin-bottom: 3vh;">
+            <button class="icon-btn" onclick="history.back()" aria-label="إغلاق"><i class="ic" data-icon="chevron-down"></i></button>
+            <div class="fp-heading">
+              <div>يتم التشغيل الآن</div>
+              <div id="fp-sleep-badge" class="fp-sleep-badge" style="display: none;" role="button" tabindex="0" aria-label="مؤقت النوم"><i class="ic" data-icon="timer"></i> <span></span></div>
+            </div>
+            <button class="icon-btn" onclick="openCurrentTrackOptions(event)" aria-label="خيارات"><i class="ic" data-icon="more"></i></button>
+          </header>
+
+          <img id="fp-cover" src="" alt="" class="fp-cover" />
+
+          <div class="fp-title-row">
+            <div style="overflow: hidden; flex: 1; padding-left: 15px;">
+              <h2 id="fp-title" class="ellipsis"></h2>
+              <div id="fp-artist" class="ellipsis fp-artist" role="button" tabindex="0"></div>
+            </div>
+            <button class="icon-btn fp-like" id="fp-like-btn" aria-label="إعجاب"><i class="ic" data-icon="heart"></i></button>
+          </div>
+
+          <div style="width: 100%; margin-bottom: 4vh;">
+            <input type="range" id="fp-progress" min="0" max="100" step="any" value="0" style="width: 100%;" aria-label="موضع التشغيل" />
+            <div class="fp-times">
+              <span id="fp-current-time">0:00</span>
+              <span id="fp-total-time">0:00</span>
+            </div>
+          </div>
+
+          <div class="fp-controls">
+            <button class="icon-btn shuffle-toggle" onclick="toggleShuffle()" aria-label="تشغيل عشوائي"><i class="ic" data-icon="shuffle"></i></button>
+            <button class="icon-btn fp-skip" onclick="playPrev()" aria-label="السابق"><i class="ic" data-icon="prev" data-fill></i></button>
+            <button id="fp-play-btn" class="fp-play-circle" onclick="togglePlay(event)" aria-label="تشغيل"><i class="ic" data-icon="play" data-fill></i></button>
+            <button class="icon-btn fp-skip" onclick="playNext()" aria-label="التالي"><i class="ic" data-icon="next" data-fill></i></button>
+            <button class="icon-btn" id="fp-repeat-btn" onclick="toggleRepeat()" aria-label="تكرار"><i class="ic" data-icon="repeat"></i></button>
+          </div>
+
+          <div id="fp-lyrics-box" class="fp-card" onclick="openLyricsView()" style="cursor: pointer;" role="button" tabindex="0" aria-label="عرض الكلمات">
+            <div class="fp-card-head"><span>الكلمات</span><i class="ic muted" data-icon="expand"></i></div>
+            <div id="fp-lyrics-preview" class="fp-lyrics-preview"></div>
+          </div>
+
+          <h3 style="margin: 10px 0 15px; font-size: 18px;">مقاطع مشابهة</h3>
+          <div class="horizontal-scroller" id="fp-similar-list" style="margin-bottom: 30px;"></div>
+
+          <div class="fp-card">
+            <div class="fp-card-head">
+              <span style="font-size: 18px;">التالي في قائمة الانتظار</span>
+              <button class="chip-btn" onclick="startRadio()"><i class="ic" data-icon="radio"></i> شغّل الراديو</button>
+            </div>
+            <div id="fp-queue-list" class="track-list" style="margin-bottom: 20px;"></div>
+            <div class="fp-card-head" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; margin: 0;">
+              <span>التشغيل التلقائي</span>
+              <div id="fp-autoplay-switch" class="switch" onclick="toggleAutoplay()" role="switch" tabindex="0" aria-checked="true" aria-label="التشغيل التلقائي"><div class="switch-knob"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <nav class="bottom-nav">
+        <a href="#" class="nav-item active" onclick="goHome(); return false;"><i class="ic" data-icon="home"></i><span>الرئيسية</span></a>
+        <a href="#" class="nav-item" onclick="goSearch(); return false;"><i class="ic" data-icon="search"></i><span>البحث</span></a>
+        <a href="#" class="nav-item" onclick="goLibrary(); return false;"><i class="ic" data-icon="library"></i><span>مكتبتك</span></a>
+        <a href="#" class="nav-item" onclick="goProfile(); return false;"><i class="ic" data-icon="user"></i><span>حسابي</span></a>
+      </nav>
+
+      <!-- Mini player -->
+      <div id="mini-player" class="mini-player" style="display: none;">
+        <div class="mp-progress-line"><div id="mp-progress-fill"></div></div>
+        <div class="player-info" role="button" tabindex="0" aria-label="فتح المشغّل">
+          <img id="mp-cover" src="" alt="" class="player-cover" />
+          <div class="player-text">
+            <span id="mp-title" class="player-title"></span>
+            <span id="mp-reciter" class="player-reciter"></span>
+          </div>
+        </div>
+        <div class="player-controls">
+          <button class="icon-btn" id="mp-like-btn" aria-label="إعجاب"><i class="ic" data-icon="heart"></i></button>
+          <button id="mp-play-btn" class="mp-play" onclick="togglePlay(event)" aria-label="تشغيل"><i class="ic" data-icon="play" data-fill></i></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add to playlist -->
+    <div id="playlist-modal" class="modal" style="display: none;" role="dialog" aria-modal="true" aria-label="إضافة إلى قائمة تشغيل">
+      <div class="modal-card">
+        <h2 class="modal-title">إضافة إلى قائمة تشغيل</h2>
+        <div id="playlist-modal-list" style="max-height: 50vh; overflow-y: auto; margin-bottom: 15px;"></div>
+        <button class="secondary-btn" onclick="promptCreatePlaylist()" style="margin-bottom: 10px;"><i class="ic" data-icon="plus"></i> إنشاء قائمة جديدة</button>
+        <button class="outline-btn" onclick="history.back()">إلغاء</button>
+      </div>
+    </div>
+
+    <!-- Text prompt (new playlist, display name) -->
+    <div id="prompt-modal" class="modal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="prompt-title">
+      <div class="modal-card" style="text-align: center;">
+        <h2 id="prompt-title" class="modal-title" style="border: none;"></h2>
+        <p id="prompt-hint" class="muted" style="font-size: 14px; margin-bottom: 20px;"></p>
+        <input type="text" id="prompt-input" class="text-input" maxlength="100" />
+        <div style="display: flex; gap: 15px;">
+          <button class="outline-btn" onclick="history.back()">إلغاء</button>
+          <button class="primary-btn" id="prompt-submit">حفظ</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Confirm (e.g. delete a playlist) -->
+    <div id="confirm-modal" class="modal" style="display: none;" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title">
+      <div class="modal-card" style="text-align: center;">
+        <h2 id="confirm-title" class="modal-title" style="border: none;"></h2>
+        <p id="confirm-text" class="muted" style="font-size: 14px; margin-bottom: 22px;"></p>
+        <div style="display: flex; gap: 15px;">
+          <button class="outline-btn" onclick="history.back()">إلغاء</button>
+          <button class="danger-btn" id="confirm-ok" style="border-radius: 30px;"></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Track options -->
+    <div id="track-options-modal" class="sheet-backdrop" style="display: none;" onclick="history.back()">
+      <div id="track-options-sheet" class="sheet" onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-label="خيارات المقطع">
+        <div class="sheet-handle"></div>
+        <div class="sheet-head">
+          <img id="track-options-img" src="" alt="" />
+          <div style="flex: 1; overflow: hidden;">
+            <div id="track-options-title" class="ellipsis" style="font-size: 18px; font-weight: bold; margin-bottom: 4px;"></div>
+            <div id="track-options-artist" class="muted" style="font-size: 14px;"></div>
+          </div>
+        </div>
+        <button class="sheet-item" id="opt-like"><i class="ic" data-icon="heart" id="opt-like-icon"></i><span id="opt-like-text">إضافة إلى المفضلة</span></button>
+        <button class="sheet-item" id="opt-queue"><i class="ic" data-icon="list-plus"></i><span>التشغيل بعد الحالي</span></button>
+        <button class="sheet-item" id="opt-playlist"><i class="ic" data-icon="playlist"></i><span>إضافة إلى قائمة تشغيل</span></button>
+        <button class="sheet-item" id="opt-remove" style="display: none;"><i class="ic" data-icon="trash"></i><span>إزالة من هذه القائمة</span></button>
+        <button class="sheet-item" id="opt-download"><i class="ic" data-icon="download" id="opt-download-icon"></i><span id="opt-download-text">تنزيل للاستماع بدون إنترنت</span></button>
+        <button class="sheet-item" id="opt-artist"><i class="ic" data-icon="mic"></i><span>عرض صفحة الرادود</span></button>
+        <button class="sheet-item" id="opt-share"><i class="ic" data-icon="share"></i><span>مشاركة</span></button>
+      </div>
+    </div>
+
+    <!-- Sleep timer -->
+    <div id="sleep-modal" class="sheet-backdrop" style="display: none;" onclick="history.back()">
+      <div class="sheet" onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-label="مؤقت النوم">
+        <div class="sheet-handle"></div>
+        <h2 class="modal-title" style="border: none; text-align: center;">مؤقت النوم</h2>
+        <button class="sheet-item" data-sleep="15"><i class="ic" data-icon="timer"></i><span>15 دقيقة</span></button>
+        <button class="sheet-item" data-sleep="30"><i class="ic" data-icon="timer"></i><span>30 دقيقة</span></button>
+        <button class="sheet-item" data-sleep="60"><i class="ic" data-icon="timer"></i><span>ساعة</span></button>
+        <button class="sheet-item" data-sleep="end"><i class="ic" data-icon="disc"></i><span>نهاية المقطع الحالي</span></button>
+        <button class="sheet-item" data-sleep="off"><i class="ic" data-icon="close"></i><span>إيقاف المؤقت</span></button>
+      </div>
+    </div>
+
+    <!-- Lyrics -->
+    <div id="lyrics-view" class="lyrics-view" style="display: none;" role="dialog" aria-modal="true" aria-label="الكلمات">
+      <div class="lyrics-head">
+        <button class="icon-btn" onclick="history.back()" aria-label="إغلاق"><i class="ic" data-icon="chevron-down"></i></button>
+        <div style="text-align: center; min-width: 0;">
+          <div id="ly-title" class="ellipsis" style="font-size: 16px; font-weight: bold;"></div>
+          <div id="ly-artist" class="muted" style="font-size: 13px;"></div>
+        </div>
+        <div style="width: 38px;"></div>
+      </div>
+      <div id="lyrics-content" class="lyrics-content"></div>
+    </div>
+
+    <!-- Sign in -->
+    <div id="auth-modal" class="auth-modal" style="display: none;">
+      <div id="auth-sheet" class="auth-sheet" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+        <div style="text-align: center; margin-bottom: 28px;">
+          <img src="icon-192.png" alt="" width="64" height="64" style="border-radius: 16px; margin-bottom: 10px;" />
+          <h2 id="auth-title" class="auth-title">أهلاً بك في صوت الأحزان</h2>
+          <p class="muted" style="margin-top: 8px; font-size: 13px;">سجّل دخولك لحفظ إعجاباتك وقوائمك عبر أجهزتك</p>
+        </div>
+        <div id="auth-message" style="display: none;"></div>
+
+        <button class="google-btn" onclick="signInWithGoogle()" type="button" style="margin-bottom: 16px;">
+          <svg width="22" height="22" aria-hidden="true"><use href="#google-logo" /></svg>
+          المتابعة باستخدام جوجل
+        </button>
+
+        <div class="or-line"><hr /><span>أو بالبريد الإلكتروني</span><hr /></div>
+
+        <div id="auth-name-field" style="display: none; margin-bottom: 14px;">
+          <label class="field-label" for="auth-name">الاسم</label>
+          <input id="auth-name" type="text" class="text-input" placeholder="اسمك الكريم" autocomplete="name" maxlength="100" />
+        </div>
+        <div style="margin-bottom: 14px;">
+          <label class="field-label" for="auth-email">البريد الإلكتروني</label>
+          <input id="auth-email" type="email" class="text-input" placeholder="example@email.com" autocomplete="email" dir="ltr" />
+        </div>
+        <div style="margin-bottom: 22px;">
+          <label class="field-label" for="auth-password">كلمة المرور</label>
+          <div style="position: relative;">
+            <input id="auth-password" type="password" class="text-input" placeholder="••••••••" autocomplete="current-password" dir="ltr" style="padding-left: 48px;" />
+            <button type="button" class="eye-btn" onclick="toggleAuthPasswordVisibility()" aria-label="إظهار كلمة المرور"><i id="auth-eye-icon" class="ic" data-icon="eye"></i></button>
+          </div>
+        </div>
+
+        <button id="auth-submit-btn" type="button" class="primary-btn" onclick="submitAuth()" style="margin-bottom: 14px;">
+          <span id="auth-btn-text">دخول</span>
+          <i id="auth-btn-spinner" class="ic" data-icon="spinner" style="display: none;"></i>
+        </button>
+        <div class="muted" style="text-align: center; font-size: 14px; margin-bottom: 14px;">
+          <span id="auth-toggle-text">ليس لديك حساب؟</span>
+          <button type="button" onclick="toggleAuthMode()" id="auth-toggle-btn" class="link-btn">إنشاء حساب</button>
+        </div>
+        <button type="button" class="outline-btn" onclick="skipAuth()">متابعة بدون تسجيل</button>
+      </div>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  </body>
+</html>
