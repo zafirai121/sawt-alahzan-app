@@ -27,6 +27,21 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Build files carry a content hash (assets/index-AbC123xy.js): each release
+// adds new names, so older copies of the same file are dropped as they're replaced
+const HASHED = /^(.*\/assets\/.+-)[\w-]{8}(\.\w+)$/;
+async function keepApp(request, response) {
+  const cache = await caches.open(APP_CACHE);
+  await cache.put(request, response);
+  const path = new URL(request.url).pathname;
+  const m = HASHED.exec(path);
+  if (!m) return;
+  for (const key of await cache.keys()) {
+    const p = new URL(key.url).pathname;
+    if (p !== path && p.startsWith(m[1]) && p.endsWith(m[2]) && HASHED.test(p) && p.length === path.length) cache.delete(key);
+  }
+}
+
 // Answer a Range request from a full cached response
 async function rangeResponse(request, cached) {
   const range = request.headers.get('range');
@@ -59,10 +74,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          if (response.ok) {
-            const copy = response.clone();
-            caches.open(APP_CACHE).then((cache) => cache.put(request, copy));
-          }
+          if (response.ok) event.waitUntil(keepApp(request, response.clone()));
           return response;
         })
         .catch(() => caches.match(request).then((hit) => hit || caches.match(new URL('./', self.location).href)))
