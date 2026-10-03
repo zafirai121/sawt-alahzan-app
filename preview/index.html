@@ -32,8 +32,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" crossorigin />
-    <script type="module" crossorigin src="/sawt-alahzan-app/preview/assets/index-CamAyUGn.js"></script>
-    <link rel="stylesheet" crossorigin href="/sawt-alahzan-app/preview/assets/index-BtJxnkNP.css">
+    <script type="module" crossorigin src="/sawt-alahzan-app/preview/assets/index-Ccm0bbf9.js"></script>
+    <link rel="stylesheet" crossorigin href="/sawt-alahzan-app/preview/assets/index-CQP2JJDX.css">
   </head>
   <body>
     <svg width="0" height="0" style="position: absolute;" aria-hidden="true">
@@ -305,6 +305,15 @@
             <button class="icon-btn" id="fp-repeat-btn" onclick="toggleRepeat()" aria-label="تكرار"><i class="ic" data-icon="repeat"></i></button>
           </div>
 
+          <!-- Connect a device | share, queue (as in Spotify's now-playing screen) -->
+          <div class="fp-actions">
+            <button class="icon-btn" id="fp-devices-btn" onclick="openDevices()" aria-label="الاتصال بجهاز آخر"><i class="ic" data-icon="devices"></i></button>
+            <div class="fp-actions-group">
+              <button class="icon-btn" onclick="shareCurrentTrack()" aria-label="مشاركة"><i class="ic" data-icon="share-nodes"></i></button>
+              <button class="icon-btn" onclick="openQueue()" aria-label="قائمة الاستماع"><i class="ic" data-icon="queue"></i></button>
+            </div>
+          </div>
+
           <div id="fp-lyrics-box" class="fp-card" onclick="openLyricsView()" style="cursor: pointer;" role="button" tabindex="0" aria-label="عرض الكلمات">
             <div class="fp-card-head"><span>الكلمات</span><i class="ic muted" data-icon="expand"></i></div>
             <div id="fp-lyrics-preview" class="fp-lyrics-preview"></div>
@@ -453,6 +462,38 @@
         <a id="credits-report" class="credits-report" href="https://web.soutalahzan.com/contact" target="_blank" rel="noopener">
           <span>الإبلاغ عن خطأ في المعلومات</span><i class="ic" data-icon="chevron-left"></i>
         </a>
+      </div>
+    </div>
+
+    <!-- Listening queue -->
+    <div id="queue-modal" class="sheet-backdrop" style="display: none;" onclick="history.back()">
+      <div class="sheet queue-sheet" onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="queue-title">
+        <div class="sheet-handle"></div>
+        <h2 id="queue-title" class="modal-title" style="border: none;">قائمة الاستماع</h2>
+        <div class="queue-label">تستمع الآن</div>
+        <div id="queue-now" class="track-list"></div>
+        <div class="queue-label" id="queue-next-label">التالي</div>
+        <div id="queue-next" class="track-list"></div>
+      </div>
+    </div>
+
+    <!-- Connect to a device -->
+    <div id="devices-modal" class="sheet-backdrop" style="display: none;" onclick="history.back()">
+      <div class="sheet" onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="devices-title">
+        <div class="sheet-handle"></div>
+        <h2 id="devices-title" class="modal-title" style="border: none;">الاتصال بجهاز</h2>
+        <div class="device-row current" id="device-this">
+          <i class="ic" data-icon="smartphone"></i>
+          <div><div class="device-name">هذا الجهاز</div><div class="device-sub" id="device-this-sub">يتم التشغيل عليه الآن</div></div>
+        </div>
+        <button class="device-row" id="device-remote" style="display: none;">
+          <i class="ic" data-icon="cast"></i>
+          <div><div class="device-name" id="device-remote-name">البحث عن أجهزة قريبة</div><div class="device-sub" id="device-remote-sub">تلفاز أو سماعة ذكية على شبكة الـ Wi-Fi نفسها</div></div>
+        </button>
+        <div class="device-tip">
+          <i class="ic" data-icon="bluetooth"></i>
+          <div><div class="device-name">سماعة أو سيارة عبر البلوتوث</div><div class="device-sub">صِل الجهاز من إعدادات البلوتوث في هاتفك، وسيُشغَّل الصوت عليه مباشرة.</div></div>
+        </div>
       </div>
     </div>
 
