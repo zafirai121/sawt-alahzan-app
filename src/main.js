@@ -1769,12 +1769,20 @@ window.openLyricsView = () => {
 // Taken from the cover (see color.js) and laid behind the player as a gradient
 // into the dark, as Spotify does; the mini player, the lyrics card and the
 // phone's status bar take shades of it.
-const coverShades = new Map(); // cover url → shades
 let nowShades = null;
 let shadesFor = null;          // the track the colour is being worked out for
 
-// When the cover can't be read (no permission from its server, offline): a calm
-// colour of its own for each reciter, so the player is never plain
+// Worked out once per cover and kept on the device
+const COLOR_STORE = 'sawt_cover_colors_v1';
+const coverShades = new Map(Object.entries(store.get(COLOR_STORE, {})));
+function rememberShades(url, shades) {
+  coverShades.set(url, shades);
+  while (coverShades.size > 500) coverShades.delete(coverShades.keys().next().value); // oldest first
+  store.set(COLOR_STORE, Object.fromEntries(coverShades));
+}
+
+// When no copy of the cover can be read: a calm colour of its own for each
+// reciter, so the player is never plain
 const FALLBACK_HUES = [0.02, 0.08, 0.3, 0.45, 0.55, 0.62, 0.75, 0.9];
 function fallbackShades(t) {
   let h = 0;
@@ -1782,31 +1790,44 @@ function fallbackShades(t) {
   return playerShades([FALLBACK_HUES[h % FALLBACK_HUES.length], 0.35, 0.28]);
 }
 
-// A small copy of the cover, at a size no <img> on the page uses (so it isn't
-// served from the cache without the cross-origin permission reading pixels needs)
-function colorSampleUrl(url) {
+// Reading a cover's pixels needs its server to allow it (CORS). Small copies
+// are tried in turn: the site's own resized one (soutalahzan.com does not
+// allow it yet), then a public image service that does (wsrv.nl).
+function colorSampleUrls(url) {
+  let own;
   try {
-    if (IMAGE_HOSTS.has(new URL(url).hostname)) return `https://soutalahzan.com/cdn-cgi/image/width=48,quality=70,format=auto,fit=scale-down/${url}`;
-  } catch { /* not a full URL */ }
-  return url;
+    own = IMAGE_HOSTS.has(new URL(url).hostname)
+      ? `https://soutalahzan.com/cdn-cgi/image/width=48,quality=70,format=auto,fit=scale-down/${url}`
+      : url;
+  } catch { return []; } // not a full URL
+  return [own, `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=48&h=48&fit=cover&output=jpg&q=70`];
 }
 
-function coverShadesFor(t) {
-  const url = t.coverImage;
-  if (!url) return Promise.resolve(fallbackShades(t));
-  if (coverShades.has(url)) return Promise.resolve(coverShades.get(url));
+function readShades(src) {
   return new Promise((resolve) => {
     const img = new Image();
+    const done = (value) => { clearTimeout(timer); img.onload = img.onerror = null; resolve(value); };
+    const timer = setTimeout(() => done(null), 8000);
     img.crossOrigin = 'anonymous';
     img.onload = () => {
-      let shades = null;
-      try { const hsl = dominantHsl(img); if (hsl) shades = playerShades(hsl); } catch { /* pixels not readable */ }
-      if (shades) coverShades.set(url, shades);
-      resolve(shades || fallbackShades(t));
+      try { const hsl = dominantHsl(img); done(hsl ? playerShades(hsl) : null); } catch { done(null); } // pixels not readable
     };
-    img.onerror = () => resolve(fallbackShades(t));
-    img.src = colorSampleUrl(url);
+    img.onerror = () => done(null);
+    img.src = src;
   });
+}
+
+const unreadableCovers = new Set(); // tried this session with no luck: not again until the next one
+async function coverShadesFor(t) {
+  const url = t.coverImage;
+  if (!url || unreadableCovers.has(url)) return fallbackShades(t);
+  if (coverShades.has(url)) return coverShades.get(url);
+  for (const src of colorSampleUrls(url)) {
+    const shades = await readShades(src);
+    if (shades) { rememberShades(url, shades); return shades; }
+  }
+  unreadableCovers.add(url);
+  return fallbackShades(t);
 }
 
 function paintPlayerColor(t) {
