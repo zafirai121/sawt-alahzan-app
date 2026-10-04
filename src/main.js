@@ -67,14 +67,17 @@ const normalize = (s) => String(s || '').toLowerCase()
 
 // Covers are stored full size; Cloudflare resizes them on the fly (as on the website)
 const IMAGE_HOSTS = new Set(['soutalahzan.com', 'ckhtndmrcypkqrpjlzli.supabase.co', 'images.unsplash.com', 'pub-8168942d67ae4c1fb48c404f11458b4a.r2.dev']);
-const SIZE_STEPS = [96, 160, 320, 480, 640, 800, 1080];
+const SIZE_STEPS = [96, 160, 320, 480, 640, 800, 1080, 1280, 1600];
+// Phones draw 2 to 3 real pixels per CSS pixel: covers are asked for at the
+// screen's own density, so none is enlarged into a blur
+const PIXEL_RATIO = Math.min(Math.max(window.devicePixelRatio || 2, 2), 3);
 function thumb(url, cssWidth) {
   if (!url) return FALLBACK_COVER;
   try {
     if (!IMAGE_HOSTS.has(new URL(url).hostname)) return url;
   } catch { return url; }
-  const px = SIZE_STEPS.find((s) => s >= cssWidth * 2) ?? 1080;
-  return `https://soutalahzan.com/cdn-cgi/image/width=${px},quality=75,format=auto,fit=scale-down/${url}`;
+  const px = SIZE_STEPS.find((s) => s >= cssWidth * PIXEL_RATIO) ?? SIZE_STEPS.at(-1);
+  return `https://soutalahzan.com/cdn-cgi/image/width=${px},quality=85,format=auto,fit=scale-down/${url}`;
 }
 
 // "0:00" means the duration was never measured
@@ -2656,7 +2659,7 @@ function loadCardCover(url) {
     img.onerror = () => { clearTimeout(timer); resolve(null); };
     img.src = src;
   });
-  const sources = url ? [`https://wsrv.nl/?url=${encodeURIComponent(url)}&w=640&h=640&fit=cover&output=jpg&q=85`, url] : [];
+  const sources = url ? [`https://wsrv.nl/?url=${encodeURIComponent(url)}&w=1080&h=1080&fit=cover&output=jpg&q=90`, url] : [];
   return sources.reduce((p, src) => p.then((img) => img || tryLoad(src)), Promise.resolve(null))
     .then((img) => img || tryLoad(FALLBACK_COVER));
 }
