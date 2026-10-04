@@ -1225,8 +1225,9 @@ function renderHome() {
     card.className = 'wide-card';
     card.innerHTML = `
       <img src="${esc(thumb(t.coverImage, 320))}" alt="" loading="lazy" />
-      ${splashBadge}<span class="fabric-ribbon">جديد</span>
-      <div class="wide-card-text"><div class="ellipsis wide-title">${esc(t.title)}</div><div class="ellipsis muted">${esc(t.reciterName)}</div></div>`;
+      ${splashBadge}
+      <div class="wide-card-text"><div class="ellipsis wide-title">${esc(t.title)}</div></div>
+      <div class="fabric-band"><span class="ellipsis">${esc(t.reciterName)}</span></div>`;
     return clickable(card, () => openTrackDetail(t));
   }), () => openListPage('مضاف حديثاً', allTracks.slice(0, 100))));
 
