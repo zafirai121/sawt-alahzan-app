@@ -573,7 +573,13 @@ async function downloadAll(list) {
 
 // The file, its covers and its details into the offline cache; `quiet` leaves
 // redrawing the screens to the caller (a whole list at once)
+// Being downloaded right now (shown on the downloads tab)
+const downloading = new Set();
+const downloadingChanged = () => { if (currentTab === 'downloads' && !topPage()) renderDownloadsTab(); };
+
 async function saveOffline(track, { quiet = false } = {}) {
+  downloading.add(track.id);
+  downloadingChanged();
   try {
     const cache = await caches.open(AUDIO_CACHE);
     const res = await fetch(track.audioUrl, { mode: 'cors' });
@@ -594,6 +600,9 @@ async function saveOffline(track, { quiet = false } = {}) {
   } catch (e) {
     console.warn('Download failed:', e);
     return false;
+  } finally {
+    downloading.delete(track.id);
+    downloadingChanged();
   }
 }
 
@@ -914,7 +923,7 @@ const compactCount = (n) => (n >= 1e6 ? `${oneDecimal(n / 1e6)} مليون` : n 
 // Tabs are the four bottom-bar screens. Pages (reciter, category, track, list)
 // and overlays (player, sheets, modals) go on a stack mirrored in browser
 // history, so the phone's back button closes / goes back one step.
-const TABS = { home: 'home-view', search: 'search-view', library: 'library-view', profile: 'profile-view' };
+const TABS = { home: 'home-view', search: 'search-view', library: 'library-view', downloads: 'downloads-view', profile: 'profile-view' };
 let currentTab = 'home';
 let navStack = [];
 let ignorePops = 0;
@@ -1068,6 +1077,7 @@ function renderTab() {
   if (currentTab === 'home') renderHome();
   else if (currentTab === 'library') renderLibrary();
   else if (currentTab === 'search') renderSearchHome();
+  else if (currentTab === 'downloads') renderDownloadsTab();
   else if (currentTab === 'profile') updateProfileUI();
   tabDrawnAt[currentTab] = tabStamp();
 }
@@ -1083,7 +1093,7 @@ function libraryChanged() {
   libVersion++;
   const top = topPage();
   if (top?.library) drawPage(top);
-  else if (!top && (currentTab === 'library' || currentTab === 'profile')) renderTab();
+  else if (!top && ['library', 'downloads', 'profile'].includes(currentTab)) renderTab();
 }
 
 // ═══ Shared list rendering ═══════════════════════════════════════════════════
@@ -2365,6 +2375,174 @@ function renderSearchPage() {
   if (searchUi.shownFor === null) setTimeout(() => { if (input.isConnected) input.focus(); }, 60);
 }
 
+// ═══ Downloads tab ═══════════════════════════════════════════════════════════
+// What is saved here to hear with no connection: a gold card with how many
+// and how long, the room they take (a gold bar) and the room left, shuffle and
+// play; the reciters they come from (tap one to show only theirs); a sort and
+// a search; what is downloading now; and liked tracks not downloaded yet (or
+// the most listened), to save one by one or all at once
+const DOWNLOAD_SORTS = { newest: 'الأحدث', title: 'العنوان', reciter: 'الرادود' };
+const downloadsUi = { sort: 'newest', reciter: null, query: '' };
+
+// "245 ميغابايت", "1.2 غيغابايت"
+function formatBytes(bytes) {
+  if (bytes >= 1e9) return `${oneDecimal(bytes / 1e9)} غيغابايت`;
+  if (bytes >= 1e6) return `${Math.round(bytes / 1e6)} ميغابايت`;
+  return bytes > 0 ? `${Math.max(1, Math.round(bytes / 1e3))} كيلوبايت` : '0 ميغابايت';
+}
+
+window.goDownloads = () => { goTab('downloads'); renderTab(); };
+
+function renderDownloadsTab() {
+  const box = $('downloads-content');
+  const newest = downloadedTracks().reverse();
+  const source = { kind: 'downloads', id: '' };
+  $('dl-search-btn').style.display = newest.length ? '' : 'none';
+  const parts = [];
+
+  if (!newest.length) {
+    const empty = document.createElement('div');
+    empty.className = 'dl-empty animate-in';
+    empty.innerHTML = `
+      <div class="dl-empty-ring"><span class="dl-empty-disc">${icon('download-plain')}</span></div>
+      <h2>لا توجد تنزيلات بعد</h2>
+      <p class="muted">نزّل القصائد التي تحبها لتسمعها في أي مكان، حتى في الطريق أو بدون إنترنت.</p>
+      <button class="pill-btn">تصفح القصائد</button>`;
+    empty.querySelector('button').onclick = () => goHome();
+    parts.push(empty);
+  } else {
+    // The card: a gold disc, how many and how long, the room they take, shuffle and play
+    const card = document.createElement('div');
+    card.className = 'dl-card animate-in';
+    card.innerHTML = `
+      <div class="dl-card-head">
+        <span class="dl-disc">${icon('download-plain')}</span>
+        <div style="min-width: 0;"><div class="dl-card-title">مكتبتك بلا إنترنت</div>
+        <div class="muted dl-card-sub">${formatCount(newest.length)} مقطع • ${totalDuration(newest)}</div></div>
+      </div>
+      <div class="dl-bar"><span></span></div>
+      <div class="dl-room muted"><span class="dl-used">…</span><span class="dl-free"></span></div>
+      <div class="dl-card-actions">
+        <span class="dl-offline">${icon('wifi-off')} تعمل بدون إنترنت</span>
+        <span class="pv-spacer"></span>
+      </div>`;
+    const shuffle = iconButton('shuffle', 'تشغيل عشوائي', () => toggleShuffle(), `icon-btn pv-icon shuffle-toggle${isShuffle ? ' on' : ''}`);
+    card.querySelector('.dl-card-actions').append(shuffle, playAllButton(newest, source));
+    // The browser says how much it keeps for this app, and how much more it would
+    navigator.storage?.estimate?.().then(({ usage = 0, quota = 0 }) => {
+      card.querySelector('.dl-used').textContent = `تستخدم ${formatBytes(usage)}`;
+      if (quota) card.querySelector('.dl-free').textContent = `${formatBytes(Math.max(quota - usage, 0))} متاحة`;
+      card.querySelector('.dl-bar span').style.width = `${quota ? Math.max((usage / quota) * 100, 2) : 0}%`;
+    }).catch(() => {});
+    if (!navigator.storage?.estimate) card.querySelector('.dl-used').textContent = '';
+    parts.push(card);
+  }
+
+  // Downloading now
+  const now = [...downloading].map((id) => trackById.get(id)).filter(Boolean);
+  if (now.length) {
+    const list = document.createElement('div');
+    list.className = 'track-list';
+    now.forEach((t) => list.appendChild(downloadRow(t, t.reciterName, `<span class="dl-spin">${icon('spinner')}</span>`)));
+    parts.push(section('جارٍ التنزيل', list));
+  }
+
+  if (newest.length) {
+    // The reciters they come from: tap one to show only theirs
+    const counts = new Map();
+    newest.forEach((t) => counts.set(t.reciterName, (counts.get(t.reciterName) || 0) + 1));
+    if (downloadsUi.reciter && !counts.has(downloadsUi.reciter)) downloadsUi.reciter = null;
+    if (counts.size > 1) {
+      const row = document.createElement('div');
+      row.className = 'horizontal-scroller dl-reciters';
+      [...counts.entries()].sort((a, b) => b[1] - a[1]).forEach(([name, n]) => {
+        const chosen = downloadsUi.reciter === name;
+        const el = document.createElement('div');
+        el.className = `dl-reciter${chosen ? ' on' : ''}${downloadsUi.reciter && !chosen ? ' dim' : ''}`;
+        el.innerHTML = `<span class="dl-reciter-photo"><img src="${esc(thumb(reciterPhoto(name), 76))}" alt="" loading="lazy" /></span>
+          <div class="ellipsis dl-reciter-name">${esc(name)}</div><div class="muted dl-reciter-count">${formatCount(n)} مقطع</div>`;
+        row.appendChild(clickable(el, () => { downloadsUi.reciter = chosen ? null : name; renderDownloadsTab(); }));
+      });
+      parts.push(section('حسب الرادود', row));
+    }
+
+    // Sort
+    const sorts = document.createElement('div');
+    sorts.className = 'horizontal-scroller dl-sorts';
+    Object.entries(DOWNLOAD_SORTS).forEach(([k, label]) => {
+      const b = document.createElement('button');
+      b.className = `filter-chip${downloadsUi.sort === k ? ' active' : ''}`;
+      b.textContent = label;
+      b.onclick = () => { downloadsUi.sort = k; renderDownloadsTab(); };
+      sorts.appendChild(b);
+    });
+    parts.push(sorts);
+
+    // The tracks
+    const q = normalize(downloadsUi.query.trim());
+    let shown = newest.filter((t) => (!downloadsUi.reciter || t.reciterName === downloadsUi.reciter) && (!q || searchKey(t).includes(q)));
+    if (downloadsUi.sort === 'title') shown = [...shown].sort((a, b) => arabicOrder.compare(a.title, b.title));
+    if (downloadsUi.sort === 'reciter') shown = [...shown].sort((a, b) => arabicOrder.compare(a.reciterName, b.reciterName) || arabicOrder.compare(a.title, b.title));
+    const list = document.createElement('div');
+    list.className = 'track-list dl-list';
+    if (!shown.length) list.innerHTML = '<div class="empty-state">لا توجد نتائج</div>';
+    shown.forEach((t, i) => {
+      const more = iconButton('more', 'خيارات', (e) => { e.stopPropagation(); openTrackOptions(t); }, 'icon-btn row-more');
+      const row = downloadRow(t, t.reciterName, '', true);
+      row.appendChild(more);
+      list.appendChild(clickable(row, () => playFromList(shown, i, { source })));
+    });
+    parts.push(list);
+  }
+
+  // Ready to save: their likes not downloaded yet, or else the most listened
+  const free = (t) => !lib.downloads.has(t.id) && !downloading.has(t.id) && t.audioUrl;
+  const liked = likedTracks().filter(free).slice(0, 8);
+  const toSave = liked.length ? liked : popularTracks.filter(free).slice(0, 8);
+  if (toSave.length) {
+    const s = document.createElement('div');
+    s.className = 'section dl-save';
+    s.innerHTML = `<div class="cl-suggest-head"><div><h2 class="section-title">${liked.length ? 'من مفضلتك' : 'مقترحة للتنزيل'}</h2>
+      <div class="muted" style="font-size: 13px;">${liked.length ? 'مقاطع تحبها ولم تنزّلها بعد' : 'الأكثر استماعاً، لتسمعها في أي مكان'}</div></div>
+      <button class="link-btn">تنزيل الكل</button></div>`;
+    s.querySelector('.link-btn').onclick = () => downloadAll(toSave);
+    const list = document.createElement('div');
+    list.className = 'track-list';
+    toSave.forEach((t) => {
+      const row = downloadRow(t, t.reciterName, '');
+      const get = iconButton('download', 'تنزيل', (e) => { e.stopPropagation(); toggleDownload(t); }, 'icon-btn pv-icon dl-get');
+      row.appendChild(get);
+      list.appendChild(clickable(row, () => playFromList([t], 0)));
+    });
+    s.appendChild(list);
+    parts.push(s);
+  }
+  box.replaceChildren(...parts);
+  markPlayingRows();
+}
+
+// A track of this page: its cover, a gold sign when it is on the device, two lines
+function downloadRow(t, subtitle, end = '', onDevice = false) {
+  const row = document.createElement('div');
+  row.className = 'track-item dl-row';
+  row.dataset.trackId = t.id;
+  row.innerHTML = `
+    <img src="${esc(thumb(t.coverImage, 56))}" class="track-img" alt="" loading="lazy" />
+    <div class="track-info"><div class="track-title">${esc(t.title)}</div>
+      <div class="track-artist">${onDevice ? `<span class="dl-mark" aria-label="منزّل">${icon('arrow-down')}</span>` : ''}${esc(subtitle)}</div></div>
+    ${end}`;
+  return row;
+}
+
+$('dl-search-btn').onclick = () => {
+  const box = $('dl-search');
+  const open = box.style.display === 'none';
+  box.style.display = open ? '' : 'none';
+  if (open) $('dl-search-input').focus();
+  else { $('dl-search-input').value = ''; downloadsUi.query = ''; renderDownloadsTab(); }
+};
+$('dl-search-input').addEventListener('input', (e) => { downloadsUi.query = e.target.value; renderDownloadsTab(); });
+
 // ═══ Library tab (Spotify's "Your Library") ══════════════════════════════════
 // Filters, a sort, a grid (or a list) of their collections, the likes and the
 // downloads pinned on top
@@ -2375,7 +2553,7 @@ const playlistTime = (pl) => Number(String(pl.id).match(/\d{10,}/)?.[0] || 0);
 function libraryEntries() {
   const all = [
     { key: 'likes', kind: 'likes', title: 'المقاطع المفضلة', subtitle: `قائمة تشغيل • ${formatCount(likesCount())} مقطع`, art: { likes: true }, pinned: true, time: 2, open: () => openLikesPage() },
-    { key: 'downloads', kind: 'downloads', title: 'التنزيلات', subtitle: `${formatCount(lib.downloads.size)} مقطع على الجهاز`, art: { downloads: true }, pinned: true, time: 1, open: () => openDownloadsPage() },
+    { key: 'downloads', kind: 'downloads', title: 'التنزيلات', subtitle: `${formatCount(lib.downloads.size)} مقطع على الجهاز`, art: { downloads: true }, pinned: true, time: 1, open: () => goDownloads() },
     ...lib.playlists.map((pl) => {
       const tracks = playlistTracks(pl);
       return { key: `p:${pl.id}`, kind: 'playlist', pl, title: pl.name, subtitle: `قائمة تشغيل • ${formatCount(fullyLoaded ? tracks.length : pl.tracks.length)} مقطع`,

@@ -515,6 +515,70 @@ header { display: flex; justify-content: space-between; align-items: center; mar
 .lib-sub { display: flex; align-items: center; gap: 5px; font-size: 13px; color: var(--text-secondary); margin-top: 4px; min-width: 0; }
 .lib-pin { color: var(--accent); font-size: 13px; display: inline-flex; flex-shrink: 0; }
 
+/* Downloads tab: a gold card, the reciters, a sort, the tracks, what to save next */
+.dl-card {
+  position: relative; border-radius: 20px; padding: 18px; margin-bottom: 30px; overflow: hidden;
+  background: linear-gradient(135deg, #4A3810 0%, #221D12 55%, #141414 100%);
+  box-shadow: 0 14px 34px rgba(222,190,79,0.18), 0 6px 18px rgba(0,0,0,0.5);
+}
+/* A gold rim, bright on one corner and fading */
+.dl-card::before {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: linear-gradient(135deg, rgba(222,190,79,0.75), transparent 45%, rgba(222,190,79,0.35));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+.dl-card-head { display: flex; align-items: center; gap: 14px; }
+.dl-disc {
+  width: 58px; height: 58px; border-radius: 50%; background: var(--gold); color: #121212; font-size: 28px; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 6px 16px rgba(222,190,79,0.35);
+}
+.dl-card-title { font-size: 19px; font-weight: 800; }
+.dl-card-sub { font-size: 13px; margin-top: 3px; }
+.dl-bar { height: 8px; border-radius: 4px; background: rgba(255,255,255,0.12); margin: 18px 0 8px; overflow: hidden; }
+.dl-bar span { display: block; height: 100%; width: 0; background: var(--gold); border-radius: 4px; transition: width 0.6s ease; }
+.dl-room { display: flex; justify-content: space-between; font-size: 12px; min-height: 16px; }
+.dl-card-actions { display: flex; align-items: center; gap: 6px; margin-top: 16px; }
+.dl-offline {
+  display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 16px;
+  background: var(--accent-soft); color: var(--accent); font-size: 12px; font-weight: 700;
+}
+.dl-offline .ic { font-size: 14px; }
+.dl-reciters { gap: 16px; }
+.dl-reciter { width: 84px; flex-shrink: 0; text-align: center; cursor: pointer; transition: opacity 0.2s; }
+.dl-reciter.dim { opacity: 0.45; }
+.dl-reciter-photo { display: block; width: 76px; height: 76px; margin: 0 auto 8px; border-radius: 50%; padding: 0; }
+.dl-reciter.on .dl-reciter-photo { padding: 4px; background: var(--gold); }
+.dl-reciter-photo img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; background: var(--dark-surface); border: 0 solid #121212; }
+.dl-reciter.on .dl-reciter-photo img { border-width: 2px; }
+.dl-reciter-name { font-size: 13px; font-weight: 700; }
+.dl-reciter.on .dl-reciter-name { color: var(--accent); }
+.dl-reciter-count { font-size: 12px; }
+.dl-sorts { gap: 8px; margin-bottom: 14px; }
+.dl-list { margin-bottom: 34px; }
+.dl-row .track-img { width: 56px; height: 56px; border-radius: 6px; }
+.dl-row .track-title { font-size: 16px; }
+.dl-row .track-artist { display: flex; align-items: center; gap: 6px; }
+.dl-mark {
+  width: 15px; height: 15px; border-radius: 50%; background: var(--accent); color: #121212; font-size: 11px; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.dl-mark svg { stroke-width: 3; }
+.dl-spin { font-size: 22px; color: var(--accent); display: inline-flex; padding: 8px; }
+.dl-get { color: var(--accent); }
+.dl-save { margin-top: 34px; }
+.dl-empty { text-align: center; padding: 30px 20px 10px; }
+.dl-empty-ring {
+  width: 132px; height: 132px; margin: 0 auto 24px; border-radius: 50%; background: rgba(222,190,79,0.12);
+  border: 1px solid rgba(222,190,79,0.35); display: flex; align-items: center; justify-content: center;
+}
+.dl-empty-disc {
+  width: 88px; height: 88px; border-radius: 50%; background: var(--gold); color: #121212; font-size: 42px;
+  display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 28px rgba(222,190,79,0.4);
+}
+.dl-empty h2 { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+.dl-empty p { font-size: 14px; line-height: 1.7; margin-bottom: 20px; }
+
 /* Create */
 .create-item {
   display: flex; align-items: center; gap: 16px; width: 100%; padding: 10px 4px; background: none; border: none; color: var(--primary);

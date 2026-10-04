@@ -89,6 +89,20 @@
           <div id="library-content"></div>
         </div>
 
+        <!-- Downloads: what is saved here to hear with no connection -->
+        <div id="downloads-view" class="view" style="display: none;">
+          <header class="page-header">
+            <button class="avatar-btn" onclick="goProfile()" aria-label="حسابي"></button>
+            <h1 class="search-header" style="flex: 1;">التنزيلات</h1>
+            <button class="icon-btn" id="dl-search-btn" aria-label="البحث في التنزيلات"><i class="ic" data-icon="search"></i></button>
+          </header>
+          <div class="search-input-container" id="dl-search" style="display: none; margin-bottom: 18px;">
+            <i class="ic search-icon" data-icon="search" style="color: rgba(255,255,255,0.6);"></i>
+            <input type="search" id="dl-search-input" class="search-input dark" placeholder="ابحث في التنزيلات" autocomplete="off" />
+          </div>
+          <div id="downloads-content"></div>
+        </div>
+
         <!-- Playlist / likes / downloads list -->
         <div id="playlist-detail-view" class="view" style="display: none;">
           <header class="page-header" style="margin-bottom: 10px;">
@@ -373,6 +387,7 @@
         <a href="#" class="nav-item active" onclick="goHome(); return false;"><i class="ic" data-icon="home"></i><span>الرئيسية</span></a>
         <a href="#" class="nav-item" onclick="goSearch(); return false;"><i class="ic" data-icon="search"></i><span>البحث</span></a>
         <a href="#" class="nav-item" onclick="goLibrary(); return false;"><i class="ic" data-icon="library"></i><span>مكتبتك</span></a>
+        <a href="#" class="nav-item" onclick="goDownloads(); return false;"><i class="ic" data-icon="download"></i><span>التنزيلات</span></a>
         <a href="#" class="nav-item" onclick="goProfile(); return false;"><i class="ic" data-icon="user"></i><span>حسابي</span></a>
       </nav>
 
