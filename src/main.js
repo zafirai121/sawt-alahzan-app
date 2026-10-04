@@ -1065,7 +1065,14 @@ function goTab(tab) {
   }
   currentTab = tab;
   showView(TABS[tab]);
-  document.querySelectorAll('.nav-item').forEach((n, i) => n.classList.toggle('active', Object.keys(TABS)[i] === tab));
+  // The bar holds home, search, the library and the downloads (the profile opens from the avatar);
+  // the open tab's icon is lit, the library's filled as on Spotify
+  document.querySelectorAll('.nav-item').forEach((n, i) => {
+    const open = Object.keys(TABS)[i] === tab;
+    n.classList.toggle('active', open);
+    const ic = n.querySelector('.ic');
+    if (ic.dataset.icon === 'library') setIcon(ic, 'library', { fill: open });
+  });
 }
 
 window.goHome = () => { goTab('home'); if (tabDrawnAt.home !== tabStamp()) renderHome(); };

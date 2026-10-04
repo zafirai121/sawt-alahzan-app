@@ -3,7 +3,7 @@
 // <i> at 1em, so the element's font-size and color size and tint it.
 // Filled glyphs (play/pause, a liked heart) add data-fill.
 import {
-  House, Search, Library, User, Plus, ArrowRight, ChevronRight, ChevronLeft, ChevronDown,
+  House, Search, User, Plus, ArrowRight, ChevronRight, ChevronLeft, ChevronDown,
   EllipsisVertical, Heart, CircleArrowDown, CircleCheck, Shuffle, Repeat, Repeat1, Play, Pause,
   SkipBack, SkipForward, Settings, Camera, Music, ListMusic, List, ListPlus, Mic, Mail, SquarePen,
   LogOut, Maximize2, LoaderCircle, Eye, EyeOff, Share, Radio, Clock3, UserPlus, UserCheck, X,
@@ -12,8 +12,16 @@ import {
   ArrowDownUp, LayoutGrid, Pin, CircleMinus, ArrowUp, ArrowDown, Pencil, Copy, CircleX, Album, Blend, Flame, AudioLines, QrCode,
 } from 'lucide';
 
+// Spotify's "Your Library": two books standing and one leaning on them
+// (filled when the tab is open)
+const LibraryBooks = [
+  ['path', { d: 'M4 3v18' }],
+  ['path', { d: 'M9.5 3v18' }],
+  ['path', { d: 'M14 3.6 20.5 7.3V21H14z' }],
+];
+
 const ICONS = {
-  home: House, search: Search, library: Library, user: User, plus: Plus,
+  home: House, search: Search, library: LibraryBooks, user: User, plus: Plus,
   back: ArrowRight, 'chevron-right': ChevronRight, 'chevron-left': ChevronLeft, 'chevron-down': ChevronDown,
   more: EllipsisVertical, heart: Heart, download: CircleArrowDown, 'download-plain': Download,
   check: CircleCheck, shuffle: Shuffle, repeat: Repeat, 'repeat-one': Repeat1, play: Play, pause: Pause,
