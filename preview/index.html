@@ -31,8 +31,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" crossorigin />
-    <script type="module" crossorigin src="/sawt-alahzan-app/preview/assets/index-w8rDd5jA.js"></script>
-    <link rel="stylesheet" crossorigin href="/sawt-alahzan-app/preview/assets/index-DfWR8NTh.css">
+    <script type="module" crossorigin src="/sawt-alahzan-app/preview/assets/index-Bkmk0O2k.js"></script>
+    <link rel="stylesheet" crossorigin href="/sawt-alahzan-app/preview/assets/index-CVMs8psC.css">
   </head>
   <body>
     <svg width="0" height="0" style="position: absolute;" aria-hidden="true">
@@ -88,6 +88,20 @@
             <button class="icon-btn" id="lib-layout" style="font-size: 20px;"><i class="ic" data-icon="list"></i></button>
           </div>
           <div id="library-content"></div>
+        </div>
+
+        <!-- Downloads: what is saved here to hear with no connection -->
+        <div id="downloads-view" class="view" style="display: none;">
+          <header class="page-header">
+            <button class="avatar-btn" onclick="goProfile()" aria-label="حسابي"></button>
+            <h1 class="search-header" style="flex: 1;">التنزيلات</h1>
+            <button class="icon-btn" id="dl-search-btn" aria-label="البحث في التنزيلات"><i class="ic" data-icon="search"></i></button>
+          </header>
+          <div class="search-input-container" id="dl-search" style="display: none; margin-bottom: 18px;">
+            <i class="ic search-icon" data-icon="search" style="color: rgba(255,255,255,0.6);"></i>
+            <input type="search" id="dl-search-input" class="search-input dark" placeholder="ابحث في التنزيلات" autocomplete="off" />
+          </div>
+          <div id="downloads-content"></div>
         </div>
 
         <!-- Playlist / likes / downloads list -->
@@ -374,6 +388,7 @@
         <a href="#" class="nav-item active" onclick="goHome(); return false;"><i class="ic" data-icon="home"></i><span>الرئيسية</span></a>
         <a href="#" class="nav-item" onclick="goSearch(); return false;"><i class="ic" data-icon="search"></i><span>البحث</span></a>
         <a href="#" class="nav-item" onclick="goLibrary(); return false;"><i class="ic" data-icon="library"></i><span>مكتبتك</span></a>
+        <a href="#" class="nav-item" onclick="goDownloads(); return false;"><i class="ic" data-icon="download"></i><span>التنزيلات</span></a>
         <a href="#" class="nav-item" onclick="goProfile(); return false;"><i class="ic" data-icon="user"></i><span>حسابي</span></a>
       </nav>
 
