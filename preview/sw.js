@@ -5,7 +5,7 @@
 //    player asks for, whichever host the file lives on.
 //  - Fonts: cached copy first, so text keeps its typeface offline.
 //  - The database and everything else are left alone, so data is always fresh.
-const APP_CACHE = 'sawt-alahzan-app-v3';
+const APP_CACHE = 'sawt-alahzan-app-v4';
 const AUDIO_CACHE = 'sawt-alahzan-audio-cache-v1';
 // Where audio files and covers are stored: R2 (own domain and r2.dev) and
 // Supabase Storage (older uploads)
@@ -70,9 +70,15 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
 
   if (url.origin === self.location.origin) {
-    // App shell: network first so updates show up, cache as the offline fallback
+    // App shell: network first so updates show up, cache as the offline fallback.
+    // The page and the files without a hash in their name skip the browser's own
+    // short-lived copy (GitHub Pages lets it keep one for 10 minutes), so a new
+    // release shows on the next open; hashed files never change, any copy will do.
+    const fresh = HASHED.test(url.pathname)
+      ? fetch(request)
+      : fetch(url.href, { cache: 'no-cache', credentials: 'same-origin' });
     event.respondWith(
-      fetch(request)
+      fresh
         .then((response) => {
           if (response.ok) event.waitUntil(keepApp(request, response.clone()));
           return response;
