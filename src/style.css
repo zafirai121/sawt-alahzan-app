@@ -134,7 +134,24 @@ header { display: flex; justify-content: space-between; align-items: center; mar
   position: relative; flex-shrink: 0; width: 78vw; max-width: 320px; height: 160px; border-radius: 12px;
   overflow: hidden; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3); scroll-snap-align: center; background: var(--dark-surface);
 }
-.wide-card img { width: 100%; height: 100%; object-fit: cover; }
+.wide-card > img { width: 100%; height: 100%; object-fit: cover; }
+/* The app's mark on a white splash, top corner */
+.splash-badge { position: absolute; top: 8px; right: 8px; width: 54px; height: 54px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.35)); pointer-events: none; }
+/* A fabric sash across the other corner: gold satin, a fine weave, a crease, stitched edges */
+.fabric-ribbon {
+  position: absolute; top: 20px; left: -36px; width: 140px; height: 26px; transform: rotate(-45deg); pointer-events: none;
+  display: flex; align-items: center; justify-content: center; color: #3A2706; font-size: 12px; font-weight: 900; letter-spacing: 0.5px;
+  background:
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.07) 0 1px, transparent 1px 2px),
+    repeating-linear-gradient(0deg, rgba(60,40,0,0.07) 0 1px, transparent 1px 2px),
+    linear-gradient(90deg, transparent 0 46%, rgba(80,55,0,0.16) 49%, transparent 52%),
+    linear-gradient(180deg, #7A5410 0%, #D9B04A 16%, #FFF1B8 38%, #E7C35E 56%, #B5862A 80%, #6B4A0E 100%);
+  box-shadow: 0 3px 7px rgba(0,0,0,0.5);
+}
+.fabric-ribbon::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 3px; bottom: 3px;
+  border-top: 1px dashed rgba(255,246,214,0.8); border-bottom: 1px dashed rgba(255,246,214,0.8);
+}
 .wide-card-text {
   position: absolute; bottom: 0; left: 0; right: 0; padding: 30px 14px 10px;
   background: linear-gradient(0deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%);
