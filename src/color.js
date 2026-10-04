@@ -68,11 +68,23 @@ export function dominantHsl(source) {
 }
 
 // The shades the player uses: the top of the screen, the mini player, the lyrics card
+// (the same ones as the phone app)
 export function playerShades([h, s, l]) {
   const sat = Math.min(s, 0.5);
   return {
     top: hslToHex(h, sat, Math.min(Math.max(l, 0.24), 0.3)),
     mini: hslToHex(h, Math.min(sat, 0.4), 0.19),
     card: hslToHex(h, Math.min(sat + 0.08, 0.55), 0.36),
+    // A radio's page: the cover's hue, light (Spotify's pastel radio colours)
+    pastel: hslToHex(h, Math.min(sat + 0.2, 0.6), 0.62),
+    // The pages' and the full player's colour: bright, as Spotify's, still dark enough for white text
+    vivid: hslToHex(h, Math.min(sat + 0.15, 0.62), 0.42),
   };
+}
+
+// a mixed into b by t (0 → a, 1 → b), both "#rrggbb"
+export function mixHex(a, b, t) {
+  const pa = [1, 3, 5].map((i) => parseInt(a.slice(i, i + 2), 16));
+  const pb = [1, 3, 5].map((i) => parseInt(b.slice(i, i + 2), 16));
+  return `#${pa.map((v, i) => Math.round(v + (pb[i] - v) * t).toString(16).padStart(2, '0')).join('')}`;
 }

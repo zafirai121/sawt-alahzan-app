@@ -1,6 +1,6 @@
 import { supabase, isPasswordRecovery } from './supabaseClient.js';
 import { icon, setIcon, startIcons } from './icons.js';
-import { dominantHsl, playerShades } from './color.js';
+import { dominantHsl, playerShades, mixHex } from './color.js';
 
 // ═══ Constants ═══════════════════════════════════════════════════════════════
 const SITE_URL = 'https://web.soutalahzan.com';
@@ -323,7 +323,22 @@ function buildReciters(rows) {
 // Normalised "title reciter", worked out once per track rather than per keystroke
 const searchKey = (t) => (t.searchKey ??= normalize(`${t.title} ${t.reciterName}`));
 
-const tracksOf = (name) => allTracks.filter((t) => t.reciterName === name);
+// A reciter's tracks (newest first), from an index built once per library load
+let byReciter = null;
+let byReciterOf = null;
+let byReciterSize = 0;
+function tracksOf(name) {
+  if (byReciterOf !== allTracks || byReciterSize !== allTracks.length) {
+    byReciter = new Map();
+    for (const t of allTracks) {
+      if (!byReciter.has(t.reciterName)) byReciter.set(t.reciterName, []);
+      byReciter.get(t.reciterName).push(t);
+    }
+    byReciterOf = allTracks;
+    byReciterSize = allTracks.length;
+  }
+  return byReciter.get(name) || [];
+}
 const reciterOf = (track) => reciterByName.get(track.reciterName);
 const categoryOf = (track) => CATEGORIES.find((c) => c.values.includes(track.category));
 
@@ -444,8 +459,8 @@ async function savePlaylist(pl) {
   if (error) { console.warn('Could not save playlist:', error); toast('تعذر حفظ القائمة في حسابك'); }
 }
 
-async function createPlaylist(name) {
-  const pl = { id: `pl_${Date.now()}`, name, tracks: [] };
+async function createPlaylist(name, tracks = []) {
+  const pl = { id: `pl_${Date.now()}`, name, tracks: [...tracks] };
   lib.playlists.push(pl);
   await savePlaylist(pl);
   return pl;
@@ -462,8 +477,11 @@ async function deletePlaylist(pl) {
   return true;
 }
 
+let followedNow = null; // { name, at }: the button drawn for it right after pops too
+
 async function toggleFollow(reciter) {
   const following = !lib.follows.has(reciter.name);
+  followedNow = following ? { name: reciter.name, at: Date.now() } : null;
   if (following) lib.follows.add(reciter.name); else lib.follows.delete(reciter.name);
   lib.saveLocal();
   libraryChanged();
@@ -527,6 +545,26 @@ async function toggleDownload(track) {
   }
   if (!('caches' in window)) { toast('المتصفح لا يدعم التنزيل'); return false; }
   toast('جارٍ التنزيل...');
+  const ok = await saveOffline(track);
+  toast(ok ? 'تم التنزيل، يمكنك الاستماع بدون إنترنت' : 'تعذر تنزيل المقطع');
+  return ok;
+}
+
+// A whole list (a mix, a radio, a playlist), one track after another
+async function downloadAll(list) {
+  if (!('caches' in window)) { toast('المتصفح لا يدعم التنزيل'); return; }
+  const missing = list.filter((t) => !lib.downloads.has(t.id) && t.audioUrl);
+  if (!missing.length) { toast('كل المقاطع منزّلة'); return; }
+  toast(`جارٍ تنزيل ${formatCount(missing.length)} مقطع...`);
+  let done = 0;
+  for (const t of missing) if (await saveOffline(t, { quiet: true })) done++;
+  libraryChanged();
+  toast(done ? `تم تنزيل ${formatCount(done)} مقطع` : 'تعذر التنزيل، تحقق من اتصالك');
+}
+
+// The file, its covers and its details into the offline cache; `quiet` leaves
+// redrawing the screens to the caller (a whole list at once)
+async function saveOffline(track, { quiet = false } = {}) {
   try {
     const cache = await caches.open(AUDIO_CACHE);
     const res = await fetch(track.audioUrl, { mode: 'cors' });
@@ -540,14 +578,12 @@ async function toggleDownload(track) {
     lib.downloads.add(track.id);
     rememberDownload(track);
     lib.saveLocal();
-    libraryChanged();
+    if (!quiet) libraryChanged();
     // Ask the browser not to clear downloads when the device runs low on space
     navigator.storage?.persist?.()?.catch(() => {});
-    toast('تم التنزيل، يمكنك الاستماع بدون إنترنت');
     return true;
   } catch (e) {
     console.warn('Download failed:', e);
-    toast('تعذر تنزيل المقطع');
     return false;
   }
 }
@@ -557,6 +593,278 @@ function addToHistory(track) {
   lib.saveLocal();
 }
 const historyTracks = () => lib.history.map((h) => trackById.get(h.id)).filter(Boolean);
+
+// ═══ Recently played, taste, daily mixes, radios ═════════════════════════════
+// As in the phone app. "Recently played" (Spotify's) holds not only tracks but
+// what they were played from (a reciter, a playlist, the likes, a radio, a
+// daily mix...); each opens its own page instead of playing at once.
+let recentPlayed = store.get('sawt_recent_played', []); // [{ kind, id }] newest first
+let queueSource = null;   // what the queue was played from
+let playingFrom = '';     // its name, under "now playing"
+const sameSource = (a, b) => !!a && !!b && a.kind === b.kind && String(a.id) === String(b.id);
+
+function rememberPlayedFrom(source) {
+  const id = String(source.id ?? '');
+  queueSource = { kind: source.kind, id };
+  recentPlayed = [queueSource, ...recentPlayed.filter((r) => !sameSource(r, queueSource))].slice(0, 40);
+  store.set('sawt_recent_played', recentPlayed);
+}
+
+function topTrackOf(name) {
+  let best = null;
+  for (const t of tracksOf(name)) if (!best || t.listens > best.listens) best = t;
+  return best;
+}
+const reciterPhoto = (name) => reciterByName.get(name)?.image || topTrackOf(name)?.coverImage || '';
+
+// A thing they played from, ready to show: its name, what it is, its picture
+// (see artHtml) and the page it opens
+function recentEntry(r) {
+  switch (r.kind) {
+    case 'track': {
+      const t = trackById.get(r.id);
+      return t && { key: `t:${t.id}`, title: t.title, subtitle: `مقطع • ${t.reciterName}`, art: { cover: t.coverImage }, open: () => openTrackDetail(t), more: () => openTrackOptions(t) };
+    }
+    case 'reciter':
+      return tracksOf(r.id).length ? { key: `r:${r.id}`, title: r.id, subtitle: 'رادود', art: { cover: reciterPhoto(r.id), round: true }, open: () => openArtistDetail(r.id), more: () => openReciterOptions(r.id) } : null;
+    case 'playlist': {
+      const pl = lib.playlists.find((p) => p.id === r.id);
+      return pl && { key: `p:${pl.id}`, title: pl.name, subtitle: `قائمة تشغيل • ${formatCount(pl.tracks.length)} مقطع`, art: { covers: playlistTracks(pl).map((t) => t.coverImage) }, open: () => openPlaylistPage(pl) };
+    }
+    case 'likes':
+      return { key: 'likes', title: 'المقاطع المفضلة', subtitle: `قائمة تشغيل • ${formatCount(likesCount())} مقطع`, art: { likes: true }, open: () => openLikesPage() };
+    case 'downloads':
+      return { key: 'downloads', title: 'التنزيلات', subtitle: `${formatCount(lib.downloads.size)} مقطع على جهازك`, art: { downloads: true }, open: () => openDownloadsPage() };
+    case 'radio': {
+      const t = trackById.get(r.id);
+      return t && { key: `radio:${t.id}`, title: `${t.title} الراديو`, subtitle: `راديو • ${t.reciterName}`, art: { cover: t.coverImage, radio: true }, open: () => openRadioPage(t) };
+    }
+    case 'mix': {
+      const m = dailyMixes().find((x) => String(x.number) === r.id);
+      return m && { key: `mix:${m.number}`, title: mixTitle(m), subtitle: mixReciters(m), art: { mix: m }, open: () => openMixPage(m.number) };
+    }
+    case 'category': {
+      const c = CATEGORIES.find((x) => x.id === r.id);
+      return c && { key: `c:${c.id}`, title: c.title, subtitle: 'تصنيف', art: { category: c }, open: () => openCategoryDetail(c) };
+    }
+    default: return null;
+  }
+}
+
+// Newest first, only what still exists (a deleted playlist drops out); topped
+// up with the tracks they played while the list is short
+function recentEntries(n = 20) {
+  const items = recentPlayed.length >= 8 ? recentPlayed : [...recentPlayed, ...lib.history.map((h) => ({ kind: 'track', id: h.id }))];
+  const out = [];
+  const seen = new Set();
+  for (const r of items) {
+    const e = recentEntry(r);
+    if (!e || seen.has(e.key)) continue;
+    seen.add(e.key);
+    out.push(e);
+    if (out.length >= n) break;
+  }
+  return out;
+}
+
+// The brand's S, drawn from the same outline as the phone app's logo
+const S_PATH = 'M93.3,252.99 L82.96,252.8 L77.64,252.38 L65.03,250.75 L55.48,249.31 L44.16,247.12 L38.05,245.48 L34.51,244.27 L18.43,239.6 L2.22,233.56 L0.96,232.83 L0.23,231.84 L0,230.52 L0.21,228.9 L3.62,217.07 L6.68,208.63 L11.05,193.75 L14.13,185.08 L18.19,171.14 L20.92,163.63 L23.21,156.17 L23.69,155.15 L24.39,154.42 L25.48,154.05 L26.85,154.26 L46.71,161.82 L51.9,163.38 L61.25,165.53 L72.88,167.4 L87.17,168.29 L89.98,168.17 L96.03,167.47 L98.33,166.78 L100.55,165.5 L101.64,164.1 L102.14,162.16 L102.13,160.86 L101.86,159.42 L101.31,157.97 L100.56,156.72 L99.61,155.67 L98.11,154.43 L94.56,152.22 L91.71,151.07 L88.8,150.23 L71.92,147.36 L66.6,145.93 L56.41,142.87 L49.57,140.47 L39.26,135.27 L34.17,132.11 L27.4,126.63 L24.77,124.01 L22.46,121.32 L18.29,115.74 L15.82,110.97 L12.57,102.21 L11.25,97.02 L10.83,93.95 L10.56,89.48 L10.54,83.24 L10.7,78.89 L11.11,74.56 L12.79,66.24 L14.7,60.15 L16.48,55.43 L17.8,52.5 L19.33,49.78 L23.41,43.37 L25.94,39.89 L28.35,37.06 L33.08,32.04 L39.58,26.53 L47.57,21.02 L52.15,18.36 L57.8,15.5 L66.94,11.64 L71.15,10.1 L76.89,8.34 L83.35,6.55 L91.04,4.74 L101.42,2.87 L118.53,0.97 L127.22,0.4 L136.8,0 L160.31,0.02 L179.31,0.96 L192.75,2.04 L195.93,2.62 L196.93,3.36 L197.37,4.59 L197.36,6.09 L196.86,9.81 L195.38,16.08 L190.89,43.84 L186.98,64.43 L184.54,79.74 L184.12,81.32 L183.46,82.41 L182.19,83.08 L180.53,83.18 L176.17,82.6 L161.6,81.18 L143.65,80.1 L129.17,80.07 L122.53,80.48 L118.98,80.93 L116.29,81.49 L113.24,82.44 L111.4,83.35 L109.71,84.66 L108.63,86.08 L108.07,87.73 L107.98,89.63 L108.2,90.84 L108.68,92.1 L109.45,93.33 L110.41,94.37 L113.19,96.34 L117.26,98.27 L123.1,99.93 L138.45,102.33 L147.34,104.2 L154.31,105.97 L166.03,109.5 L175.41,113.12 L182.84,116.69 L189.94,120.85 L195.14,124.64 L200.62,129.42 L204.17,133.36 L206.15,135.88 L210.52,143.26 L212.75,148.28 L214.01,153.02 L214.55,155.73 L215.08,160.71 L215.4,167.35 L215.38,173.14 L214.94,179.39 L214.31,184.51 L212.98,190.68 L212.38,192.84 L210.85,196.8 L207.13,204.83 L205.21,208.16 L199.98,215.19 L196.64,218.85 L190.37,224.57 L183.8,229.25 L177.44,233.14 L167.43,238.13 L159.45,241.4 L150.58,244.28 L147.31,245.51 L141.68,247.13 L133.58,248.78 L121.26,250.71 L107.16,252.35 L101.33,252.76 L93.3,252.99 Z';
+document.body.insertAdjacentHTML('afterbegin', `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="logo-s" viewBox="0 0 215.4 253"><path fill="#F1592A" d="${S_PATH}"/></symbol></svg>`);
+const sLogo = (cls = 's-disc') => `<span class="${cls}"><svg viewBox="0 0 215.4 253" aria-hidden="true"><use href="#logo-s"/></svg></span>`;
+
+// A picture for what they played from: a cover (round for a reciter, a label
+// on a radio), four covers for a playlist, the likes' and the downloads' own,
+// a mix's, a category's colour. `small`: a thumbnail (no labels).
+function artHtml(art, { small = false, width = 320 } = {}) {
+  const img = (url, w = width) => `<img src="${esc(thumb(url, w))}" alt="" loading="lazy" />`;
+  if (art.cover !== undefined) {
+    return `<div class="art${art.round ? ' round' : ''}">${img(art.cover)}${art.radio && !small ? '<span class="art-badge">راديو</span>' : ''}</div>`;
+  }
+  if (art.covers) {
+    const distinct = [...new Set(art.covers.filter(Boolean))];
+    return distinct.length < 4
+      ? `<div class="art">${img(distinct[0] || '')}</div>`
+      : `<div class="art mosaic">${distinct.slice(0, 4).map((c) => img(c, width / 2)).join('')}</div>`;
+  }
+  if (art.likes) return `<div class="art art-likes">${icon('heart', { fill: true })}</div>`;
+  if (art.downloads) return `<div class="art art-downloads">${icon('download-plain')}</div>`;
+  if (art.mix) return mixCoverHtml(art.mix, width);
+  if (art.category) return `<div class="art art-category" style="background:${art.category.color}">${small ? '' : `<span>${esc(art.category.title)}</span>`}</div>`;
+  return '<div class="art"></div>';
+}
+
+// "Recently played" as the "most listened" section: short rows, five to a
+// column, the columns scrolling sideways; a row opens its page, ⋮ gives a
+// track's or a reciter's options
+function recentColumns(entries) {
+  const row = document.createElement('div');
+  row.className = 'horizontal-scroller snap';
+  for (let c = 0; c * 5 < entries.length && c < 5; c++) {
+    const col = document.createElement('div');
+    col.className = 'mini-col';
+    entries.slice(c * 5, c * 5 + 5).forEach((e) => {
+      const item = document.createElement('div');
+      item.className = 'mini-row';
+      item.innerHTML = `
+        ${artHtml(e.art, { small: true, width: 48 })}
+        <div class="mini-row-text"><div class="ellipsis">${esc(e.title)}</div><div class="ellipsis muted">${esc(e.subtitle)}</div></div>
+        ${e.more ? `<button class="icon-btn row-more" aria-label="خيارات">${icon('more')}</button>` : '<span class="row-more-space"></span>'}`;
+      clickable(item, e.open);
+      if (e.more) item.querySelector('.row-more').onclick = (ev) => { ev.stopPropagation(); e.more(); };
+      col.appendChild(item);
+    });
+    row.appendChild(col);
+  }
+  return row;
+}
+
+// ─── Taste: which reciters they love (what they play, more recent counts
+// more; what they like; whom they follow) ───
+function taste() {
+  const w = new Map();
+  const add = (name, v) => { if (name && name !== UNKNOWN_RECITER) w.set(name, (w.get(name) || 0) + v); };
+  lib.history.forEach((h, i) => add(trackById.get(h.id)?.reciterName, 1 / (1 + i / 20)));
+  lib.likes.forEach((id) => add(trackById.get(id)?.reciterName, 1.5));
+  lib.follows.forEach((name) => add(name, 3));
+  return w;
+}
+const topKeys = (map, n) => [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, n).map(([k]) => k);
+
+function interleave(a, b, every) {
+  const out = [];
+  let i = 0;
+  let j = 0;
+  while (i < a.length || j < b.length) {
+    for (let k = 0; k < every && i < a.length; k++) out.push(a[i++]);
+    if (j < b.length) out.push(b[j++]);
+  }
+  return out;
+}
+const uniqueById = (list) => { const seen = new Set(); return list.filter((t) => !seen.has(t.id) && seen.add(t.id)); };
+
+// "Made for you" before there is enough for a mix: unheard work by the reciters they love
+function madeForYou(n = 15) {
+  const w = taste();
+  if (!w.size) return [];
+  const heard = new Set(lib.history.map((h) => h.id));
+  const picks = topKeys(w, 5).flatMap((name) => tracksOf(name).filter((t) => !heard.has(t.id)).sort((a, b) => b.listens - a.listens).slice(0, 12));
+  return seededShuffle(picks, todaySeed()).slice(0, n);
+}
+
+// ─── Daily mixes (Spotify's "made for you") ───
+// One around each of the reciters they love most, with the reciters they play
+// alongside them (or ones like them to discover); their favourites and work
+// they haven't heard yet alternate. Made once a day, so a mix doesn't change
+// while it plays; a new set comes the next day.
+const MIX_COLORS = ['#22D3EE', '#F5E142', '#FF7EB6', '#8BE36B', '#FFA552', '#B79CFF'];
+const mixColor = (n) => MIX_COLORS[(n - 1) % MIX_COLORS.length];
+const mixTitle = (m) => `الميكس اليومي ${m.number}`;
+// "علي بوحجو وسيد سلام الحسيني وحسين فيصل والمزيد"
+const mixReciters = (m) => m.reciters.slice(0, 3).join(' و') + (m.reciters.length > 3 ? ' والمزيد' : '');
+const mixTracks = (m) => m.tracks.map((id) => trackById.get(id)).filter(Boolean);
+
+// The mix's cover: the lead reciter's photo, the app's S in a corner, the coloured band with its name
+function mixCoverHtml(m, width = 320) {
+  return `<div class="art mix-cover"><img src="${esc(thumb(reciterPhoto(m.lead), width))}" alt="" loading="lazy" />
+    ${sLogo('mix-logo')}<span class="mix-band" style="background:${mixColor(m.number)}">${esc(mixTitle(m))}</span></div>`;
+}
+
+function buildMixes(day, max = 6, size = 50) {
+  const w = taste();
+  if (!w.size) return [];
+  const heard = new Set(lib.history.map((h) => h.id));
+  // Who they play together: reciters heard within a few tracks of each other
+  const names = lib.history.map((h) => trackById.get(h.id)?.reciterName).filter((n) => n && n !== UNKNOWN_RECITER);
+  const near = new Map();
+  const bump = (a, b) => { if (!near.has(a)) near.set(a, new Map()); near.get(a).set(b, (near.get(a).get(b) || 0) + 1); };
+  for (let i = 0; i < names.length; i++) {
+    for (let j = i + 1; j <= Math.min(i + 4, names.length - 1); j++) {
+      if (names[i] !== names[j]) { bump(names[i], names[j]); bump(names[j], names[i]); }
+    }
+  }
+  const leads = topKeys(w, max * 2).filter((name) => tracksOf(name).length >= 5).slice(0, max);
+  const used = new Set();
+  const mixes = [];
+  leads.forEach((lead, i) => {
+    // Up to three with them: the reciters they play with this one, then ones like them
+    const score = (n) => (near.get(lead)?.get(n) || 0) * 2 + (w.get(n) || 0);
+    const together = [...w.keys()].filter((n) => n !== lead && !leads.includes(n) && tracksOf(n).length).sort((a, b) => score(b) - score(a)).slice(0, 3);
+    const top = topTrackOf(lead);
+    const alike = top ? seededShuffle(
+      [...new Set(similarTo(top, 200, { others: true }).map((t) => t.reciterName))].filter((n) => n !== UNKNOWN_RECITER && !leads.includes(n) && !together.includes(n)),
+      day + i,
+    ) : [];
+    const members = [lead, ...[...together, ...alike].slice(0, 3)];
+    // Each one's favourites and unheard work, alternating, in a new order each day
+    const pools = members.map((name, k) => {
+      const all = tracksOf(name).filter((t) => !used.has(t.id));
+      const known = all.filter((t) => lib.likes.has(t.id) || heard.has(t.id));
+      const fresh = all.filter((t) => !lib.likes.has(t.id) && !heard.has(t.id)).sort((a, b) => b.listens - a.listens).slice(0, 30);
+      return interleave(seededShuffle(known, day + i * 10 + k), seededShuffle(fresh, day * 7 + i * 10 + k), 1);
+    });
+    // Two of the lead's, then one of each of the others, and again
+    const out = [];
+    while (out.length < size && pools.some((p) => p.length)) {
+      pools.forEach((pool, k) => {
+        for (let r = 0; r < (k === 0 ? 2 : 1); r++) if (out.length < size && pool.length) out.push(pool.shift());
+      });
+    }
+    if (out.length >= 8) {
+      out.forEach((t) => used.add(t.id));
+      mixes.push({ number: mixes.length + 1, lead, reciters: members.filter((m) => out.some((t) => t.reciterName === m)), tracks: out.map((t) => t.id) });
+    }
+  });
+  return mixes;
+}
+
+let savedMixes = store.get('sawt_mixes', null); // { day, mixes }: today's, once made from the whole library
+let mixMemo = null;
+function dailyMixes() {
+  const day = todaySeed();
+  if (savedMixes?.day === day && savedMixes.mixes?.length) return savedMixes.mixes;
+  if (!allTracks.length) return [];
+  const key = `${day}|${dataVersion}|${libVersion}|${lib.history.length}`;
+  if (mixMemo?.key !== key) {
+    const mixes = buildMixes(day);
+    if (mixes.length && fullyLoaded) {
+      savedMixes = { day, mixes };
+      store.set('sawt_mixes', savedMixes);
+    }
+    mixMemo = { key, mixes };
+  }
+  return mixMemo.mixes;
+}
+
+// ─── Song radio: the track, then its reciter's best work mixed with similar
+// tracks by other reciters (the ones they like first, three each at most) ───
+function radioOf(seed, n = 50) {
+  const own = seededShuffle(tracksOf(seed.reciterName).filter((t) => t.id !== seed.id).sort((a, b) => b.listens - a.listens).slice(0, 25), Number(seed.id) || 1);
+  const liked = taste();
+  const each = new Map();
+  const others = similarTo(seed, 120, { others: true })
+    .filter((t) => t.reciterName !== UNKNOWN_RECITER && (each.set(t.reciterName, (each.get(t.reciterName) || 0) + 1).get(t.reciterName) <= 3))
+    .sort((a, b) => (liked.get(b.reciterName) || 0) - (liked.get(a.reciterName) || 0));
+  return uniqueById([seed, ...interleave(own, others, 1)]).slice(0, n);
+}
+
+// The reciters of a list, the most present first
+function recitersOfList(list) {
+  const count = new Map();
+  list.forEach((t) => { if (t.reciterName !== UNKNOWN_RECITER) count.set(t.reciterName, (count.get(t.reciterName) || 0) + 1); });
+  return topKeys(count, count.size);
+}
+// "حسين خميس، محمد الخياط، يوسف العاملي والمزيد"
+const withMore = (names, shown = 3) => names.slice(0, shown).join('، ') + (names.length > shown ? ' والمزيد' : '');
+
+// "37 دقيقة", "1 س و 12 د": a list's length, as Spotify shows it
+function totalDuration(list) {
+  const secs = list.reduce((sum, t) => sum + (t.duration ? t.duration.split(':').reduce((a, p) => a * 60 + Number(p), 0) : 0), 0);
+  const min = Math.floor(secs / 60);
+  return min >= 60 ? `${Math.floor(min / 60)} س و ${min % 60} د` : `${min} دقيقة`;
+}
+// "46.1 ألف", "1.2 مليون": a big count, short (Spotify's monthly listeners)
+const oneDecimal = (x) => x.toFixed(1).replace(/\.0$/, '');
+const compactCount = (n) => (n >= 1e6 ? `${oneDecimal(n / 1e6)} مليون` : n >= 1e4 ? `${oneDecimal(n / 1e3)} ألف` : formatCount(n));
 
 // ═══ Navigation ══════════════════════════════════════════════════════════════
 // Tabs are the four bottom-bar screens. Pages (reciter, category, track, list)
@@ -577,20 +885,64 @@ let libVersion = 0;      // bumped when likes, playlists, downloads or follows c
 let tabScroll = 0;       // the tab's scroll when a page was opened over it
 const viewShows = {};    // view id → the page entry whose content it holds
 const tabDrawnAt = {};   // tab → what it was drawn from (see tabStamp)
-const tabStamp = () => `${dataVersion}|${libVersion}|${lib.history[0]?.id || ''}`;
+const tabStamp = () => `${dataVersion}|${libVersion}|${lib.history[0]?.id || ''}|${recentPlayed[0]?.kind}:${recentPlayed[0]?.id}`;
 const pageStamp = (e) => `${dataVersion}|${e.library ? libVersion : ''}`;
 const mainEl = () => document.querySelector('.main-container');
 const topPage = () => [...navStack].reverse().find((e) => e.type === 'page');
 
+// Pages with a picture or a colour of their own across the top don't take the gold glow
+const OWN_TOP = new Set(['category-view', 'track-detail-view', 'page-view']);
+
 function showView(viewId, scrollTop = 0) {
   document.querySelectorAll('.view').forEach((v) => { v.style.display = v.id === viewId ? 'block' : 'none'; });
+  document.querySelector('.top-gradient').style.display = OWN_TOP.has(viewId) ? 'none' : '';
   mainEl().scrollTo(0, scrollTop);
+  startPageScroll(viewId);
+}
+
+// ─── Pages drawn from code (reciter, radio, daily mix) ───
+// Each says what happens as it scrolls (its photo moving, its bar coming
+// down); the bar is one for all of them, fixed at the top of the screen
+const viewScroll = {};     // view id → the page's scroll handler
+let onPageScroll = null;
+let scrollFrame = 0;
+function startPageScroll(viewId) {
+  onPageScroll = viewScroll[viewId] || null;
+  $('page-bar').classList.remove('show');
+  onPageScroll?.(mainEl().scrollTop, true);
+}
+mainEl().addEventListener('scroll', () => {
+  if (!onPageScroll || scrollFrame) return;
+  scrollFrame = requestAnimationFrame(() => { scrollFrame = 0; onPageScroll?.(mainEl().scrollTop, false); });
+}, { passive: true });
+
+// The bar: `title` on `color()`, shown once the page has scrolled past `at()`;
+// `play`: a play button for the page's list at its end
+function pageScroller({ title, color, at, play = null, extra = null }) {
+  const bar = $('page-bar');
+  const handler = (top, init) => {
+    if (init) {
+      bar.querySelector('.page-bar-title').textContent = title;
+      bar.style.background = color();
+      bar.querySelector('.page-bar-end').replaceChildren(...(play ? [play()] : []));
+    }
+    const show = top > at();
+    if (show !== bar.classList.contains('show')) {
+      bar.classList.toggle('show', show);
+      bar.setAttribute('aria-hidden', String(!show));
+    }
+    extra?.(top);
+  };
+  handler.recolor = () => { if (onPageScroll === handler) bar.style.background = color(); };
+  return handler;
 }
 
 function drawPage(entry) {
   entry.render();
   entry.drawn = pageStamp(entry);
   viewShows[entry.viewId] = entry;
+  // Redrawn while on screen (a like, a follow): its scroll handler is a new one
+  if ($(entry.viewId).style.display === 'block') startPageScroll(entry.viewId);
 }
 
 // `library`: the page shows the listener's own things (likes, a playlist, a
@@ -693,7 +1045,10 @@ function libraryChanged() {
 // ═══ Shared list rendering ═══════════════════════════════════════════════════
 // Track rows: tap plays the list from that row; ⋮ opens the options sheet.
 // Long lists render in chunks as you scroll.
-function renderTrackList(container, list, { numbered = false, emptyText = 'لا توجد مقاطع هنا بعد', playlist = null } = {}) {
+// `source`: what the list is (a reciter, a playlist...) for "recently played";
+// `subtitle`: the line under the title; `likedMark`: a gold check on liked
+// tracks; `playList`: the whole list a row plays from, when `list` is its start
+function renderTrackList(container, list, { numbered = false, emptyText = 'لا توجد مقاطع هنا بعد', playlist = null, source = null, subtitle = null, likedMark = false, playList = null } = {}) {
   container._io?.disconnect(); // the previous drawing's "load more" watcher
   container.innerHTML = '';
   if (!list.length) {
@@ -708,7 +1063,7 @@ function renderTrackList(container, list, { numbered = false, emptyText = 'لا 
       const el = document.createElement('div');
       el.className = 'track-item';
       el.dataset.trackId = track.id;
-      const meta = [esc(track.reciterName), track.duration && `<span dir="ltr">${track.duration}</span>`].filter(Boolean).join(' • ');
+      const meta = subtitle ? esc(subtitle(track)) : [esc(track.reciterName), track.duration && `<span dir="ltr">${track.duration}</span>`].filter(Boolean).join(' • ');
       el.innerHTML = `
         ${numbered ? `<div class="track-number">${index + 1}</div>` : ''}
         <img src="${esc(thumb(track.coverImage, 50))}" class="track-img" alt="" loading="lazy" />
@@ -716,8 +1071,9 @@ function renderTrackList(container, list, { numbered = false, emptyText = 'لا 
           <div class="track-title">${esc(track.title)}</div>
           <div class="track-artist">${meta}</div>
         </div>
+        ${likedMark && lib.likes.has(track.id) ? `<span class="liked-mark" aria-label="في المفضلة">${icon('tick')}</span>` : ''}
         <button class="icon-btn row-more" aria-label="خيارات">${icon('more')}</button>`;
-      clickable(el, () => playFromList(list, index));
+      clickable(el, () => playFromList(playList || list, index, { source }));
       el.querySelector('.row-more').onclick = (e) => { e.stopPropagation(); openTrackOptions(track, { playlist }); };
       frag.appendChild(el);
     });
@@ -804,16 +1160,20 @@ function renderHome() {
 
   const recent = historyTracks();
   const liked = likedTracks();
+  // What they played from (a reciter, a playlist, the likes, a radio, a track...), newest first
+  const recents = recentEntries(20);
 
-  // 1. Quick grid: what you played last, otherwise the newest
+  // 1. Quick grid (Spotify's, six cards): what they played from last, each
+  // opening its page; otherwise the newest
+  const quick = recents.length >= 4 ? recents.slice(0, 6)
+    : allTracks.slice(0, 6).map((t) => ({ title: t.title, art: { cover: t.coverImage }, open: () => openTrackDetail(t) }));
   const grid = document.createElement('div');
   grid.className = 'recent-grid section animate-in';
-  (recent.length >= 4 ? recent : allTracks).slice(0, 6).forEach((t) => {
+  quick.forEach((e) => {
     const card = document.createElement('div');
     card.className = 'recent-card';
-    card.innerHTML = `<img src="${esc(thumb(t.coverImage, 70))}" alt="" class="recent-img" /><div class="recent-title">${esc(t.title)}</div>`;
-    clickable(card, () => openTrackDetail(t));
-    grid.appendChild(card);
+    card.innerHTML = `${artHtml(e.art, { small: true, width: 56 })}<div class="recent-title">${esc(e.title)}</div>`;
+    grid.appendChild(clickable(card, e.open));
   });
   container.appendChild(grid);
 
@@ -832,17 +1192,21 @@ function renderHome() {
   const topReciters = reciters.filter((r) => r.count > 0).sort((a, b) => (b.hasPhoto - a.hasPhoto) || (b.count - a.count)).slice(0, 12);
   container.appendChild(section('أشهر الرواديد', scroller(topReciters, reciterCard), () => openAllReciters()));
 
-  // 4. The listener's own history
-  if (recent.length) {
-    container.appendChild(section('تم الاستماع إليه مؤخراً', columnsScroller(recent.slice(0, 25)), () => openListPage('تم الاستماع إليه مؤخراً', recent)));
+  // 4. Recently played (Spotify's): tracks, reciters, playlists, the likes,
+  // radios, mixes; each opens its own page instead of playing at once
+  if (recents.length) {
+    container.appendChild(section('تم الاستماع إليه مؤخراً', recentColumns(recents), () => openListPage('تم الاستماع إليه مؤخراً', recent)));
   }
 
-  // 5. Made for you: more from the reciters you listen to most
-  if (recent.length) {
-    const favReciters = [...new Set(recent.map((t) => t.reciterName))].slice(0, 3);
-    const played = new Set(recent.map((t) => t.id));
-    const picks = seededShuffle(allTracks.filter((t) => favReciters.includes(t.reciterName) && !played.has(t.id)), todaySeed()).slice(0, 15);
-    if (picks.length >= 3) container.appendChild(section(`مصمم من أجل ${displayName() || 'الضيف'}`, scroller(picks, (t) => squareCard(t))));
+  // 5. Made for you: Spotify's daily mixes, from their taste (what they play,
+  // like and follow); before there is enough for a mix, tracks picked for them
+  if (recent.length || lib.likes.size || lib.follows.size) {
+    const mixes = dailyMixes();
+    if (mixes.length) container.appendChild(section('مصممة من أجلك', scroller(mixes, mixCard)));
+    else {
+      const picks = madeForYou(15);
+      if (picks.length >= 3) container.appendChild(section('مصممة من أجلك', scroller(picks, (t) => squareCard(t))));
+    }
   }
 
   // 6. Your likes
@@ -859,8 +1223,8 @@ function renderHome() {
   const daily = seededShuffle(popularTracks.length > 15 ? popularTracks : allTracks.slice(0, 200), todaySeed()).slice(0, 15);
   container.appendChild(section('توصياتنا لك اليوم', scroller(daily, (t) => squareCard(t))));
 
-  // 9. More from the most listened reciter (or the one you play most)
-  const focus = reciterByName.get(recent[0]?.reciterName) || topReciters[0];
+  // 9. More from their favourite reciter (from their taste), or the most popular one
+  const focus = reciterByName.get(topKeys(taste(), 1)[0]) || topReciters[0];
   if (focus) {
     const more = [...tracksOf(focus.name)].sort((a, b) => b.listens - a.listens).slice(0, 15);
     if (more.length >= 3) container.appendChild(section(`المزيد من ${focus.name}`, scroller(more, (t) => squareCard(t)), () => openArtistDetail(focus.name)));
@@ -869,6 +1233,14 @@ function renderHome() {
   // 10. Duas
   const duas = allTracks.filter((t) => CATEGORIES[1].values.includes(t.category)).slice(0, 15);
   if (duas.length >= 3) container.appendChild(section('أدعية ومناجاة', scroller(duas, (t) => squareCard(t)), () => openCategoryDetail(CATEGORIES[1])));
+}
+
+// A daily mix on the home screen: its cover, then who is in it
+function mixCard(m) {
+  const card = document.createElement('div');
+  card.className = 'square-card';
+  card.innerHTML = `${mixCoverHtml(m, 160)}<div class="square-subtitle mix-names">${esc(mixReciters(m))}</div>`;
+  return clickable(card, () => openMixPage(m.number));
 }
 
 // Several short rows per column, scrolling sideways
@@ -895,28 +1267,29 @@ function columnsScroller(list) {
 }
 
 // ═══ Pages ═══════════════════════════════════════════════════════════════════
-let playlistPage = null; // { title, list, playlist? }
+let playlistPage = null; // { title, list, playlist?, source? }
 
-function openListPage(title, list, playlist = null, library = false) {
-  openPage('playlist-detail-view', () => renderListPage(title, typeof list === 'function' ? list() : list, playlist), { library });
+// `source`: what the list is, for "recently played" (the likes, a playlist, a reciter...)
+function openListPage(title, list, playlist = null, library = false, source = null) {
+  openPage('playlist-detail-view', () => renderListPage(title, typeof list === 'function' ? list() : list, playlist, source), { library });
 }
 const likedTracks = () => [...lib.likes].map((id) => trackById.get(id)).filter(Boolean).reverse();
 // Once the whole library is in, likes of deleted tracks no longer count
 const likesCount = () => (fullyLoaded ? likedTracks().length : lib.likes.size);
 const playlistTracks = (pl) => pl.tracks.map((id) => trackById.get(id)).filter(Boolean);
-const openLikesPage = () => openListPage('المقاطع المفضلة', likedTracks, null, true);
-const openDownloadsPage = () => openListPage('التنزيلات', downloadedTracks, null, true);
-const openPlaylistPage = (pl) => openListPage(pl.name, () => playlistTracks(pl), pl, true);
+const openLikesPage = () => openListPage('المقاطع المفضلة', likedTracks, null, true, { kind: 'likes', id: '' });
+const openDownloadsPage = () => openListPage('التنزيلات', downloadedTracks, null, true, { kind: 'downloads', id: '' });
+const openPlaylistPage = (pl) => openListPage(pl.name, () => playlistTracks(pl), pl, true, { kind: 'playlist', id: pl.id });
 
-function renderListPage(title, list, playlist) {
-  playlistPage = { title, list, playlist };
+function renderListPage(title, list, playlist, source = null) {
+  playlistPage = { title, list, playlist, source };
   $('playlist-tracks').className = 'track-list';
   $('playlist-search').parentElement.style.display = 'block';
   $('playlist-title').textContent = title;
   $('playlist-subtitle').textContent = `${formatCount(list.length)} مقطع`;
   $('playlist-search').value = '';
-  renderTrackList($('playlist-tracks'), list, { numbered: true, playlist });
-  $('playlist-play-all').onclick = () => playFromList(list, 0, { shuffleStart: isShuffle });
+  renderTrackList($('playlist-tracks'), list, { numbered: true, playlist, source });
+  $('playlist-play-all').onclick = () => playFromList(list, 0, { shuffleStart: isShuffle, source });
   const del = $('playlist-delete-btn');
   del.style.display = playlist ? 'flex' : 'none';
   del.onclick = () => {
@@ -936,7 +1309,7 @@ $('playlist-search').addEventListener('input', (e) => {
   if (!playlistPage) return;
   const q = normalize(e.target.value.trim());
   const list = q ? playlistPage.list.filter((t) => searchKey(t).includes(q)) : playlistPage.list;
-  renderTrackList($('playlist-tracks'), list, { numbered: true, playlist: playlistPage.playlist, emptyText: 'لا توجد نتائج' });
+  renderTrackList($('playlist-tracks'), list, { numbered: true, playlist: playlistPage.playlist, source: playlistPage.source, emptyText: 'لا توجد نتائج' });
 });
 
 function openAllReciters() {
@@ -955,26 +1328,6 @@ function openAllReciters() {
   });
 }
 
-let artistShown = null;
-window.openArtistDetail = (name) => openPage('artist-view', () => renderArtist(name));
-
-function renderArtist(name) {
-  artistShown = name;
-  const r = reciterByName.get(name) || { name, image: '', count: 0 };
-  const list = [...tracksOf(name)].sort((a, b) => b.listens - a.listens);
-  $('artist-detail-name').textContent = name;
-  $('artist-detail-stats').textContent = `${formatCount(list.length)} مقطع • ${formatCount(list.reduce((s, t) => s + t.listens, 0))} استماع`;
-  $('artist-detail-image').src = thumb(r.image || list[0]?.coverImage, 400);
-  renderTrackList($('artist-tracks'), list, { numbered: true });
-  $('artist-play-all').onclick = () => playFromList(list, 0, { shuffleStart: isShuffle });
-  const follow = $('artist-follow-btn');
-  follow.dataset.follow = name;
-  follow.dataset.followIcon = '';
-  follow.onclick = () => toggleFollow(r);
-  paintFollowButtons();
-  $('artist-share-btn').onclick = () => share(`${name} | صوت الأحزان`, `استمع إلى قصائد ${name}`, r.dbId ? `${SITE_URL}/reciter?id=${r.dbId}` : APP_URL);
-}
-
 window.openCategoryDetail = (cat) => openPage('category-view', () => renderCategory(cat));
 
 function renderCategory(cat) {
@@ -983,8 +1336,432 @@ function renderCategory(cat) {
   $('category-detail-stats').textContent = `${formatCount(list.length)} مقطع`;
   $('category-detail-image').src = thumb(list[0]?.coverImage, 400);
   $('category-view').querySelector('.hero-image').style.background = cat.color;
-  renderTrackList($('category-tracks'), list, { numbered: true, emptyText: 'لا توجد مقاطع في هذا التصنيف بعد' });
-  $('category-play-all').onclick = () => playFromList(list, 0, { shuffleStart: isShuffle });
+  const source = { kind: 'category', id: cat.id };
+  renderTrackList($('category-tracks'), list, { numbered: true, source, emptyText: 'لا توجد مقاطع في هذا التصنيف بعد' });
+  $('category-play-all').onclick = () => playFromList(list, 0, { shuffleStart: isShuffle, source });
+}
+
+// ─── Shared by the reciter, radio and mix pages ───
+// The cover's shades now (worked out before, or a stand-in), then `apply` again
+// once they are read from the cover
+function withShades(t, apply) {
+  const known = t.coverImage && coverShades.get(t.coverImage);
+  apply(known || fallbackShades(t));
+  if (!known) coverShadesFor(t).then(apply);
+}
+
+// The page's play button: plays the list (from what it was played from), or
+// pauses / resumes it when it is what is playing
+function playAllButton(list, source, cls = 'big-play') {
+  const b = document.createElement('button');
+  b.className = cls;
+  b.setAttribute('aria-label', 'تشغيل');
+  b.dataset.plays = '';
+  b._source = source;
+  b.innerHTML = icon('play', { fill: true });
+  b.onclick = (e) => {
+    e.stopPropagation();
+    if (sameSource(queueSource, source) && currentTrack && queue.some((t) => t.id === currentTrack.id)) togglePlay();
+    else playFromList(list, 0, { shuffleStart: isShuffle, source });
+  };
+  paintPlayButton(b);
+  return b;
+}
+function paintPlayButton(b) {
+  const on = !audio.paused && sameSource(queueSource, b._source);
+  setIcon(b.querySelector('.ic'), on ? 'pause' : 'play', { fill: true });
+  b.setAttribute('aria-label', on ? 'إيقاف مؤقت' : 'تشغيل');
+}
+
+// Spotify's follow button: a fixed size, so nothing beside it moves when it
+// changes; filled with gold and a check once they follow
+function followButton(reciter, { small = false } = {}) {
+  const b = document.createElement('button');
+  b.className = `follow-btn${small ? ' small' : ''}`;
+  b.dataset.follow = reciter.name;
+  b.onclick = (e) => { e.stopPropagation(); toggleFollow(reciter); };
+  paintFollowButton(b);
+  return b;
+}
+
+// Three faces in circles: the biggest in the middle, the others behind it on either side
+const facesHtml = (urls) => `<div class="faces">${[urls[1], urls[2], urls[0]].map((u, i) => (u !== undefined
+  ? `<img class="face ${['left', 'right', 'big'][i]}" src="${esc(thumb(u, i === 2 ? 240 : 160))}" alt="" loading="lazy" />` : '')).join('')}</div>`;
+const facesOf = (names, list) => names.slice(0, 3).map((n) => reciterByName.get(n)?.image || list.find((t) => t.reciterName === n)?.coverImage || '');
+
+// A radio to discover: its light colour and faces, "<track> الراديو", who is
+// in it. `label`: a reciter's radio, their name across the card instead
+function radioCard(t, label = null) {
+  const radio = radioOf(t, 20);
+  const names = recitersOfList(radio);
+  const card = document.createElement('div');
+  card.className = 'radio-card';
+  card.innerHTML = `
+    <div class="radio-art">${facesHtml(facesOf(names, radio))}
+      ${label ? `<span class="radio-tag">راديو</span><span class="radio-label ellipsis">${esc(label)}</span>` : '<span class="radio-word">الراديو</span>'}
+    </div>
+    ${label ? '' : `<div class="radio-card-title">${esc(t.title)} الراديو</div>`}
+    <div class="square-subtitle">${esc(label ? withMore(names.filter((n) => n !== label), 3) : `مع ${withMore(names, 2)}`)}</div>`;
+  withShades(t, (sh) => { card.querySelector('.radio-art').style.background = sh.pastel; });
+  return clickable(card, () => openRadioPage(t));
+}
+
+// The actions under a radio's or a mix's header: keep it in the library (as a
+// playlist) or let it go, download it all, and more
+function keepButton(title, list, kept) {
+  const b = document.createElement('button');
+  b.className = `icon-btn pv-icon${kept ? ' on' : ''}`;
+  b.setAttribute('aria-label', kept ? 'في مكتبتك' : 'حفظ في مكتبتك');
+  b.innerHTML = icon(kept ? 'check' : 'circle-plus');
+  b.onclick = async () => {
+    if (kept) { if (await deletePlaylist(kept)) toast('أُزيل من مكتبتك'); }
+    else { await createPlaylist(title, list.map((t) => t.id)); toast('حُفظ في مكتبتك'); }
+  };
+  return b;
+}
+function downloadButton(list) {
+  const all = list.length > 0 && list.every((t) => lib.downloads.has(t.id));
+  const b = document.createElement('button');
+  b.className = `icon-btn pv-icon${all ? ' on' : ''}`;
+  b.setAttribute('aria-label', all ? 'منزّل' : 'تنزيل');
+  b.innerHTML = icon(all ? 'check' : 'download');
+  b.onclick = () => { if (!all) { setIcon(b.querySelector('.ic'), 'spinner'); downloadAll(list); } else toast('كل المقاطع منزّلة'); };
+  return b;
+}
+function actionsRow(start, list, source) {
+  const row = document.createElement('div');
+  row.className = 'pv-actions';
+  const shuffle = document.createElement('button');
+  shuffle.className = `icon-btn pv-icon shuffle-toggle${isShuffle ? ' on' : ''}`;
+  shuffle.setAttribute('aria-label', 'تشغيل عشوائي');
+  shuffle.innerHTML = icon('shuffle');
+  shuffle.onclick = () => toggleShuffle();
+  const spacer = document.createElement('span');
+  spacer.className = 'pv-spacer';
+  row.append(...start, spacer, shuffle, playAllButton(list, source));
+  return row;
+}
+const iconButton = (name, label, onClick, cls = 'icon-btn pv-icon') => {
+  const b = document.createElement('button');
+  b.className = cls;
+  b.setAttribute('aria-label', label);
+  b.innerHTML = icon(name);
+  b.onclick = onClick;
+  return b;
+};
+
+// ═══ Reciter page (Spotify's artist page) ════════════════════════════════════
+// The photo with the name over it, moving up slower than the page and
+// darkening as it goes; listens, follow, options, shuffle and play; the
+// popular tracks, the releases, "this is" and their radio, about, fans also like
+const expandedReciters = new Set();
+window.openArtistDetail = (name) => openPage('page-view', () => renderReciterPage(name), { library: true });
+
+// Each drawing of the page view: a colour worked out for an earlier one is dropped
+const newPageToken = (view) => (view._token = (view._token || 0) + 1);
+
+function renderReciterPage(name) {
+  const view = $('page-view');
+  const token = newPageToken(view);
+  const r = reciterByName.get(name) || { name, dbId: null, image: '', count: 0, hasPhoto: false };
+  const newest = tracksOf(name);
+  const list = [...newest].sort((a, b) => b.listens - a.listens);
+  const source = { kind: 'reciter', id: name };
+  const photo = r.image || list[0]?.coverImage || '';
+  const listens = `${compactCount(list.reduce((sum, t) => sum + t.listens, 0))} استماع`;
+  const releases = newest.slice(0, 4);
+  const radioSeed = list[0];
+  // Fans also like: the reciters of the same kind of work, those with a photo first
+  const fans = radioSeed ? [...new Set(similarTo(radioSeed, 300, { others: true }).map((t) => t.reciterName))]
+    .filter((n) => n !== UNKNOWN_RECITER && n !== name).map((n) => reciterByName.get(n)).filter(Boolean)
+    .sort((a, b) => b.hasPhoto - a.hasPhoto).slice(0, 10) : [];
+
+  view.innerHTML = `
+    <div class="rc-hero">
+      <div class="rc-photo"><img src="${esc(thumb(photo, 640))}" alt="" /></div>
+      <div class="rc-shade"></div>
+      <div class="rc-darken"></div>
+      <button class="hero-back" onclick="history.back()" aria-label="رجوع">${icon('chevron-right')}</button>
+      <h1 class="rc-name">${esc(name)}</h1>
+    </div>
+    <div class="rc-top">
+      <div class="rc-listens">${esc(listens)}</div>
+    </div>
+    ${list.length ? `<section class="pv-section"><h2 class="sub-title">القصائد الرائجة</h2><div class="track-list rc-popular"></div>
+      ${list.length > 5 ? '<div class="pv-center"><button class="pill-btn rc-toggle"></button></div>' : ''}</section>` : '<div class="empty-state">لا توجد قصائد لهذا الرادود بعد</div>'}
+    ${releases.length ? `<section class="pv-section rc-releases">
+      <div class="section-head"><h2 class="section-title">الإصدارات الرائجة</h2><button class="link-btn rc-releases-all">عرض الكل</button></div>
+      <div class="rc-release-list"></div>
+      <div class="pv-center"><button class="pill-btn rc-recordings">الانتقال إلى التسجيلات</button></div>
+    </section>` : ''}
+    ${radioSeed ? `<section class="pv-section"><h2 class="sub-title">تضم ${esc(name)}</h2><div class="pv-pair rc-featuring"></div></section>` : ''}
+    <section class="pv-section">
+      <h2 class="sub-title">معلومات تعريفية</h2>
+      <div class="rc-about">
+        <img src="${esc(thumb(photo, 640))}" alt="" class="rc-about-photo" loading="lazy" />
+        <div class="rc-about-body">
+          <div class="rc-about-head">
+            <div style="min-width: 0; flex: 1;">
+              <div class="rc-about-name"><span class="ellipsis">${esc(name)}</span>${r.dbId ? `<span class="verified" aria-label="رادود موثّق">${icon('tick')}</span>` : ''}</div>
+              <div class="muted rc-about-listens">${esc(listens)}</div>
+            </div>
+            <span class="rc-about-follow"></span>
+          </div>
+          <p class="rc-bio"></p>
+        </div>
+      </div>
+    </section>
+    ${fans.length ? '<section class="pv-section rc-fans"><h2 class="sub-title">المعجبون يحبون أيضاً</h2></section>' : ''}`;
+
+  // Listens, then the actions: follow, ⋮ ... shuffle, play
+  const more = iconButton('more', 'خيارات', () => openReciterOptions(name), 'icon-btn rc-more');
+  view.querySelector('.rc-top').appendChild(actionsRow([followButton(r), more], list, source));
+
+  // Popular: numbered, how often each was heard, a check on the liked ones
+  const paintPopular = () => {
+    const open = expandedReciters.has(name);
+    renderTrackList(view.querySelector('.rc-popular'), list.slice(0, open ? 10 : 5), {
+      numbered: true, source, playList: list, likedMark: true, subtitle: (t) => formatCount(t.listens),
+    });
+    const toggle = view.querySelector('.rc-toggle');
+    if (toggle) toggle.textContent = open ? 'عرض أقل' : 'عرض المزيد';
+  };
+  if (list.length) paintPopular();
+  const toggle = view.querySelector('.rc-toggle');
+  if (toggle) toggle.onclick = () => { if (!expandedReciters.delete(name)) expandedReciters.add(name); paintPopular(); };
+
+  // Releases: the newest first ("latest release"), each with its year
+  if (releases.length) {
+    const box = view.querySelector('.rc-release-list');
+    const paintReleases = () => box.replaceChildren(...releases.map((t, i) => {
+      const year = /^\d{4}/.test(t.addedAt || '') ? t.addedAt.slice(0, 4) : '';
+      const row = document.createElement('div');
+      row.className = 'release-row';
+      row.innerHTML = `
+        <img src="${esc(thumb(t.coverImage, 84))}" alt="" loading="lazy" />
+        <div style="min-width: 0; flex: 1;">
+          ${i === 0 ? '<div class="muted release-latest">أحدث الإصدارات</div>' : ''}
+          <div class="release-title">${esc(t.title)}</div>
+          <div class="muted release-meta ellipsis">${esc([categoryOf(t)?.title || 'قصيدة', year].filter(Boolean).join(' • '))}</div>
+        </div>`;
+      return clickable(row, () => openTrackDetail(t));
+    }));
+    paintReleases();
+    loadDates(releases).then(() => { if (box.isConnected) paintReleases(); });
+    const all = () => openListPage(`إصدارات ${name}`, newest, null, false, source);
+    view.querySelector('.rc-releases-all').onclick = all;
+    view.querySelector('.rc-recordings').onclick = () => openListPage(`تسجيلات ${name}`, newest, null, false, source);
+  }
+
+  // Featuring them: "this is" (their best in one list) and their radio
+  let pastel = fallbackShades({ reciterName: name }).pastel;
+  if (radioSeed) {
+    const thisIs = document.createElement('div');
+    thisIs.className = 'radio-card';
+    thisIs.innerHTML = `
+      <div class="this-is">
+        <div class="this-is-word">هذا هو</div>
+        <div class="this-is-band"></div>
+        <img src="${esc(thumb(photo, 240))}" alt="" loading="lazy" />
+        <div class="this-is-name ellipsis">${esc(name)}</div>
+      </div>
+      <div class="square-subtitle">هذا هو ${esc(name)}. أبرز قصائده في قائمة واحدة</div>`;
+    clickable(thisIs, () => openListPage(`هذا هو ${name}`, list.slice(0, 50), null, false, source));
+    view.querySelector('.rc-featuring').append(thisIs, radioCard(radioSeed, name));
+  }
+
+  // About: the photo, the name, the listens, follow, and the bio
+  view.querySelector('.rc-about-follow').appendChild(followButton(r));
+  const bio = view.querySelector('.rc-bio');
+  const paintBio = (text) => { bio.textContent = text || `قصائد ${name} على صوت الأحزان: ${formatCount(list.length)} قصيدة.`; };
+  paintBio(reciterBios.get(r.dbId));
+  if (r.dbId) loadReciterBio(r).then((text) => { if (text && bio.isConnected) paintBio(text); });
+
+  if (fans.length) view.querySelector('.rc-fans').appendChild(scroller(fans, reciterCard));
+
+  // The page's colour, from the photo: under the photo and in the bar on top
+  const hero = view.querySelector('.rc-hero');
+  let tint = '#121212';
+  const handler = pageScroller({
+    title: name,
+    color: () => tint,
+    at: () => hero.offsetHeight - barHeight(),
+    extra: (top) => {
+      const h = hero.offsetHeight || 1;
+      view.querySelector('.rc-photo').style.transform = `translateY(${Math.min(top, h) * 0.5}px)`;
+      view.querySelector('.rc-darken').style.opacity = String(Math.min(Math.max(top / h, 0), 1));
+    },
+  });
+  withShades({ coverImage: photo, reciterName: name }, (sh) => {
+    if (view._token !== token) return;
+    tint = mixHex('#121212', sh.vivid, 0.5);
+    pastel = sh.pastel;
+    view.style.setProperty('--tint', tint);
+    view.querySelector('.this-is-band')?.style.setProperty('background', pastel);
+    handler.recolor();
+  });
+  viewScroll['page-view'] = handler;
+}
+
+const barHeight = () => $('page-bar').offsetHeight || 56;
+
+// The years of a few tracks' releases, in one request
+function loadDates(list) {
+  const ids = list.filter((t) => t.addedAt === undefined).map((t) => Number(t.id));
+  if (!ids.length) return Promise.resolve();
+  return supabase.from('audio_library').select('id,created_at').in('id', ids)
+    .then(({ data, error }) => {
+      if (error) throw error;
+      (data || []).forEach((row) => { const t = trackById.get(String(row.id)); if (t) t.addedAt = row.created_at || ''; });
+    })
+    .catch(() => {});
+}
+
+function openReciterOptions(name) {
+  const r = reciterByName.get(name) || { name, dbId: null, image: '' };
+  const tracks = [...tracksOf(name)].sort((a, b) => b.listens - a.listens);
+  const following = lib.follows.has(name);
+  const sheet = $('action-sheet');
+  sheet.innerHTML = `
+    <div class="sheet-handle"></div>
+    <div class="sheet-head">
+      <img src="${esc(thumb(reciterPhoto(name), 55))}" alt="" style="border-radius: 50%;" />
+      <div style="flex: 1; overflow: hidden;">
+        <div class="ellipsis" style="font-size: 18px; font-weight: bold; margin-bottom: 4px;">${esc(name)}</div>
+        <div class="muted" style="font-size: 14px;">رادود • ${formatCount(tracks.length)} مقطع</div>
+      </div>
+    </div>`;
+  const item = (iconName, text, fn) => {
+    const b = document.createElement('button');
+    b.className = 'sheet-item';
+    b.innerHTML = `${icon(iconName)}<span>${esc(text)}</span>`;
+    b.onclick = () => closeOverlayThen(fn);
+    sheet.appendChild(b);
+  };
+  item(following ? 'following' : 'follow', following ? 'إلغاء المتابعة' : 'متابعة', () => toggleFollow(r));
+  if (tracks[0]) item('radio', 'الانتقال إلى راديو الرادود', () => openRadioPage(tracks[0]));
+  item('playlist', 'عرض كل القصائد', () => openListPage(`قصائد ${name}`, tracksOf(name), null, false, { kind: 'reciter', id: name }));
+  item('share-nodes', 'مشاركة', () => share(`${name} | صوت الأحزان`, `استمع إلى قصائد ${name}`, r.dbId ? `${SITE_URL}/reciter?id=${r.dbId}` : APP_URL));
+  openSheet('action-modal');
+}
+
+// ═══ Radio page (Spotify's song radio) ═══════════════════════════════════════
+// A light colour with the faces of its reciters, its name in big letters, who
+// is in it (and who wrote it), "made for you", how long it is, the actions,
+// the tracks, and more radios to discover
+window.openRadioPage = (t) => openPage('page-view', () => renderRadioPage(t), { library: true });
+
+function renderRadioPage(seed) {
+  const view = $('page-view');
+  const token = newPageToken(view);
+  const radio = radioOf(seed, 50);
+  const title = `${seed.title} الراديو`;
+  const names = recitersOfList(radio);
+  const source = { kind: 'radio', id: seed.id };
+  const kept = lib.playlists.find((p) => p.name === title);
+  // More radios: a track of each of the other reciters in this one
+  const seen = new Set([seed.reciterName, UNKNOWN_RECITER]);
+  const more = radio.slice(1).filter((t) => !seen.has(t.reciterName) && seen.add(t.reciterName)).slice(0, 6);
+
+  view.innerHTML = `
+    <div class="rd-top">
+      <button class="pv-round-back" onclick="history.back()" aria-label="رجوع">${icon('back')}</button>
+      ${facesHtml(facesOf(names, radio))}
+      <h1 class="rd-title">${esc(title)}</h1>
+    </div>
+    <div class="pv-details rd-details">
+      ${names.length ? `<div class="muted pv-line">مع ${esc(withMore(names))}</div>` : ''}
+      <div class="muted pv-line rd-poets" style="display: none;"></div>
+      <div class="made-for">${sLogo()} مُصمم من أجلك</div>
+      <p class="pv-about"><b>حول هذا الراديو</b> مبني على «${esc(seed.title)}» لـ ${esc(seed.reciterName)}<span class="rd-seed-poet"></span>، ومرتّب حسب ذوقك.</p>
+      <div class="muted pv-line">${totalDuration(radio)} • ${formatCount(radio.length)} مقطع</div>
+    </div>
+    <div class="pv-actions-slot"></div>
+    <div class="track-list pv-list"></div>
+    ${more.length >= 2 ? '<section class="pv-section"><h2 class="pv-big-title">قد يعجبك أيضاً</h2><div class="pv-grid rd-more"></div></section>' : ''}`;
+
+  view.querySelector('.pv-actions-slot').replaceWith(actionsRow([
+    keepButton(title, radio, kept), downloadButton(radio), iconButton('more', 'خيارات', () => openTrackOptions(seed)),
+  ], radio, source));
+  renderTrackList(view.querySelector('.pv-list'), radio, { source, likedMark: true });
+  if (more.length >= 2) view.querySelector('.rd-more').append(...more.map((t) => radioCard(t)));
+
+  // Who wrote the track it is built on, once its details are in
+  loadDetails(seed).then(() => {
+    const poet = seed.credits?.find((c) => c.role === 'الكلمات')?.name;
+    if (!poet || view._token !== token) return;
+    const line = view.querySelector('.rd-poets');
+    if (line) { line.textContent = `كلمات: ${poet}`; line.style.display = ''; }
+    const about = view.querySelector('.rd-seed-poet');
+    if (about) about.textContent = `، كلمات ${poet}`;
+  });
+
+  const top = view.querySelector('.rd-top');
+  let deep = '#121212';
+  const handler = pageScroller({
+    title, color: () => deep, at: () => top.offsetHeight - barHeight() * 1.4,
+    play: () => playAllButton(radio, source, 'big-play small'),
+  });
+  withShades(seed, (sh) => {
+    if (view._token !== token) return;
+    deep = sh.vivid;
+    view.style.setProperty('--pastel', sh.pastel);
+    view.style.setProperty('--deep', sh.vivid);
+    handler.recolor();
+  });
+  viewScroll['page-view'] = handler;
+}
+
+// ═══ Daily mix page ══════════════════════════════════════════════════════════
+// Its colour, cover, who is in it, "made for you", how long it is, the
+// actions and the tracks (a check on the ones they like), then their other mixes
+window.openMixPage = (number) => openPage('page-view', () => renderMixPage(number), { library: true });
+
+function renderMixPage(number) {
+  const view = $('page-view');
+  newPageToken(view);
+  view.style.removeProperty('--tint');
+  const mixes = dailyMixes();
+  const mix = mixes.find((m) => m.number === number);
+  if (!mix) {
+    view.innerHTML = `<header class="page-header pv-plain"><button class="icon-btn" onclick="history.back()" aria-label="رجوع">${icon('back')}</button></header>
+      <div class="empty-state">هذا الميكس لم يعد متوفراً، وتصلك ميكسات جديدة كل يوم</div>`;
+    viewScroll['page-view'] = null;
+    return;
+  }
+  const tracks = mixTracks(mix);
+  const title = mixTitle(mix);
+  const deep = mixHex(mixColor(mix.number), '#000000', 0.38);
+  const source = { kind: 'mix', id: String(mix.number) };
+  const others = mixes.filter((m) => m.number !== mix.number);
+  view.style.setProperty('--deep', deep);
+  view.innerHTML = `
+    <div class="mx-top">
+      <button class="icon-btn" onclick="history.back()" aria-label="رجوع">${icon('back')}</button>
+      <div class="mx-cover">${mixCoverHtml(mix, 300)}</div>
+      <div class="pv-details mx-details">
+        <div class="muted pv-line">${esc(mixReciters(mix))}</div>
+        <div class="made-for">${sLogo()} مُصممة من أجلك</div>
+        <p class="pv-about"><b>حول هذا الميكس</b> يجمع ${esc(mix.lead)} ومن تستمع إليهم معه، بين ما تحبه وما لم تسمعه بعد، ويتجدد كل يوم بحسب ما تستمع إليه.</p>
+        <div class="muted pv-line">${totalDuration(tracks)} • ${formatCount(tracks.length)} مقطع</div>
+      </div>
+    </div>
+    <div class="pv-actions-slot"></div>
+    <div class="track-list pv-list"></div>
+    ${others.length ? '<section class="pv-section"><h2 class="pv-big-title">ميكسات أخرى من أجلك</h2><div class="pv-grid mx-others"></div></section>' : ''}`;
+
+  view.querySelector('.pv-actions-slot').replaceWith(actionsRow([
+    keepButton(title, tracks, lib.playlists.find((p) => p.name === title)), downloadButton(tracks),
+    iconButton('share-nodes', 'مشاركة', () => share(`${title} | صوت الأحزان`, `${title} من صوت الأحزان: ${mixReciters(mix)}`, APP_URL)),
+  ], tracks, source));
+  renderTrackList(view.querySelector('.pv-list'), tracks, { source, likedMark: true });
+  if (others.length) view.querySelector('.mx-others').append(...others.map(mixCard));
+
+  const top = view.querySelector('.mx-top');
+  viewScroll['page-view'] = pageScroller({
+    title, color: () => deep, at: () => top.offsetHeight - barHeight() * 1.6,
+    play: () => playAllButton(tracks, source, 'big-play small'),
+  });
 }
 
 window.openTrackDetail = (trackOrId) => {
@@ -1044,10 +1821,10 @@ function renderTrackDetail(track) {
   fl.parentElement.style.display = fans.length ? 'block' : 'none';
 }
 
-// Same reciter first, then the same category (any of its Arabic or English
-// values), in a fixed order per track
-function similarTo(track, n) {
-  const same = tracksOf(track.reciterName).filter((t) => t.id !== track.id);
+// Same reciter first (unless `others`: other reciters only), then the same
+// category (any of its Arabic or English values), in a fixed order per track
+function similarTo(track, n, { others = false } = {}) {
+  const same = others ? [] : tracksOf(track.reciterName).filter((t) => t.id !== track.id);
   const cat = categoryOf(track);
   const inCat = cat ? (t) => cat.values.includes(t.category) : (t) => !!track.category && t.category === track.category;
   const sameCat = allTracks.filter((t) => inCat(t) && t.reciterName !== track.reciterName);
@@ -1261,13 +2038,16 @@ function openTrackOptions(track, { playlist = null } = {}) {
     if ($('full-player-view').classList.contains('open')) closeOverlayThen(() => openArtistDetail(track.reciterName));
     else openArtistDetail(track.reciterName);
   });
-  $('opt-share').onclick = () => closeOverlayThen(() => shareTrack(track));
+  $('opt-radio').onclick = () => closeOverlayThen(() => {
+    if ($('full-player-view').classList.contains('open')) closeOverlayThen(() => openRadioPage(track));
+    else openRadioPage(track);
+  });
+  $('opt-share').onclick = () => closeOverlayThen(() => openShareSheet(track));
   openSheet('track-options-modal');
 }
 
 window.openCurrentTrackOptions = () => { if (currentTrack) openTrackOptions(currentTrack); };
-const shareTrack = (t) => share(t.title, `استمع إلى ${t.title} بصوت ${t.reciterName}`, `${SITE_URL}/track?id=${t.id}`);
-window.shareCurrentTrack = () => { if (currentTrack) shareTrack(currentTrack); };
+window.shareCurrentTrack = () => { if (currentTrack) openShareSheet(currentTrack); };
 
 // Shared links point at the website: it shows a preview in chats/search and
 // sends phones back into this app on the same track.
@@ -1278,6 +2058,245 @@ async function share(title, text, url) {
   }
   try { await navigator.clipboard.writeText(url); toast('تم نسخ الرابط'); } catch { prompt('انسخ الرابط:', url); }
 }
+
+// ─── Share sheet (Spotify's): a story card of the track (its cover, name and
+// reciter on the cover's colour, the app's logo), four backgrounds to choose
+// from, then where to send it. The card goes as a picture where the browser
+// can share files, with the track's link always ───
+const CARD_STYLES = ['colour', 'fade', 'black', 'picture'];
+let shareState = null; // { track, style, colour, cover }
+
+const trackLink = (t) => `${SITE_URL}/track?id=${t.id}`;
+const shareText = (t) => `استمع إلى ${t.title} بصوت ${t.reciterName}`;
+
+// The cover, readable by the canvas (its pixels go into the picture): through
+// the image service that allows it, else the file itself, else the app's icon
+function loadCardCover(url) {
+  const tryLoad = (src) => new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    const timer = setTimeout(() => resolve(null), 8000);
+    img.onload = () => { clearTimeout(timer); resolve(img); };
+    img.onerror = () => { clearTimeout(timer); resolve(null); };
+    img.src = src;
+  });
+  const sources = url ? [`https://wsrv.nl/?url=${encodeURIComponent(url)}&w=640&h=640&fit=cover&output=jpg&q=85`, url] : [];
+  return sources.reduce((p, src) => p.then((img) => img || tryLoad(src)), Promise.resolve(null))
+    .then((img) => img || tryLoad(FALLBACK_COVER));
+}
+
+// Lines of `text` that fit `width`, `max` at most (the last one cut with "…")
+function wrapLines(ctx, text, width, max) {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines = [];
+  let line = '';
+  for (let i = 0; i < words.length; i++) {
+    const next = line ? `${line} ${words[i]}` : words[i];
+    if (ctx.measureText(next).width <= width || !line) { line = next; continue; }
+    lines.push(line);
+    line = words[i];
+    if (lines.length === max) { line = ''; break; }
+  }
+  if (line) lines.push(line);
+  const shown = lines.slice(0, max);
+  if (lines.length > max || words.join(' ') !== shown.join(' ')) {
+    let last = shown[shown.length - 1] || '';
+    while (last && ctx.measureText(`${last}…`).width > width) last = last.slice(0, -1);
+    shown[shown.length - 1] = `${last.trim()}…`;
+  }
+  return shown;
+}
+
+const roundRect = (ctx, x, y, w, h, r) => {
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); // older browsers: square corners
+};
+
+function drawShareCard() {
+  const { track: t, style, colour, cover } = shareState;
+  const canvas = $('share-card');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+  ctx.save();
+  ctx.clearRect(0, 0, W, H);
+  roundRect(ctx, 0, 0, W, H, W * 0.06);
+  ctx.clip();
+  // The background
+  if (style === 'picture' && cover) {
+    // The cover blurred: drawn tiny then stretched (works where canvas filters don't)
+    const tiny = document.createElement('canvas');
+    tiny.width = 12;
+    tiny.height = 21;
+    const s = Math.max(12 / cover.width, 21 / cover.height);
+    tiny.getContext('2d').drawImage(cover, (12 - cover.width * s) / 2, (21 - cover.height * s) / 2, cover.width * s, cover.height * s);
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(tiny, 0, 0, W, H);
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.fillRect(0, 0, W, H);
+  } else if (style === 'fade') {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, colour);
+    g.addColorStop(1, '#0E0E0E');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  } else {
+    ctx.fillStyle = style === 'black' ? '#0E0E0E' : colour;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // The card: the cover, the name, the reciter, the app's logo
+  const x = W * 0.07;
+  const cw = W - 2 * x;
+  const pad = W * 0.045;
+  const inner = cw - 2 * pad;
+  const titleSize = W * 0.062;
+  const nameSize = W * 0.05;
+  const logo = W * 0.075;
+  ctx.direction = 'rtl';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'top';
+  ctx.font = `800 ${titleSize}px Tajawal, sans-serif`;
+  const titleLines = wrapLines(ctx, t.title, inner, 2);
+  const ch = pad + inner + W * 0.045 + titleLines.length * titleSize * 1.25 + W * 0.012 + nameSize * 1.3 + W * 0.05 + logo + pad;
+  const y = (H - ch) / 2;
+  ctx.fillStyle = style === 'black' ? '#232323' : style === 'picture' ? 'rgba(0,0,0,0.55)' : mixHex(colour, '#000000', 0.62);
+  roundRect(ctx, x, y, cw, ch, W * 0.035);
+  ctx.fill();
+
+  let cy = y + pad;
+  ctx.save();
+  roundRect(ctx, x + pad, cy, inner, inner, W * 0.025);
+  ctx.clip();
+  if (cover) {
+    const s = Math.max(inner / cover.width, inner / cover.height);
+    ctx.drawImage(cover, x + pad + (inner - cover.width * s) / 2, cy + (inner - cover.height * s) / 2, cover.width * s, cover.height * s);
+  } else {
+    ctx.fillStyle = '#2a2a2a';
+    ctx.fillRect(x + pad, cy, inner, inner);
+  }
+  ctx.restore();
+  cy += inner + W * 0.045;
+
+  const right = x + cw - pad;
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = `800 ${titleSize}px Tajawal, sans-serif`;
+  titleLines.forEach((line) => { ctx.fillText(line, right, cy); cy += titleSize * 1.25; });
+  cy += W * 0.012;
+  ctx.font = `500 ${nameSize}px Tajawal, sans-serif`;
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.fillText(wrapLines(ctx, t.reciterName, inner, 1)[0] || '', right, cy);
+  cy += nameSize * 1.3 + W * 0.05;
+
+  // The logo, where Spotify puts its own: the S in a dark circle, the app's name
+  ctx.fillStyle = '#161B1F';
+  ctx.beginPath();
+  ctx.arc(right - logo / 2, cy + logo / 2, logo / 2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.save();
+  const sh = logo * 0.62;
+  const sc = sh / 253;
+  ctx.translate(right - logo / 2 - (215.4 * sc) / 2, cy + (logo - sh) / 2);
+  ctx.scale(sc, sc);
+  ctx.fillStyle = '#F1592A';
+  ctx.fill(new Path2D(S_PATH));
+  ctx.restore();
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = `700 ${W * 0.045}px Tajawal, sans-serif`;
+  ctx.textBaseline = 'middle';
+  ctx.fillText('صوت الأحزان', right - logo - W * 0.02, cy + logo / 2);
+  ctx.restore();
+}
+
+const cardBlob = () => new Promise((resolve) => {
+  try { $('share-card').toBlob((b) => resolve(b), 'image/png'); } catch { resolve(null); } // a cover the canvas can't export
+});
+
+async function shareCardFile(t) {
+  const blob = await cardBlob();
+  if (!blob) return null;
+  const file = new File([blob], 'sawt-alahzan.png', { type: 'image/png' });
+  return navigator.canShare?.({ files: [file] }) ? file : null;
+}
+
+window.openShareSheet = (t) => {
+  shareState = { track: t, style: 'colour', colour: fallbackShades(t).vivid, cover: null };
+  const paintStyles = () => {
+    $('share-styles').replaceChildren(...CARD_STYLES.map((style) => {
+      const dot = document.createElement('button');
+      dot.className = `style-dot${shareState.style === style ? ' on' : ''}`;
+      dot.setAttribute('aria-label', { colour: 'لون الغلاف', fade: 'تدرّج', black: 'أسود', picture: 'صورة الغلاف' }[style]);
+      dot.setAttribute('aria-pressed', String(shareState.style === style));
+      dot.innerHTML = style === 'picture' ? `<span>${icon('image-down')}</span>` : '<span></span>';
+      const fill = dot.firstElementChild;
+      if (style === 'colour') fill.style.background = shareState.colour;
+      if (style === 'fade') fill.style.background = `linear-gradient(180deg, ${shareState.colour}, #0E0E0E)`;
+      if (style === 'black') fill.style.background = '#0E0E0E';
+      dot.onclick = () => { shareState.style = style; paintStyles(); drawShareCard(); };
+      return dot;
+    }));
+  };
+  paintStyles();
+  drawShareCard();
+  coverShadesFor(t).then((sh) => {
+    if (shareState?.track !== t) return;
+    shareState.colour = sh.vivid;
+    paintStyles();
+    drawShareCard();
+  });
+  loadCardCover(t.coverImage).then((img) => {
+    if (shareState?.track !== t) return;
+    shareState.cover = img;
+    drawShareCard();
+  });
+  document.fonts?.ready.then(() => { if (shareState?.track === t) drawShareCard(); });
+
+  const link = trackLink(t);
+  const text = shareText(t);
+  const enc = encodeURIComponent;
+  // Opened (or copied, or shared) straight from the tap, which browsers ask
+  // for, then the sheet closes
+  const openUrl = (url) => () => { window.open(url, '_blank', 'noopener'); history.back(); };
+  const targets = [
+    ['نسخ الرابط', 'link', '#2E2E2E', async () => {
+      try { await navigator.clipboard.writeText(link); toast('تم نسخ الرابط'); } catch { prompt('انسخ الرابط:', link); }
+      history.back();
+    }],
+    ['واتساب', 'whatsapp', '#25D366', openUrl(`https://wa.me/?text=${enc(`${text}\n${link}`)}`)],
+    ['تيليجرام', 'send', '#229ED9', openUrl(`https://t.me/share/url?url=${enc(link)}&text=${enc(text)}`)],
+    ['X', 'x', '#000000', openUrl(`https://twitter.com/intent/tweet?text=${enc(text)}&url=${enc(link)}`)],
+    ['فيسبوك', 'facebook', '#1877F2', openUrl(`https://www.facebook.com/sharer/sharer.php?u=${enc(link)}`)],
+    ['الرسائل', 'message', '#2E2E2E', () => { location.href = `sms:?&body=${enc(`${text}\n${link}`)}`; history.back(); }],
+    ['حفظ الصورة', 'image-down', '#2E2E2E', async () => {
+      const blob = await cardBlob();
+      if (!blob) { toast('تعذر حفظ الصورة'); return; }
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${t.title.replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'sawt-alahzan'}.png`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      toast('حُفظت الصورة');
+    }],
+    ['عرض المزيد', 'ellipsis', '#2E2E2E', async () => {
+      const file = await shareCardFile(t);
+      let done = false;
+      if (file) {
+        try { await navigator.share({ files: [file], title: t.title, text: `${text}\n${link}` }); done = true; } catch (e) { done = e.name === 'AbortError'; }
+      }
+      if (!done) await share(t.title, text, link);
+      if ($('share-modal').classList.contains('open')) history.back();
+    }],
+  ];
+  $('share-targets').replaceChildren(...targets.map(([label, glyph, bg, fn]) => {
+    const b = document.createElement('button');
+    b.className = 'share-target';
+    const mark = glyph === 'x' ? '<b class="brand-x">𝕏</b>' : glyph === 'facebook' ? '<b class="brand-f">f</b>' : icon(glyph);
+    b.innerHTML = `<span class="share-disc" style="background:${bg}">${mark}</span><span class="share-label">${esc(label)}</span>`;
+    b.onclick = fn;
+    return b;
+  }));
+  openSheet('share-modal');
+};
 
 // ═══ Player ══════════════════════════════════════════════════════════════════
 const audio = new Audio();
@@ -1326,8 +2345,10 @@ async function playTrack(track, { autoplay = true, startAt = 0 } = {}) {
   }
 }
 
-// Play `list` starting at `index`; the list becomes the queue
-function playFromList(list, index, { shuffleStart = false } = {}) {
+// Play `list` starting at `index`; the list becomes the queue. `source` is
+// what it was played from (a reciter, a playlist, a radio...), for "recently
+// played" and the player's "playing from"; a single track otherwise.
+function playFromList(list, index, { shuffleStart = false, source = null } = {}) {
   if (!list.length) return;
   queueOriginal = list.slice();
   if (isShuffle) {
@@ -1339,6 +2360,9 @@ function playFromList(list, index, { shuffleStart = false } = {}) {
     queue = list.slice();
     queueIndex = index;
   }
+  const from = source || { kind: 'track', id: queue[queueIndex].id };
+  rememberPlayedFrom(from);
+  playingFrom = source ? recentEntry(source)?.title || '' : '';
   playTrack(queue[queueIndex]);
 }
 
@@ -1421,15 +2445,18 @@ function paintAutoplay() {
   sw.setAttribute('aria-checked', String(isAutoplay));
 }
 
-// Radio: shuffle of the current reciter's work, then similar tracks
+// Radio from the track playing: what follows it becomes its song radio
 window.startRadio = () => {
   if (!currentTrack) return;
-  const own = shuffled(tracksOf(currentTrack.reciterName).filter((t) => t.id !== currentTrack.id));
-  queue = [currentTrack, ...own, ...similarTo(currentTrack, 20).filter((t) => t.reciterName !== currentTrack.reciterName)];
+  queue = radioOf(currentTrack, 50);
   queueOriginal = null;
   queueIndex = 0;
+  rememberPlayedFrom({ kind: 'radio', id: currentTrack.id });
+  playingFrom = `${currentTrack.title} الراديو`;
+  $('fp-context').textContent = playingFrom;
   updateQueueUI();
-  toast(`راديو ${currentTrack.reciterName}`);
+  paintPlayButtons();
+  toast(playingFrom);
 };
 
 // Repeat-one replays here rather than with audio.loop, which never fires
@@ -1494,15 +2521,18 @@ function paintPlayButtons() {
   [$('mp-play-btn'), $('fp-play-btn')].forEach((b) => setIcon(b.querySelector('.ic'), playing ? 'pause' : 'play', { fill: true }));
   const td = $('td-play-btn');
   setIcon(td.querySelector('.ic'), playing && currentTrack?.id === td.dataset.trackId ? 'pause' : 'play', { fill: true });
+  document.querySelectorAll('[data-plays]').forEach(paintPlayButton);
   if ('mediaSession' in navigator) navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
 }
 
 let isDragging = false;
+const RING = 2 * Math.PI * 21.75; // the ring's length (r = 21.75 in a 46 box)
 function updateProgressUI() {
   const d = audio.duration;
   if (!d || !isFinite(d)) return;
   const pct = (audio.currentTime / d) * 100;
-  $('mp-progress-fill').style.width = `${pct}%`;
+  // The mini player's ring: its gold part grows round the play button
+  $('mp-ring-fill').style.strokeDashoffset = String(RING * (1 - Math.min(pct, 100) / 100));
   if (!isDragging) {
     const range = $('fp-progress');
     range.value = pct;
@@ -1534,8 +2564,10 @@ function updateNowPlaying() {
   document.body.classList.add('has-player');
 
   $('mp-cover').src = thumb(t.coverImage, 48);
-  $('mp-title').textContent = t.title;
-  $('mp-reciter').textContent = t.reciterName;
+  marquee($('mp-title'), t.title);
+  marquee($('mp-reciter'), t.reciterName);
+  $('mp-ring-fill').style.strokeDashoffset = String(RING);
+  $('fp-context').textContent = playingFrom;
   $('fp-cover').src = thumb(t.coverImage, 400);
   paintPlayerColor(t);
   $('fp-title').textContent = t.title;
@@ -1576,6 +2608,22 @@ function updateNowPlaying() {
   }
 }
 
+// Names too long to show whole scroll by, again and again (Spotify's): two
+// copies side by side, moving one copy's width plus the gap
+function marquee(box, text) {
+  box.classList.remove('moving');
+  box.innerHTML = `<span class="mq">${esc(text)}</span>`;
+  requestAnimationFrame(() => {
+    const one = box.firstElementChild;
+    if (!one || one.offsetWidth <= box.clientWidth + 1) return;
+    const dist = one.offsetWidth + 40;
+    box.innerHTML = `<span class="mq-track"><span class="mq">${esc(text)}</span><span class="mq" aria-hidden="true">${esc(text)}</span></span>`;
+    box.style.setProperty('--mq-dist', `${dist}px`);
+    box.style.setProperty('--mq-time', `${Math.max(dist / 32, 4) / 0.85}s`);
+    box.classList.add('moving');
+  });
+}
+
 function paintPlayerLyrics(t, loading) {
   const text = loading ? 'جارٍ تحميل الكلمات...' : t.lyrics || NO_LYRICS;
   $('fp-lyrics-box').style.display = loading || t.lyrics ? '' : 'none';
@@ -1607,9 +2655,7 @@ function paintPlayerExtras(t) {
   paintBio(reciterBios.get(r.dbId));
   if (known) loadReciterBio(r).then((bio) => { if (bio && currentTrack === t) paintBio(bio); });
   $('fp-about').onclick = openReciter;
-  const follow = $('fp-about-follow');
-  follow.dataset.follow = r.name;
-  follow.onclick = (e) => { e.stopPropagation(); toggleFollow(r); };
+  $('fp-about-follow').replaceChildren(followButton(r));
 
   // 2. Credits
   paintCredits(t, r);
@@ -1630,13 +2676,7 @@ function creditRow(name, role, reciter = null) {
   const row = document.createElement('div');
   row.className = 'credit-row';
   row.innerHTML = `<div class="credit-text"><div class="credit-name ellipsis">${esc(name)}</div><div class="credit-role">${esc(role)}</div></div>`;
-  if (reciter) {
-    const b = document.createElement('button');
-    b.className = 'pill-btn small';
-    b.dataset.follow = reciter.name;
-    b.onclick = (e) => { e.stopPropagation(); toggleFollow(reciter); };
-    row.appendChild(b);
-  }
+  if (reciter) row.appendChild(followButton(reciter, { small: true }));
   return row;
 }
 
@@ -1697,13 +2737,24 @@ function exploreCard(t, onClick) {
 
 // Every follow button on screen (reciter page, player, credits) shows the same state
 function paintFollowButtons() {
-  document.querySelectorAll('[data-follow]').forEach((b) => {
-    const on = lib.follows.has(b.dataset.follow);
-    b.classList.toggle('on', on);
-    b.setAttribute('aria-pressed', String(on));
-    const label = on ? 'تتابعه' : 'متابعة';
-    b.innerHTML = 'followIcon' in b.dataset ? `${icon(on ? 'following' : 'follow')} <span>${label}</span>` : label;
-  });
+  document.querySelectorAll('[data-follow]').forEach(paintFollowButton);
+}
+// "متابعة", or the gold fill with a check; it pops when they follow
+function paintFollowButton(b) {
+  const on = lib.follows.has(b.dataset.follow);
+  const was = b.dataset.state;
+  b.dataset.state = on ? 'on' : 'off';
+  b.setAttribute('aria-pressed', String(on));
+  b.setAttribute('aria-label', on ? `تتابع ${b.dataset.follow}` : `متابعة ${b.dataset.follow}`);
+  if (was === b.dataset.state) return;
+  b.classList.toggle('on', on);
+  b.innerHTML = on ? icon('tick', { strokeWidth: 3 }) : '<span>متابعة</span>';
+  const fresh = was === undefined && followedNow?.name === b.dataset.follow && Date.now() - followedNow.at < 500;
+  if (on && (was === 'off' || fresh)) {
+    b.classList.remove('pop');
+    void b.offsetWidth; // restart the animation
+    b.classList.add('pop');
+  }
 }
 
 function updateQueueUI() {
@@ -1754,7 +2805,7 @@ if ('mediaSession' in navigator) {
 function openFullPlayer() {
   if (!currentTrack) return;
   const fp = $('full-player-view');
-  openOverlay(() => { fp.classList.add('open'); $('mini-player').classList.remove('active'); setThemeColor(nowShades?.top); },
+  openOverlay(() => { fp.classList.add('open'); $('mini-player').classList.remove('active'); setThemeColor(nowShades?.vivid); },
     () => { fp.classList.remove('open'); if (currentTrack) $('mini-player').classList.add('active'); setThemeColor(); });
 }
 $('mini-player').addEventListener('click', (e) => { if (!e.target.closest('button')) openFullPlayer(); });
@@ -1773,7 +2824,7 @@ let nowShades = null;
 let shadesFor = null;          // the track the colour is being worked out for
 
 // Worked out once per cover and kept on the device
-const COLOR_STORE = 'sawt_cover_colors_v1';
+const COLOR_STORE = 'sawt_cover_colors_v2'; // v2: with the pages' bright and light shades
 const coverShades = new Map(Object.entries(store.get(COLOR_STORE, {})));
 function rememberShades(url, shades) {
   coverShades.set(url, shades);
@@ -1836,10 +2887,10 @@ function paintPlayerColor(t) {
     if (shadesFor !== t) return;
     nowShades = sh;
     const root = document.documentElement.style;
-    root.setProperty('--np-top', sh.top);
+    root.setProperty('--np-top', sh.vivid);
     root.setProperty('--np-mini', sh.mini);
     root.setProperty('--np-card', sh.card);
-    if ($('full-player-view').classList.contains('open')) setThemeColor(sh.top);
+    if ($('full-player-view').classList.contains('open')) setThemeColor(sh.vivid);
   });
 }
 

@@ -43,9 +43,9 @@
       </symbol>
     </svg>
     <div id="app">
-      <div class="top-gradient"></div>
-
       <main class="main-container">
+        <!-- The gold glow at the top: part of the page, so it scrolls up with it -->
+        <div class="top-gradient"></div>
 
         <!-- Home -->
         <div id="home-view" class="view">
@@ -108,32 +108,8 @@
           <div id="playlist-tracks" class="track-list"></div>
         </div>
 
-        <!-- Reciter -->
-        <div id="artist-view" class="view hero-view" style="display: none;">
-          <button class="hero-back" onclick="history.back()" aria-label="رجوع"><i class="ic" data-icon="chevron-right"></i></button>
-          <div class="hero-image" style="height: 55vh;">
-            <img id="artist-detail-image" src="" alt="" />
-            <div class="hero-shade"></div>
-            <div class="hero-text">
-              <h1 id="artist-detail-name"></h1>
-              <div id="artist-detail-stats" class="hero-stats"></div>
-            </div>
-          </div>
-          <div class="hero-content">
-            <div class="list-actions">
-              <div class="list-actions-buttons">
-                <button class="pill-btn" id="artist-follow-btn"><i class="ic" data-icon="follow"></i> <span>متابعة</span></button>
-                <button class="icon-btn" id="artist-share-btn" aria-label="مشاركة"><i class="ic" data-icon="share"></i></button>
-              </div>
-              <div class="list-actions-buttons">
-                <button class="icon-btn shuffle-toggle" onclick="toggleShuffle()" aria-label="تشغيل عشوائي"><i class="ic" data-icon="shuffle"></i></button>
-                <button class="big-play" id="artist-play-all" aria-label="تشغيل الكل"><i class="ic" data-icon="play" data-fill></i></button>
-              </div>
-            </div>
-            <h2 class="sub-title">كل القصائد</h2>
-            <div class="track-list" id="artist-tracks"></div>
-          </div>
-        </div>
+        <!-- Reciter, radio, daily mix: drawn whole from main.js -->
+        <div id="page-view" class="view page-view" style="display: none;"></div>
 
         <!-- Category -->
         <div id="category-view" class="view hero-view" style="display: none;">
@@ -264,14 +240,23 @@
         </div>
       </main>
 
+      <!-- A page's bar: comes down with the page's name once its header has scrolled away -->
+      <div id="page-bar" class="page-bar" aria-hidden="true">
+        <button class="icon-btn" onclick="history.back()" aria-label="رجوع" tabindex="-1"><i class="ic" data-icon="back"></i></button>
+        <div class="page-bar-title ellipsis"></div>
+        <div class="page-bar-end"></div>
+      </div>
+
       <!-- Full screen player -->
       <div id="full-player-view" class="full-player">
-        <div id="fp-bg" class="fp-bg"></div>
         <div class="fp-scroll">
+          <!-- The cover's colour: one screen tall and part of the page, so it goes up as the cards under the player are scrolled to -->
+          <div id="fp-bg" class="fp-bg"></div>
           <header style="justify-content: space-between; margin-bottom: 3vh;">
             <button class="icon-btn" onclick="history.back()" aria-label="إغلاق"><i class="ic" data-icon="chevron-down"></i></button>
             <div class="fp-heading">
               <div>يتم التشغيل الآن</div>
+              <div id="fp-context" class="fp-context ellipsis"></div>
               <div id="fp-sleep-badge" class="fp-sleep-badge" style="display: none;" role="button" tabindex="0" aria-label="مؤقت النوم"><i class="ic" data-icon="timer"></i> <span></span></div>
             </div>
             <button class="icon-btn" onclick="openCurrentTrackOptions(event)" aria-label="خيارات"><i class="ic" data-icon="more"></i></button>
@@ -329,7 +314,7 @@
                   <div id="fp-about-name" class="fp-about-name ellipsis"></div>
                   <div id="fp-about-stats" class="muted fp-about-stats"></div>
                 </div>
-                <button class="pill-btn" id="fp-about-follow"></button>
+                <span id="fp-about-follow" class="follow-slot"></span>
               </div>
               <p id="fp-about-text" class="fp-about-text"></p>
             </div>
@@ -379,17 +364,30 @@
 
       <!-- Mini player -->
       <div id="mini-player" class="mini-player" style="display: none;">
-        <div class="mp-progress-line"><div id="mp-progress-fill"></div></div>
         <div class="player-info" role="button" tabindex="0" aria-label="فتح المشغّل">
           <img id="mp-cover" src="" alt="" class="player-cover" />
           <div class="player-text">
-            <span id="mp-title" class="player-title"></span>
-            <span id="mp-reciter" class="player-reciter"></span>
+            <div id="mp-title" class="marquee player-title"></div>
+            <div id="mp-reciter" class="marquee player-reciter"></div>
           </div>
         </div>
         <div class="player-controls">
+          <button class="icon-btn mp-devices" onclick="openDevices()" aria-label="الاتصال بجهاز"><i class="ic" data-icon="devices"></i></button>
           <button class="icon-btn" id="mp-like-btn" aria-label="إعجاب"><i class="ic" data-icon="heart"></i></button>
-          <button id="mp-play-btn" class="mp-play" onclick="togglePlay(event)" aria-label="تشغيل"><i class="ic" data-icon="play" data-fill></i></button>
+          <!-- The play button inside a ring that fills in gold as the track plays -->
+          <div class="mp-ring">
+            <svg viewBox="0 0 46 46" aria-hidden="true">
+              <defs>
+                <linearGradient id="gold-ring" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#F6E073" /><stop offset="0.3" stop-color="#C28F1A" /><stop offset="0.55" stop-color="#F9E37A" />
+                  <stop offset="0.78" stop-color="#B78C1A" /><stop offset="1" stop-color="#F0D96C" />
+                </linearGradient>
+              </defs>
+              <circle cx="23" cy="23" r="21.75" class="ring-track" />
+              <circle cx="23" cy="23" r="21.75" class="ring-fill" id="mp-ring-fill" />
+            </svg>
+            <button id="mp-play-btn" class="mp-play" onclick="togglePlay(event)" aria-label="تشغيل"><i class="ic" data-icon="play" data-fill></i></button>
+          </div>
         </div>
       </div>
     </div>
@@ -446,7 +444,25 @@
         <button class="sheet-item" id="opt-remove" style="display: none;"><i class="ic" data-icon="trash"></i><span>إزالة من هذه القائمة</span></button>
         <button class="sheet-item" id="opt-download"><i class="ic" data-icon="download" id="opt-download-icon"></i><span id="opt-download-text">تنزيل للاستماع بدون إنترنت</span></button>
         <button class="sheet-item" id="opt-artist"><i class="ic" data-icon="mic"></i><span>عرض صفحة الرادود</span></button>
-        <button class="sheet-item" id="opt-share"><i class="ic" data-icon="share"></i><span>مشاركة</span></button>
+        <button class="sheet-item" id="opt-radio"><i class="ic" data-icon="radio"></i><span>الانتقال إلى راديو المقطع</span></button>
+        <button class="sheet-item" id="opt-share"><i class="ic" data-icon="share-nodes"></i><span>مشاركة</span></button>
+      </div>
+    </div>
+
+    <!-- Options drawn from main.js (a reciter's) -->
+    <div id="action-modal" class="sheet-backdrop" style="display: none;" onclick="history.back()">
+      <div id="action-sheet" class="sheet" onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-label="خيارات"></div>
+    </div>
+
+    <!-- Share: a story card of the track, its backgrounds, where to send it -->
+    <div id="share-modal" class="sheet-backdrop" style="display: none;" onclick="history.back()">
+      <div class="sheet share-sheet" onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-label="مشاركة">
+        <div class="sheet-handle"></div>
+        <canvas id="share-card" class="share-card" width="1080" height="1920" role="img" aria-label="بطاقة المقطع"></canvas>
+        <div id="share-styles" class="share-styles"></div>
+        <div class="share-divider"></div>
+        <h2 class="share-title">مشاركة إلى</h2>
+        <div id="share-targets" class="horizontal-scroller share-targets"></div>
       </div>
     </div>
 
