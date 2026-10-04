@@ -9,6 +9,7 @@ import {
   LogOut, Maximize2, LoaderCircle, Eye, EyeOff, Share, Radio, Clock3, UserPlus, UserCheck, X,
   Download, Trash2, Timer, Disc3, WifiOff, Cast, Smartphone, Bluetooth,
   Share2, MonitorSpeaker, Check, CirclePlus, Link, MessageSquareMore, Ellipsis, ImageDown, MessageCircle, Send,
+  ArrowDownUp, LayoutGrid, Pin, CircleMinus, ArrowUp, ArrowDown, Pencil, Copy, CircleX, Album, Blend, Flame, AudioLines, QrCode,
 } from 'lucide';
 
 const ICONS = {
@@ -25,6 +26,8 @@ const ICONS = {
   queue: ListMusic, 'share-nodes': Share2, devices: MonitorSpeaker, cast: Cast, smartphone: Smartphone, bluetooth: Bluetooth,
   tick: Check, 'circle-plus': CirclePlus, link: Link, message: MessageSquareMore, ellipsis: Ellipsis, 'image-down': ImageDown,
   whatsapp: MessageCircle, send: Send,
+  sort: ArrowDownUp, grid: LayoutGrid, pin: Pin, 'circle-minus': CircleMinus, 'arrow-up': ArrowUp, 'arrow-down': ArrowDown,
+  pencil: Pencil, copy: Copy, 'circle-x': CircleX, album: Album, blend: Blend, flame: Flame, 'audio-lines': AudioLines, qr: QrCode,
 };
 
 const escAttr = (v) => String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;');

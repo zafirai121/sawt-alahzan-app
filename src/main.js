@@ -352,6 +352,9 @@ const lib = {
   playlists: store.get('sawt_playlists', []).map((p) => ({ id: String(p.id), name: p.name, tracks: (p.tracks || []).map(String) })),
   follows: new Set(store.get('sawt_artists', [])),
   history: store.get('sawt_history', []), // [{ id, t }] newest first
+  plays: store.get('sawt_plays', {}),      // id → how many times it was played
+  hidden: new Set(store.get('sawt_hidden', [])),     // never suggested, skipped when reached
+  excluded: new Set(store.get('sawt_excluded', [])), // left out of their taste
   saveLocal() {
     if (!currentUser) {
       store.set('sawt_likes', [...this.likes]);
@@ -363,6 +366,9 @@ const lib = {
     }
     store.set('sawt_downloads', [...this.downloads]);
     store.set('sawt_history', this.history);
+    store.set('sawt_plays', this.plays);
+    store.set('sawt_hidden', [...this.hidden]);
+    store.set('sawt_excluded', [...this.excluded]);
   },
 };
 
@@ -590,7 +596,36 @@ async function saveOffline(track, { quiet = false } = {}) {
 
 function addToHistory(track) {
   lib.history = [{ id: track.id, t: Date.now() }, ...lib.history.filter((h) => h.id !== track.id)].slice(0, 100);
+  lib.plays[track.id] = (lib.plays[track.id] || 0) + 1;
+  // Counts only for what history still holds (it keeps the last 100)
+  const kept = new Set(lib.history.map((h) => h.id));
+  Object.keys(lib.plays).forEach((id) => { if (!kept.has(id)) delete lib.plays[id]; });
   lib.saveLocal();
+}
+
+// Hidden: never suggested, skipped when reached; excluded: left out of their taste
+function toggleHidden(track) {
+  const hide = !lib.hidden.has(track.id);
+  if (hide) lib.hidden.add(track.id); else lib.hidden.delete(track.id);
+  lib.saveLocal();
+  libraryChanged();
+  toast(hide ? 'أُخفي المقطع، لن يُقترح عليك ولن يُشغَّل تلقائياً' : 'أُظهر المقطع');
+}
+function toggleExcluded(track) {
+  const out = !lib.excluded.has(track.id);
+  if (out) lib.excluded.add(track.id); else lib.excluded.delete(track.id);
+  lib.saveLocal();
+  libraryChanged();
+  toast(out ? 'استُبعد المقطع من لمحة ذوقك' : 'أُعيد المقطع إلى لمحة ذوقك');
+}
+const visible = (list) => (lib.hidden.size ? list.filter((t) => !lib.hidden.has(t.id)) : list);
+window.openHiddenPage = () => openListPage('المقاطع المخفية', () => [...lib.hidden].map((id) => trackById.get(id)).filter(Boolean), null, true);
+window.openExcludedPage = () => openListPage('المستبعدة من لمحة ذوقك', () => [...lib.excluded].map((id) => trackById.get(id)).filter(Boolean), null, true);
+
+// What they play again and again: the most played first, then the most recent
+function mostPlayed(n = 30) {
+  return visible(historyTracks()).map((t, i) => ({ t, i })).sort((a, b) => (lib.plays[b.t.id] || 1) - (lib.plays[a.t.id] || 1) || a.i - b.i)
+    .map((x) => x.t).slice(0, n);
 }
 const historyTracks = () => lib.history.map((h) => trackById.get(h.id)).filter(Boolean);
 
@@ -723,8 +758,9 @@ function recentColumns(entries) {
 function taste() {
   const w = new Map();
   const add = (name, v) => { if (name && name !== UNKNOWN_RECITER) w.set(name, (w.get(name) || 0) + v); };
-  lib.history.forEach((h, i) => add(trackById.get(h.id)?.reciterName, 1 / (1 + i / 20)));
-  lib.likes.forEach((id) => add(trackById.get(id)?.reciterName, 1.5));
+  const skip = (id) => lib.excluded.has(id) || lib.hidden.has(id);
+  lib.history.forEach((h, i) => { if (!skip(h.id)) add(trackById.get(h.id)?.reciterName, (1 + Math.log(lib.plays[h.id] || 1)) / (1 + i / 20)); });
+  lib.likes.forEach((id) => { if (!skip(id)) add(trackById.get(id)?.reciterName, 1.5); });
   lib.follows.forEach((name) => add(name, 3));
   return w;
 }
@@ -747,7 +783,7 @@ function madeForYou(n = 15) {
   const w = taste();
   if (!w.size) return [];
   const heard = new Set(lib.history.map((h) => h.id));
-  const picks = topKeys(w, 5).flatMap((name) => tracksOf(name).filter((t) => !heard.has(t.id)).sort((a, b) => b.listens - a.listens).slice(0, 12));
+  const picks = topKeys(w, 5).flatMap((name) => visible(tracksOf(name)).filter((t) => !heard.has(t.id)).sort((a, b) => b.listens - a.listens).slice(0, 12));
   return seededShuffle(picks, todaySeed()).slice(0, n);
 }
 
@@ -761,7 +797,7 @@ const mixColor = (n) => MIX_COLORS[(n - 1) % MIX_COLORS.length];
 const mixTitle = (m) => `الميكس اليومي ${m.number}`;
 // "علي بوحجو وسيد سلام الحسيني وحسين فيصل والمزيد"
 const mixReciters = (m) => m.reciters.slice(0, 3).join(' و') + (m.reciters.length > 3 ? ' والمزيد' : '');
-const mixTracks = (m) => m.tracks.map((id) => trackById.get(id)).filter(Boolean);
+const mixTracks = (m) => visible(m.tracks.map((id) => trackById.get(id)).filter(Boolean));
 
 // The mix's cover: the lead reciter's photo, the app's S in a corner, the coloured band with its name
 function mixCoverHtml(m, width = 320) {
@@ -782,7 +818,7 @@ function buildMixes(day, max = 6, size = 50) {
       if (names[i] !== names[j]) { bump(names[i], names[j]); bump(names[j], names[i]); }
     }
   }
-  const leads = topKeys(w, max * 2).filter((name) => tracksOf(name).length >= 5).slice(0, max);
+  const leads = topKeys(w, max * 2).filter((name) => visible(tracksOf(name)).length >= 5).slice(0, max);
   const used = new Set();
   const mixes = [];
   leads.forEach((lead, i) => {
@@ -797,7 +833,7 @@ function buildMixes(day, max = 6, size = 50) {
     const members = [lead, ...[...together, ...alike].slice(0, 3)];
     // Each one's favourites and unheard work, alternating, in a new order each day
     const pools = members.map((name, k) => {
-      const all = tracksOf(name).filter((t) => !used.has(t.id));
+      const all = tracksOf(name).filter((t) => !used.has(t.id) && !lib.hidden.has(t.id));
       const known = all.filter((t) => lib.likes.has(t.id) || heard.has(t.id));
       const fresh = all.filter((t) => !lib.likes.has(t.id) && !heard.has(t.id)).sort((a, b) => b.listens - a.listens).slice(0, 30);
       return interleave(seededShuffle(known, day + i * 10 + k), seededShuffle(fresh, day * 7 + i * 10 + k), 1);
@@ -838,10 +874,10 @@ function dailyMixes() {
 // ─── Song radio: the track, then its reciter's best work mixed with similar
 // tracks by other reciters (the ones they like first, three each at most) ───
 function radioOf(seed, n = 50) {
-  const own = seededShuffle(tracksOf(seed.reciterName).filter((t) => t.id !== seed.id).sort((a, b) => b.listens - a.listens).slice(0, 25), Number(seed.id) || 1);
+  const own = seededShuffle(visible(tracksOf(seed.reciterName)).filter((t) => t.id !== seed.id).sort((a, b) => b.listens - a.listens).slice(0, 25), Number(seed.id) || 1);
   const liked = taste();
   const each = new Map();
-  const others = similarTo(seed, 120, { others: true })
+  const others = visible(similarTo(seed, 120, { others: true }))
     .filter((t) => t.reciterName !== UNKNOWN_RECITER && (each.set(t.reciterName, (each.get(t.reciterName) || 0) + 1).get(t.reciterName) <= 3))
     .sort((a, b) => (liked.get(b.reciterName) || 0) - (liked.get(a.reciterName) || 0));
   return uniqueById([seed, ...interleave(own, others, 1)]).slice(0, n);
@@ -1023,7 +1059,7 @@ window.goProfile = () => { goTab('profile'); renderTab(); };
 function renderTab() {
   if (currentTab === 'home') renderHome();
   else if (currentTab === 'library') renderLibrary();
-  else if (currentTab === 'search') { renderSearchHome(); runSearch(); }
+  else if (currentTab === 'search') renderSearchHome();
   else if (currentTab === 'profile') updateProfileUI();
   tabDrawnAt[currentTab] = tabStamp();
 }
@@ -1277,9 +1313,6 @@ const likedTracks = () => [...lib.likes].map((id) => trackById.get(id)).filter(B
 // Once the whole library is in, likes of deleted tracks no longer count
 const likesCount = () => (fullyLoaded ? likedTracks().length : lib.likes.size);
 const playlistTracks = (pl) => pl.tracks.map((id) => trackById.get(id)).filter(Boolean);
-const openLikesPage = () => openListPage('المقاطع المفضلة', likedTracks, null, true, { kind: 'likes', id: '' });
-const openDownloadsPage = () => openListPage('التنزيلات', downloadedTracks, null, true, { kind: 'downloads', id: '' });
-const openPlaylistPage = (pl) => openListPage(pl.name, () => playlistTracks(pl), pl, true, { kind: 'playlist', id: pl.id });
 
 function renderListPage(title, list, playlist, source = null) {
   playlistPage = { title, list, playlist, source };
@@ -1764,6 +1797,283 @@ function renderMixPage(number) {
   });
 }
 
+// ═══ Collections: the likes, the downloads, a playlist (Spotify's playlist page) ═
+// The page's colour fading down from the top, the cover (four covers for a
+// playlist), the title, who made it and how long it is, the actions, the chips
+// (add, edit, name, sort), the tracks, and tracks suggested from them
+const TRACK_SORTS = { custom: 'ترتيب مخصص', title: 'العنوان', reciter: 'الرادود', popular: 'الأكثر استماعاً' };
+const collectionUi = new Map(); // the page → { sort, editing, round }
+const arabicOrder = new Intl.Collator('ar');
+
+function sortTracks(list, sort) {
+  if (sort === 'title') return [...list].sort((a, b) => arabicOrder.compare(a.title, b.title));
+  if (sort === 'reciter') return [...list].sort((a, b) => arabicOrder.compare(a.reciterName, b.reciterName) || arabicOrder.compare(a.title, b.title));
+  if (sort === 'popular') return [...list].sort((a, b) => b.listens - a.listens);
+  return list;
+}
+
+// Suggestions for a list ("based on the tracks in this playlist"): the radios
+// of its first tracks, minus what it already has; `round` gives another set
+function forList(list, n = 10, round = 0) {
+  if (!list.length) return madeForYou(n);
+  const have = new Set(list.map((t) => t.id));
+  const pool = uniqueById(list.slice(0, 6).flatMap((t) => radioOf(t, 30).slice(1))).filter((t) => !have.has(t.id) && !lib.hidden.has(t.id));
+  return seededShuffle(pool, list.length * 31 + round).slice(0, n);
+}
+
+const playlistText = (title, list) => `قائمة «${title}» على صوت الأحزان:\n${list.slice(0, 15).map((t) => `• ${t.title} — ${t.reciterName}`).join('\n')}`;
+
+function renamePlaylist(pl) {
+  openPrompt({
+    title: 'الاسم والتفاصيل', hint: 'اسم جديد لقائمة التشغيل.', value: pl.name,
+    onSubmit: async (name) => { pl.name = name; await savePlaylist(pl); toast('تم تغيير الاسم'); },
+  });
+}
+
+function confirmDeletePlaylist(pl, after = null) {
+  openConfirm({
+    title: `حذف قائمة "${pl.name}"؟`, text: 'لا يمكن التراجع عن هذا.', okText: 'حذف',
+    onConfirm: async () => {
+      if (!(await deletePlaylist(pl))) return;
+      toast('حُذفت القائمة');
+      after?.();
+    },
+  });
+}
+
+window.openLikesPage = () => openPage('page-view', () => renderCollection({ kind: 'likes' }), { library: true });
+window.openDownloadsPage = () => openPage('page-view', () => renderCollection({ kind: 'downloads' }), { library: true });
+window.openPlaylistPage = (pl) => openPage('page-view', () => renderCollection({ kind: 'playlist', id: pl.id }), { library: true });
+
+function renderCollection(spec) {
+  const view = $('page-view');
+  const token = newPageToken(view);
+  const pl = spec.kind === 'playlist' ? lib.playlists.find((p) => p.id === spec.id) : null;
+  if (spec.kind === 'playlist' && !pl) {
+    view.innerHTML = `<header class="page-header pv-plain"><button class="icon-btn" onclick="history.back()" aria-label="رجوع">${icon('back')}</button></header>
+      <div class="empty-state">هذه القائمة لم تعد موجودة</div>`;
+    viewScroll['page-view'] = null;
+    return;
+  }
+  const key = pl ? `p:${pl.id}` : spec.kind;
+  if (!collectionUi.has(key)) collectionUi.set(key, { sort: 'custom', editing: false, round: 0 });
+  const ui = collectionUi.get(key);
+  const title = pl ? pl.name : spec.kind === 'likes' ? 'المقاطع المفضلة' : 'التنزيلات';
+  const base = uniqueById(spec.kind === 'likes' ? likedTracks() : spec.kind === 'downloads' ? downloadedTracks().reverse() : playlistTracks(pl));
+  const list = sortTracks(base, ui.sort);
+  const source = pl ? { kind: 'playlist', id: pl.id } : { kind: spec.kind, id: '' };
+  // The colour of the page, strong as Spotify's: the first cover's, gold for the likes
+  let color = spec.kind === 'likes' ? '#9A7418' : spec.kind === 'downloads' ? '#5A5A5A' : '#4A4A4A';
+  const cover = spec.kind === 'likes' ? artHtml({ likes: true }) : spec.kind === 'downloads' ? artHtml({ downloads: true })
+    : artHtml({ covers: list.map((t) => t.coverImage) }, { width: 300 });
+
+  view.innerHTML = `
+    <div class="cl-top">
+      <button class="icon-btn cl-back" onclick="history.back()" aria-label="رجوع">${icon('back')}</button>
+      <div class="cl-cover">${cover}</div>
+      <h1 class="cl-title">${esc(title)}</h1>
+      <div class="cl-owner"><span class="cl-owner-dot">${icon('user')}</span>${spec.kind === 'downloads' ? 'على هذا الجهاز' : 'أنت'}</div>
+      <div class="muted cl-meta">${icon('clock')} ${formatCount(list.length)} مقطع • ${totalDuration(list)}</div>
+    </div>
+    <div class="pv-actions-slot"></div>
+    <div class="horizontal-scroller cl-chips"></div>
+    <div class="track-list pv-list cl-list"></div>
+    ${pl && base.length ? `<section class="pv-section cl-suggest">
+      <div class="cl-suggest-head"><div><h2 class="pv-big-title" style="margin: 0;">المقاطع المقترحة</h2><div class="muted" style="font-size: 14px;">بناءً على المقاطع في هذه القائمة</div></div>
+      <button class="link-btn cl-refresh">تحديث</button></div>
+      <div class="track-list cl-suggestions"></div></section>` : ''}`;
+
+  // Actions: download, share, the playlist's options ... shuffle, play
+  const start = [];
+  if (list.length) start.push(downloadButton(list));
+  start.push(iconButton('share-nodes', 'مشاركة', () => share(`${title} | صوت الأحزان`, playlistText(title, list), APP_URL)));
+  if (pl) start.push(iconButton('more', 'خيارات القائمة', () => openPlaylistOptions(pl)));
+  view.querySelector('.pv-actions-slot').replaceWith(actionsRow(start, list, source));
+
+  // Spotify's chips: add, edit, name and details, sort
+  const chip = (iconName, text, onClick, active = false) => {
+    const b = document.createElement('button');
+    b.className = `page-chip${active ? ' on' : ''}`;
+    b.innerHTML = `${icon(iconName)}<span>${esc(text)}</span>`;
+    b.onclick = onClick;
+    return b;
+  };
+  const chips = [];
+  if (pl) {
+    chips.push(chip('plus', 'إضافة', () => openAddTracks(pl)));
+    chips.push(chip(ui.editing ? 'tick' : 'list', ui.editing ? 'تم' : 'تعديل', () => {
+      ui.editing = !ui.editing;
+      if (ui.editing) ui.sort = 'custom';
+      renderCollection(spec);
+    }, ui.editing));
+    chips.push(chip('pencil', 'الاسم والتفاصيل', () => renamePlaylist(pl)));
+  }
+  chips.push(chip('sort', ui.sort === 'custom' ? 'ترتيب' : TRACK_SORTS[ui.sort], () => openChoices('ترتيب حسب', TRACK_SORTS, ui.sort, (s) => {
+    ui.sort = s;
+    if (s !== 'custom') ui.editing = false;
+    renderCollection(spec);
+  })));
+  view.querySelector('.cl-chips').append(...chips);
+
+  // The tracks; in "edit", remove and move instead of ⋮
+  const box = view.querySelector('.cl-list');
+  if (!list.length) {
+    box.innerHTML = `<div class="empty-state">${spec.kind === 'likes' ? 'المقاطع التي تعجبك تظهر هنا. اضغط ♡ على أي مقطع.'
+      : spec.kind === 'downloads' ? 'نزّل مقاطع لتسمعها بدون إنترنت.' : 'هذه القائمة فارغة. أضف إليها مقاطع.'}
+      ${pl ? '<br/><button class="pill-btn" style="margin-top: 16px;">إضافة مقاطع</button>' : ''}</div>`;
+    box.querySelector('button')?.addEventListener('click', () => openAddTracks(pl));
+  } else if (ui.editing && pl) {
+    list.forEach((t, i) => {
+      const row = document.createElement('div');
+      row.className = 'track-item editing';
+      row.innerHTML = `
+        <button class="icon-btn edit-remove" aria-label="إزالة">${icon('circle-minus')}</button>
+        <img src="${esc(thumb(t.coverImage, 56))}" class="track-img" alt="" loading="lazy" />
+        <div class="track-info"><div class="track-title">${esc(t.title)}</div><div class="track-artist">${esc(t.reciterName)}</div></div>
+        <button class="icon-btn edit-move" aria-label="تحريك للأعلى"${i === 0 ? ' disabled' : ''}>${icon('arrow-up')}</button>
+        <button class="icon-btn edit-move" aria-label="تحريك للأسفل"${i === list.length - 1 ? ' disabled' : ''}>${icon('arrow-down')}</button>`;
+      row.querySelector('.edit-remove').onclick = async () => {
+        pl.tracks = pl.tracks.filter((id) => id !== t.id);
+        await savePlaylist(pl);
+        toast('أُزيل من القائمة');
+      };
+      const move = (step) => {
+        const other = list[i + step];
+        if (!other) return;
+        const a = pl.tracks.indexOf(t.id);
+        const b = pl.tracks.indexOf(other.id);
+        if (a < 0 || b < 0) return;
+        [pl.tracks[a], pl.tracks[b]] = [pl.tracks[b], pl.tracks[a]];
+        savePlaylist(pl);
+      };
+      const [up, down] = row.querySelectorAll('.edit-move');
+      up.onclick = () => move(-1);
+      down.onclick = () => move(1);
+      box.appendChild(row);
+    });
+  } else {
+    renderTrackList(box, list, { source, playlist: pl, subtitle: (t) => t.reciterName });
+  }
+
+  // Suggested from the playlist's own tracks, each with (+)
+  if (pl && base.length) {
+    const suggestions = forList(base, 10, ui.round);
+    view.querySelector('.cl-suggestions').append(...suggestions.map((t) => addableRow(t, pl)));
+    view.querySelector('.cl-refresh').onclick = () => { ui.round++; renderCollection(spec); };
+  }
+
+  const top = view.querySelector('.cl-top');
+  const handler = pageScroller({
+    title, color: () => color, at: () => top.offsetHeight - barHeight() * 1.6,
+    play: list.length ? () => playAllButton(list, source, 'big-play small') : null,
+  });
+  const paint = (c) => { color = c; view.style.setProperty('--deep', c); handler.recolor(); };
+  if (pl && list[0]) withShades(list[0], (sh) => { if (view._token === token) paint(sh.vivid); });
+  else paint(color);
+  viewScroll['page-view'] = handler;
+}
+
+// A track that can be added to a playlist: (+), then ✓ once it is in
+function addableRow(t, pl) {
+  const row = document.createElement('div');
+  row.className = 'track-item';
+  row.dataset.trackId = t.id;
+  const paint = () => {
+    const added = pl.tracks.includes(t.id);
+    const b = row.querySelector('.add-btn');
+    b.classList.toggle('on', added);
+    b.setAttribute('aria-label', added ? 'في القائمة' : 'إضافة');
+    setIcon(b.querySelector('.ic'), added ? 'check' : 'circle-plus');
+  };
+  row.innerHTML = `
+    <img src="${esc(thumb(t.coverImage, 56))}" class="track-img" alt="" loading="lazy" />
+    <div class="track-info"><div class="track-title">${esc(t.title)}</div><div class="track-artist">${esc(t.reciterName)}</div></div>
+    <button class="icon-btn add-btn pv-icon">${icon('circle-plus')}</button>`;
+  paint();
+  row.querySelector('.add-btn').onclick = (e) => {
+    e.stopPropagation();
+    if (pl.tracks.includes(t.id)) return;
+    pl.tracks.push(t.id);
+    paint();
+    savePlaylist(pl);
+    toast(`أُضيف إلى «${pl.name}»`);
+  };
+  return clickable(row, () => playFromList([t], 0));
+}
+
+// Spotify's "add to this playlist": search the library, or take a suggestion
+function openAddTracks(pl) {
+  openPage('page-view', () => {
+    const view = $('page-view');
+    newPageToken(view);
+    view.innerHTML = `
+      <header class="page-header pv-plain"><button class="icon-btn" onclick="history.back()" aria-label="رجوع">${icon('back')}</button>
+        <h1 class="search-header">إضافة إلى القائمة</h1></header>
+      <div class="search-input-container" style="padding: 0 16px; margin-bottom: 16px;">
+        <i class="ic search-icon" data-icon="search" style="color: rgba(255,255,255,0.6); right: 32px;"></i>
+        <input type="search" class="search-input dark at-input" placeholder="ابحث عن مقاطع" autocomplete="off" />
+      </div>
+      <h2 class="sub-title at-title" style="padding: 0 16px; margin-bottom: 12px;"></h2>
+      <div class="track-list pv-list at-list"></div>`;
+    const input = view.querySelector('.at-input');
+    const fill = () => {
+      const words = normalize(input.value.trim()).split(/\s+/).filter(Boolean);
+      const inList = playlistTracks(pl);
+      const shown = words.length ? allTracks.filter((t) => words.every((w) => searchKey(t).includes(w))) : forList(inList, 25);
+      view.querySelector('.at-title').textContent = words.length ? `النتائج (${formatCount(shown.length)})` : 'مقترحة لك';
+      const box = view.querySelector('.at-list');
+      if (!shown.length) box.innerHTML = `<div class="empty-state">${words.length ? 'لم يتم العثور على نتائج' : 'استمع إلى بعض المقاطع لتظهر لك اقتراحات'}</div>`;
+      else box.replaceChildren(...shown.slice(0, 150).map((t) => addableRow(t, pl)));
+    };
+    let timer;
+    input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(fill, 150); });
+    fill();
+    viewScroll['page-view'] = null;
+  });
+}
+
+// A playlist's ⋮: add, rename, download, share, delete
+function openPlaylistOptions(pl) {
+  const tracks = playlistTracks(pl);
+  const sheet = $('action-sheet');
+  sheet.innerHTML = `
+    <div class="sheet-handle"></div>
+    <div class="sheet-head">
+      <div class="sheet-art">${artHtml({ covers: tracks.map((t) => t.coverImage) }, { width: 54 })}</div>
+      <div style="flex: 1; overflow: hidden;">
+        <div class="ellipsis" style="font-size: 18px; font-weight: bold; margin-bottom: 4px;">${esc(pl.name)}</div>
+        <div class="muted" style="font-size: 14px;">قائمة تشغيل • ${formatCount(tracks.length)} مقطع</div>
+      </div>
+    </div>`;
+  const item = (iconName, text, fn, cls = '') => sheetItem(sheet, iconName, text, () => closeOverlayThen(fn), cls);
+  item('plus', 'إضافة مقاطع', () => openAddTracks(pl));
+  item('pencil', 'تغيير الاسم', () => renamePlaylist(pl));
+  item('download-plain', 'تنزيل القائمة', () => downloadAll(tracks));
+  item('share-nodes', 'مشاركة', () => share(`${pl.name} | صوت الأحزان`, playlistText(pl.name, tracks), APP_URL));
+  item('trash', 'حذف القائمة', () => confirmDeletePlaylist(pl, () => history.back()), 'danger');
+  openSheet('action-modal');
+}
+
+function sheetItem(sheet, iconName, text, onClick, cls = '', trailing = '') {
+  const b = document.createElement('button');
+  b.className = `sheet-item ${cls}`;
+  b.innerHTML = `${typeof iconName === 'string' && !iconName.startsWith('<') ? icon(iconName) : iconName}<span style="flex: 1;">${esc(text)}</span>${trailing ? `<span class="muted sheet-trailing">${esc(trailing)}</span>` : ''}`;
+  b.onclick = onClick;
+  sheet.appendChild(b);
+  return b;
+}
+
+// A choice from a few (a sort), as a sheet with the current one checked
+function openChoices(title, choices, current, onPick) {
+  const sheet = $('action-sheet');
+  sheet.innerHTML = `<div class="sheet-handle"></div><h2 class="modal-title" style="border: none;">${esc(title)}</h2>`;
+  Object.entries(choices).forEach(([value, label]) => {
+    const b = sheetItem(sheet, value === current ? 'tick' : '<span class="ic"></span>', label, () => closeOverlayThen(() => onPick(value)));
+    if (value === current) b.classList.add('chosen');
+  });
+  openSheet('action-modal');
+}
+
 window.openTrackDetail = (trackOrId) => {
   const track = typeof trackOrId === 'object' ? trackOrId : trackById.get(String(trackOrId));
   if (track) openPage('track-detail-view', () => renderTrackDetail(track), { library: true });
@@ -1779,18 +2089,25 @@ function renderTrackDetail(track) {
   const cat = categoryOf(track);
   $('td-meta').innerHTML = [cat && esc(cat.title), track.duration && `<span dir="ltr">${track.duration}</span>`, `${formatCount(track.listens)} استماع`].filter(Boolean).join(' • ');
 
-  const paintLyrics = () => {
+  // The lyrics and who wrote them, once the track's details are in
+  const paintDetails = () => {
     $('td-lyrics-section').style.display = track.lyrics ? 'block' : 'none';
     $('td-lyrics').textContent = track.lyrics || '';
+    const poet = track.credits?.find((c) => c.role === 'الكلمات')?.name;
+    $('td-poet').textContent = poet ? `كلمات: ${poet}` : '';
+    $('td-poet').style.display = poet ? '' : 'none';
   };
-  paintLyrics();
-  loadDetails(track).then(() => { if ($('td-play-btn').dataset.trackId === track.id) paintLyrics(); });
+  paintDetails();
+  const shown = () => $('td-play-btn').dataset.trackId === track.id;
+  loadDetails(track).then(() => { if (shown()) paintDetails(); });
+  // The cover's colour, bright, glowing down from the top
+  withShades(track, (sh) => { if (shown()) $('td-glow').style.setProperty('--glow', sh.vivid); });
 
   const playBtn = $('td-play-btn');
   playBtn.dataset.trackId = track.id;
   playBtn.onclick = () => {
     if (currentTrack?.id === track.id) togglePlay();
-    else playFromList([track, ...similarTo(track, 30)], 0);
+    else playFromList(radioOf(track, 50), 0); // the track, then its radio
   };
   paintPlayButtons();
 
@@ -1804,10 +2121,10 @@ function renderTrackDetail(track) {
   $('td-options-btn').onclick = () => openTrackOptions(track);
   refreshLikeButtons();
 
-  const similar = similarTo(track, 6);
+  const similar = visible(similarTo(track, 12)).slice(0, 6);
   renderTrackList($('td-similar-list'), similar);
 
-  const trending = tracksOf(track.reciterName).filter((t) => t.id !== track.id).sort((a, b) => b.listens - a.listens).slice(0, 10);
+  const trending = visible(tracksOf(track.reciterName)).filter((t) => t.id !== track.id).sort((a, b) => b.listens - a.listens).slice(0, 10);
   $('td-trending-title').textContent = `الأعمال الرائجة لـ ${track.reciterName}`;
   $('td-trending-title').parentElement.style.display = trending.length ? 'block' : 'none';
   const tr = $('td-trending-list');
@@ -1847,91 +2164,302 @@ function renderSearchHome() {
   });
 }
 
-let searchTimer;
-$('main-search-input').addEventListener('input', () => {
-  clearTimeout(searchTimer);
-  searchTimer = setTimeout(runSearch, 150);
-});
+// ─── The search page (Spotify's): what they searched for lately; while typing,
+// words to search for and the best matches; then the results, with filters ───
+const SEARCH_FILTERS = { all: 'الكل', tracks: 'المقاطع', reciters: 'الرواديد', playlists: 'قوائم التشغيل', categories: 'التصنيفات' };
+const searchUi = { query: '', shownFor: null, filter: 'all' };
+let recentSearches = store.get('sawt_recent_searches', []); // [{ kind, id, title, subtitle, image }]
 
-function runSearch() {
-  const raw = $('main-search-input').value.trim();
-  const results = $('search-results');
-  const browsing = !raw;
-  $('genre-grid').style.display = browsing ? 'grid' : 'none';
-  $('search-section-title').style.display = browsing ? 'block' : 'none';
-  results.style.display = browsing ? 'none' : 'block';
-  if (browsing) return;
-
-  const words = normalize(raw).split(/\s+/).filter(Boolean);
-  const has = (n) => words.every((w) => n.includes(w));
-  const foundReciters = reciters.filter((r) => has(normalize(r.name))).slice(0, 8);
-  const foundTracks = allTracks.filter((t) => has(searchKey(t)));
-
-  results.innerHTML = '';
-  if (!foundReciters.length && !foundTracks.length) {
-    results.innerHTML = `<div class="empty-state">لم يتم العثور على نتائج${fullyLoaded ? '' : '، ما زالت المكتبة تُحمَّل'}</div>`;
-    return;
-  }
-  if (foundReciters.length) results.appendChild(section('الرواديد', scroller(foundReciters, reciterCard)));
-  if (foundTracks.length) {
-    const wrap = document.createElement('div');
-    wrap.className = 'track-list';
-    results.appendChild(section(`المقاطع (${formatCount(foundTracks.length)})`, wrap));
-    renderTrackList(wrap, foundTracks);
-  }
+function addRecentSearch(r) {
+  recentSearches = [r, ...recentSearches.filter((x) => x.kind !== r.kind || x.id !== r.id)].slice(0, 20);
+  store.set('sawt_recent_searches', recentSearches);
+}
+function removeRecentSearch(r) {
+  recentSearches = recentSearches.filter((x) => x.kind !== r.kind || x.id !== r.id);
+  store.set('sawt_recent_searches', recentSearches);
 }
 
-// ═══ Library tab ═════════════════════════════════════════════════════════════
-document.querySelectorAll('.filter-chip').forEach((chip) => {
-  chip.onclick = () => {
-    document.querySelectorAll('.filter-chip').forEach((c) => c.classList.remove('active'));
-    chip.classList.add('active');
-    renderLibrary();
+// What a search finds, the best first: a name that starts with the words, then
+// one that has them, then by how much it's listened to
+function find(query) {
+  const q = normalize(query.trim());
+  const words = q.split(/\s+/).filter(Boolean);
+  const has = (n) => words.every((w) => n.includes(w));
+  const rank = (s) => { const n = normalize(s); return n.startsWith(q) ? 2 : n.includes(q) ? 1 : 0; };
+  const tracks = visible(allTracks.filter((t) => has(searchKey(t))))
+    .map((t) => ({ t, a: rank(t.title), b: rank(t.reciterName) }))
+    .sort((x, y) => y.a - x.a || y.b - x.b || y.t.listens - x.t.listens).map((x) => x.t);
+  const found = reciters.filter((r) => r.count > 0 && has(normalize(r.name))).sort((a, b) => rank(b.name) - rank(a.name) || b.count - a.count);
+  const playlists = lib.playlists.filter((p) => normalize(p.name).includes(q));
+  const categories = CATEGORIES.filter((c) => normalize(c.title).includes(q));
+  const suggestions = [...new Set([...found.map((r) => r.name), ...tracks.slice(0, 40).map((t) => t.title)])]
+    .sort((a, b) => rank(b) - rank(a)).slice(0, 5);
+  return { tracks, reciters: found, playlists, categories, suggestions, empty: !tracks.length && !found.length && !playlists.length && !categories.length };
+}
+
+window.openSearchPage = (query = '', show = false) => {
+  searchUi.query = query;
+  searchUi.shownFor = show ? query : null;
+  searchUi.filter = 'all';
+  openPage('page-view', () => renderSearchPage());
+};
+
+function renderSearchPage() {
+  const view = $('page-view');
+  newPageToken(view);
+  viewScroll['page-view'] = null;
+  view.innerHTML = `
+    <div class="sp-head">
+      <button class="icon-btn" onclick="history.back()" aria-label="رجوع">${icon('back')}</button>
+      <div class="sp-field">
+        <input type="search" class="sp-input" placeholder="ماذا تريد أن تسمع؟" enterkeyhint="search" autocomplete="off" aria-label="البحث" />
+        <button class="sp-clear" aria-label="مسح">${icon('close')}</button>
+      </div>
+    </div>
+    <div class="horizontal-scroller sp-filters"></div>
+    <div class="sp-body"></div>`;
+  const input = view.querySelector('.sp-input');
+  const clear = view.querySelector('.sp-clear');
+  const body = view.querySelector('.sp-body');
+  input.value = searchUi.query;
+
+  const search = (words) => {
+    searchUi.query = words;
+    searchUi.shownFor = words;
+    searchUi.filter = 'all';
+    input.value = words;
+    input.blur();
+    addRecentSearch({ kind: 'query', id: words.trim(), title: words.trim() });
+    paint();
   };
-});
+  // What opening a result does: a track plays (and its radio after it), the rest open
+  const openTrack = (t) => {
+    input.blur();
+    addRecentSearch({ kind: 'track', id: t.id, title: t.title, subtitle: `مقطع • ${t.reciterName}`, image: t.coverImage });
+    playFromList(radioOf(t, 50), 0);
+  };
+  const openReciter = (r) => { addRecentSearch({ kind: 'reciter', id: r.name, title: r.name, subtitle: 'رادود', image: r.image }); openArtistDetail(r.name); };
+  const openCategory = (c) => { addRecentSearch({ kind: 'category', id: c.id, title: c.title, subtitle: 'تصنيف' }); openCategoryDetail(c); };
+  const openPlaylist = (pl) => { addRecentSearch({ kind: 'playlist', id: pl.id, title: pl.name, subtitle: 'قائمة تشغيل' }); openPlaylistPage(pl); };
+
+  // A row of the results: a picture, two lines, something at the end
+  const row = (art, title, subtitle, onClick, end = []) => {
+    const el = document.createElement('div');
+    el.className = 'track-item sp-row';
+    el.innerHTML = `${art}<div class="track-info"><div class="track-title">${esc(title)}</div><div class="track-artist">${esc(subtitle)}</div></div>`;
+    el.append(...end);
+    return clickable(el, onClick);
+  };
+  const catArt = (c) => `<div class="art sp-art" style="background:${c?.color || '#333'}">${icon('music')}</div>`;
+  const trackRow = (t) => {
+    const like = document.createElement('button');
+    const paintLike = () => {
+      const on = lib.likes.has(t.id);
+      like.className = `icon-btn pv-icon sp-like${on ? ' on' : ''}`;
+      like.setAttribute('aria-label', on ? 'في المفضلة' : 'إضافة إلى المفضلة');
+      like.innerHTML = icon(on ? 'check' : 'circle-plus');
+    };
+    paintLike();
+    like.onclick = async (e) => { e.stopPropagation(); await toggleLike(t); paintLike(); };
+    const more = iconButton('more', 'خيارات', (e) => { e.stopPropagation(); openTrackOptions(t); }, 'icon-btn row-more');
+    const el = row(`<div class="art sp-art">${`<img src="${esc(thumb(t.coverImage, 56))}" alt="" loading="lazy" />`}</div>`, t.title, `مقطع • ${t.reciterName}`, () => openTrack(t), [more, like]);
+    el.dataset.trackId = t.id;
+    return el;
+  };
+  const reciterRow = (r) => row(`<div class="art sp-art round"><img src="${esc(thumb(r.image, 56))}" alt="" loading="lazy" /></div>`, r.name, `رادود • ${formatCount(r.count)} مقطع`, () => openReciter(r), [followButton(r)]);
+  const playlistRow = (pl) => row(`<div class="sp-art">${artHtml({ covers: playlistTracks(pl).map((t) => t.coverImage) }, { width: 56 })}</div>`, pl.name, `قائمة تشغيل • ${formatCount(pl.tracks.length)} مقطع`, () => openPlaylist(pl));
+  const categoryRow = (c) => row(catArt(c), c.title, 'تصنيف', () => openCategory(c));
+  const empty = (text) => { const d = document.createElement('div'); d.className = 'empty-state'; d.textContent = text; return d; };
+
+  const paint = () => {
+    const q = searchUi.query;
+    clear.style.display = q ? '' : 'none';
+    const showResults = !!q.trim() && searchUi.shownFor === q;
+    const filters = view.querySelector('.sp-filters');
+    filters.replaceChildren(...(showResults ? Object.entries(SEARCH_FILTERS).map(([k, label]) => {
+      const b = document.createElement('button');
+      b.className = `filter-chip${searchUi.filter === k ? ' active' : ''}`;
+      b.textContent = label;
+      b.onclick = () => { searchUi.filter = k; paint(); };
+      return b;
+    }) : []));
+    filters.style.display = showResults ? '' : 'none';
+
+    // Nothing typed: what they searched for lately
+    if (!q.trim()) {
+      if (!recentSearches.length) { body.replaceChildren(empty('ابحث عن مقطع أو رادود أو تصنيف')); return; }
+      const head = document.createElement('h2');
+      head.className = 'sub-title sp-title';
+      head.textContent = 'عمليات البحث الأخيرة';
+      const rows = recentSearches.map((r) => {
+        const x = iconButton('close', 'إزالة', (e) => { e.stopPropagation(); removeRecentSearch(r); paint(); }, 'icon-btn row-more');
+        const art = r.kind === 'query' ? `<div class="art sp-art">${icon('search')}</div>`
+          : r.kind === 'category' ? catArt(CATEGORIES.find((c) => c.id === r.id))
+          : r.kind === 'playlist' ? `<div class="sp-art">${artHtml({ covers: playlistTracks(lib.playlists.find((p) => p.id === r.id) || { tracks: [] }).map((t) => t.coverImage) }, { width: 56 })}</div>`
+          : `<div class="art sp-art${r.kind === 'reciter' ? ' round' : ''}"><img src="${esc(thumb(r.image, 56))}" alt="" loading="lazy" /></div>`;
+        return row(art, r.title, r.kind === 'query' ? 'بحث' : r.subtitle, () => {
+          if (r.kind === 'query') search(r.title);
+          else if (r.kind === 'track') { const t = trackById.get(r.id); if (t) openTrack(t); }
+          else if (r.kind === 'reciter') openReciter(reciterByName.get(r.id) || { name: r.id, image: r.image });
+          else if (r.kind === 'category') { const c = CATEGORIES.find((x) => x.id === r.id); if (c) openCategory(c); }
+          else if (r.kind === 'playlist') { const pl = lib.playlists.find((p) => p.id === r.id); if (pl) openPlaylist(pl); }
+        }, [x]);
+      });
+      const clearAll = document.createElement('div');
+      clearAll.className = 'pv-center';
+      clearAll.innerHTML = '<button class="pill-btn">مسح عمليات البحث الأخيرة</button>';
+      clearAll.firstElementChild.onclick = () => { recentSearches = []; store.set('sawt_recent_searches', []); paint(); };
+      body.replaceChildren(head, ...rows, clearAll);
+      return;
+    }
+    const f = find(q);
+    if (f.empty) { body.replaceChildren(empty(fullyLoaded ? `لم يتم العثور على نتائج لـ «${q}»` : 'لم يتم العثور على نتائج، ما زالت المكتبة تُحمَّل')); return; }
+    // Typing: words to search for, and the best matches straight away
+    if (!showResults) {
+      const all = document.createElement('div');
+      all.className = 'sp-all';
+      all.innerHTML = `${icon('search')}<span>عرض كل النتائج لـ «${esc(q)}»</span>`;
+      clickable(all, () => search(q));
+      body.replaceChildren(
+        ...f.suggestions.map((s) => { const el = row(`<span class="sp-suggest">${icon('search')}</span>`, s, '', () => search(s)); el.classList.add('sp-suggestion'); return el; }),
+        ...f.reciters.slice(0, 2).map(reciterRow),
+        ...f.tracks.slice(0, 6).map(trackRow),
+        all,
+      );
+      paintFollowButtons();
+      markPlayingRows();
+      return;
+    }
+    // The results, as Spotify lists them
+    const k = searchUi.filter;
+    const out = [];
+    if (k === 'all' || k === 'reciters') out.push(...(k === 'all' ? f.reciters.slice(0, 1) : f.reciters).map(reciterRow));
+    if (k === 'all' || k === 'playlists') out.push(...f.playlists.map(playlistRow));
+    if (k === 'all' || k === 'tracks') out.push(...f.tracks.slice(0, k === 'all' ? 40 : 200).map(trackRow));
+    if (k === 'all' || k === 'categories') out.push(...f.categories.map(categoryRow));
+    if (k === 'all') out.push(...f.reciters.slice(1, 12).map(reciterRow));
+    body.replaceChildren(...(out.length ? out : [empty('لا توجد نتائج هنا')]));
+    paintFollowButtons();
+    markPlayingRows();
+  };
+
+  let timer;
+  input.addEventListener('input', () => {
+    searchUi.query = input.value;
+    clearTimeout(timer);
+    timer = setTimeout(paint, 120);
+  });
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && input.value.trim()) search(input.value); });
+  clear.onclick = () => { searchUi.query = ''; searchUi.shownFor = null; input.value = ''; paint(); input.focus(); };
+  paint();
+  if (searchUi.shownFor === null) setTimeout(() => { if (input.isConnected) input.focus(); }, 60);
+}
+
+// ═══ Library tab (Spotify's "Your Library") ══════════════════════════════════
+// Filters, a sort, a grid (or a list) of their collections, the likes and the
+// downloads pinned on top
+const LIBRARY_FILTERS = { playlists: 'قوائم التشغيل', reciters: 'الرواديد', downloads: 'التنزيلات' };
+const libraryUi = { filter: null, sort: 'recent', grid: store.get('sawt_library_grid', true), query: '' };
+const playlistTime = (pl) => Number(String(pl.id).match(/\d{10,}/)?.[0] || 0);
+
+function libraryEntries() {
+  const all = [
+    { key: 'likes', kind: 'likes', title: 'المقاطع المفضلة', subtitle: `قائمة تشغيل • ${formatCount(likesCount())} مقطع`, art: { likes: true }, pinned: true, time: 2, open: () => openLikesPage() },
+    { key: 'downloads', kind: 'downloads', title: 'التنزيلات', subtitle: `${formatCount(lib.downloads.size)} مقطع على الجهاز`, art: { downloads: true }, pinned: true, time: 1, open: () => openDownloadsPage() },
+    ...lib.playlists.map((pl) => {
+      const tracks = playlistTracks(pl);
+      return { key: `p:${pl.id}`, kind: 'playlist', pl, title: pl.name, subtitle: `قائمة تشغيل • ${formatCount(fullyLoaded ? tracks.length : pl.tracks.length)} مقطع`,
+        art: { covers: tracks.map((t) => t.coverImage) }, time: playlistTime(pl), open: () => openPlaylistPage(pl) };
+    }),
+    ...[...lib.follows].map((name, i) => ({ key: `r:${name}`, kind: 'reciter', title: name, subtitle: 'رادود', art: { cover: reciterPhoto(name), round: true }, time: i, open: () => openArtistDetail(name) })),
+  ];
+  const { filter, query, sort } = libraryUi;
+  const q = normalize(query.trim());
+  const shown = all.filter((e) => {
+    if (filter === 'playlists' && e.kind !== 'likes' && e.kind !== 'playlist') return false;
+    if (filter === 'reciters' && e.kind !== 'reciter') return false;
+    if (filter === 'downloads' && e.kind !== 'downloads' && !(e.pl?.tracks.length && e.pl.tracks.every((id) => lib.downloads.has(id)))) return false;
+    return !q || normalize(e.title).includes(q);
+  });
+  return shown.sort((a, b) => (!!b.pinned - !!a.pinned) || (sort === 'recent' ? b.time - a.time : arabicOrder.compare(a.title, b.title)));
+}
 
 function renderLibrary() {
-  const filter = document.querySelector('.filter-chip.active')?.dataset.filter || 'all';
-  const container = $('library-content');
-  container.innerHTML = '';
-  const grid = document.createElement('div');
-  grid.className = 'library-grid animate-in';
-
-  const card = (iconName, title, subtitle, onClick, cover) => {
-    const el = document.createElement('div');
-    el.className = 'library-card';
-    el.innerHTML = `${cover ? `<img src="${esc(thumb(cover, 80))}" alt="" class="library-card-cover" />` : icon(iconName)}
-      <div class="library-card-title ellipsis">${esc(title)}</div><div class="library-card-subtitle muted">${esc(subtitle)}</div>`;
-    grid.appendChild(clickable(el, onClick));
+  // Filters: once one is chosen, an ✕ to go back to all of it
+  const chip = (key, active) => {
+    const b = document.createElement('button');
+    b.className = `filter-chip${active ? ' active' : ''}`;
+    b.textContent = LIBRARY_FILTERS[key];
+    b.onclick = () => { libraryUi.filter = active ? null : key; renderLibrary(); };
+    return b;
   };
-
-  if (filter === 'all') card('heart', 'المقاطع المفضلة', `${formatCount(likesCount())} مقطع`, openLikesPage);
-  if (filter === 'all' || filter === 'downloads') card('download', 'التنزيلات', `${formatCount(lib.downloads.size)} مقطع على الجهاز`, openDownloadsPage);
-  if (filter === 'all' || filter === 'playlists') {
-    lib.playlists.forEach((pl) => card('playlist', pl.name, `${formatCount(fullyLoaded ? playlistTracks(pl).length : pl.tracks.length)} مقطع`, () => openPlaylistPage(pl), playlistTracks(pl)[0]?.coverImage));
-    if (filter === 'playlists' && !lib.playlists.length) {
-      const empty = document.createElement('div');
-      empty.className = 'empty-state';
-      empty.style.gridColumn = '1 / -1';
-      empty.innerHTML = 'لم تنشئ أي قائمة بعد.<br/><button class="link-btn">إنشاء قائمة</button>';
-      empty.querySelector('button').onclick = () => promptCreatePlaylist();
-      grid.appendChild(empty);
-    }
+  if (libraryUi.filter) {
+    const clear = document.createElement('button');
+    clear.className = 'filter-clear';
+    clear.setAttribute('aria-label', 'كل المكتبة');
+    clear.innerHTML = icon('close');
+    clear.onclick = () => { libraryUi.filter = null; renderLibrary(); };
+    $('lib-filters').replaceChildren(clear, chip(libraryUi.filter, true));
+  } else {
+    $('lib-filters').replaceChildren(...Object.keys(LIBRARY_FILTERS).map((k) => chip(k, false)));
   }
-  container.appendChild(grid);
+  $('lib-sort').querySelector('span').textContent = libraryUi.sort === 'recent' ? 'مؤخراً' : 'أبجدياً';
+  const layout = $('lib-layout');
+  setIcon(layout.querySelector('.ic'), libraryUi.grid ? 'list' : 'grid');
+  layout.setAttribute('aria-label', libraryUi.grid ? 'عرض كقائمة' : 'عرض كشبكة');
 
-  if (filter === 'all' || filter === 'artists') {
-    const followed = [...lib.follows].map((n) => reciterByName.get(n)).filter(Boolean);
-    if (followed.length) container.appendChild(section('الرواديد الذين تتابعهم', scroller(followed, reciterCard)));
-    else if (filter === 'artists') {
-      const empty = document.createElement('div');
-      empty.className = 'empty-state';
-      empty.innerHTML = 'لا تتابع أي رادود بعد. افتح صفحة رادود واضغط "متابعة".<br/><button class="link-btn">تصفح الرواديد</button>';
-      empty.querySelector('button').onclick = () => openAllReciters();
-      container.appendChild(empty);
-    }
+  const container = $('library-content');
+  container.className = libraryUi.grid ? 'lib-grid' : 'lib-list';
+  const entries = libraryEntries();
+  if (!entries.length) {
+    container.innerHTML = `<div class="empty-state">${libraryUi.query.trim() ? 'لا توجد نتائج' : 'لا يوجد شيء هنا بعد'}</div>`;
+    return;
   }
+  container.replaceChildren(...entries.map((e) => {
+    const el = document.createElement('div');
+    el.className = libraryUi.grid ? 'lib-tile' : 'lib-row';
+    el.innerHTML = `${artHtml(e.art, { width: libraryUi.grid ? 120 : 64 })}
+      <div class="lib-text"><div class="lib-title">${esc(e.title)}</div>
+      <div class="lib-sub">${e.pinned ? `<span class="lib-pin">${icon('pin', { fill: true })}</span>` : ''}<span class="ellipsis">${esc(e.subtitle)}</span></div></div>`;
+    return clickable(el, e.open);
+  }));
 }
+
+$('lib-sort').onclick = () => { libraryUi.sort = libraryUi.sort === 'recent' ? 'alpha' : 'recent'; renderLibrary(); };
+$('lib-layout').onclick = () => { libraryUi.grid = !libraryUi.grid; store.set('sawt_library_grid', libraryUi.grid); renderLibrary(); };
+$('lib-search-btn').onclick = () => {
+  const box = $('lib-search');
+  const open = box.style.display === 'none';
+  box.style.display = open ? '' : 'none';
+  if (open) $('lib-search-input').focus();
+  else { $('lib-search-input').value = ''; libraryUi.query = ''; renderLibrary(); }
+};
+$('lib-search-input').addEventListener('input', (e) => { libraryUi.query = e.target.value; renderLibrary(); });
+
+// Create: a playlist, or one made from their taste or what they play most
+window.openCreateSheet = () => {
+  const sheet = $('action-sheet');
+  sheet.innerHTML = '<div class="sheet-handle"></div>';
+  const makeFrom = (name, tracks) => {
+    if (!tracks.length) { toast('استمع إلى بعض المقاطع أولاً ليتعرّف التطبيق على ذوقك'); return; }
+    closeOverlayThen(async () => {
+      const pl = await createPlaylist(name, tracks.map((t) => t.id));
+      openPlaylistPage(pl);
+      toast('أُنشئت القائمة');
+    });
+  };
+  const item = (iconName, title, sub, onClick) => {
+    const b = document.createElement('button');
+    b.className = 'create-item';
+    b.innerHTML = `<span class="create-disc">${icon(iconName)}</span><span><b>${esc(title)}</b><span class="muted">${esc(sub)}</span></span>`;
+    b.onclick = onClick;
+    sheet.appendChild(b);
+  };
+  item('music', 'قائمة تشغيل', 'أنشئ قائمة للمقاطع التي تحبها', () => closeOverlayThen(() => promptCreatePlaylist()));
+  item('blend', 'مزيج من ذوقك', 'قائمة جاهزة من مقاطع تناسب ذوقك', () => makeFrom('مزيج من ذوقك', madeForYou(30)));
+  item('flame', 'الأكثر استماعاً لديك', 'المقاطع التي تكرر الاستماع إليها', () => makeFrom('الأكثر استماعاً لديك', mostPlayed(30)));
+  openSheet('action-modal');
+};
 
 // ═══ Prompts, options, playlists ═════════════════════════════════════════════
 function openPrompt({ title, hint = '', value = '', placeholder = '', type = 'text', minLength = 1, onSubmit }) {
@@ -2007,43 +2535,84 @@ function openSheet(backdropId) {
   );
 }
 
+// The items of Spotify's menu, in its order
 function openTrackOptions(track, { playlist = null } = {}) {
   $('track-options-img').src = thumb(track.coverImage, 55);
   $('track-options-title').textContent = track.title;
   $('track-options-artist').textContent = track.reciterName;
-
+  const box = $('track-options-items');
+  box.innerHTML = '';
+  const then = (fn) => () => closeOverlayThen(fn);
+  // A page opens where the player was: the player closes first
+  const toPage = (fn) => () => closeOverlayThen(() => ($('full-player-view').classList.contains('open') ? closeOverlayThen(fn) : fn()));
   const liked = lib.likes.has(track.id);
-  setIcon($('opt-like-icon'), 'heart', { fill: liked });
-  $('opt-like-icon').classList.toggle('liked', liked);
-  $('opt-like-text').textContent = liked ? 'إزالة من المفضلة' : 'إضافة إلى المفضلة';
-  $('opt-like').onclick = () => closeOverlayThen(() => toggleLike(track));
+  const downloaded = lib.downloads.has(track.id);
+  const cat = categoryOf(track);
 
-  $('opt-queue').onclick = () => closeOverlayThen(() => playNextInQueue(track));
-  $('opt-playlist').onclick = () => closeOverlayThen(() => openPlaylistPicker(track));
-
-  const remove = $('opt-remove');
-  remove.style.display = playlist ? 'flex' : 'none';
-  remove.onclick = () => closeOverlayThen(async () => {
-    playlist.tracks = playlist.tracks.filter((id) => id !== track.id);
-    await savePlaylist(playlist);
-    toast('أُزيل من القائمة');
-  });
-
-  const dl = lib.downloads.has(track.id);
-  setIcon($('opt-download-icon'), dl ? 'check' : 'download');
-  $('opt-download-text').textContent = dl ? 'حذف التنزيل' : 'تنزيل للاستماع بدون إنترنت';
-  $('opt-download').onclick = () => closeOverlayThen(() => toggleDownload(track));
-
-  $('opt-artist').onclick = () => closeOverlayThen(() => {
-    if ($('full-player-view').classList.contains('open')) closeOverlayThen(() => openArtistDetail(track.reciterName));
-    else openArtistDetail(track.reciterName);
-  });
-  $('opt-radio').onclick = () => closeOverlayThen(() => {
-    if ($('full-player-view').classList.contains('open')) closeOverlayThen(() => openRadioPage(track));
-    else openRadioPage(track);
-  });
-  $('opt-share').onclick = () => closeOverlayThen(() => openShareSheet(track));
+  sheetItem(box, 'share-nodes', 'مشاركة', then(() => openShareSheet(track)));
+  sheetItem(box, `<span class="liked-square">${icon('heart', { fill: true })}</span>`, liked ? 'إزالة من "المقاطع المفضلة"' : 'إضافة إلى "المقاطع المفضلة"', then(() => toggleLike(track)));
+  sheetItem(box, 'circle-plus', 'إضافة إلى قائمة تشغيل', then(() => openPlaylistPicker(track)));
+  if (playlist) {
+    sheetItem(box, 'trash', 'إزالة من هذه القائمة', then(async () => {
+      playlist.tracks = playlist.tracks.filter((id) => id !== track.id);
+      await savePlaylist(playlist);
+      toast('أُزيل من القائمة');
+    }));
+  }
+  sheetItem(box, lib.hidden.has(track.id) ? 'eye' : 'eye-off', lib.hidden.has(track.id) ? 'إظهار هذا المقطع' : 'إخفاء هذا المقطع', then(() => toggleHidden(track)));
+  sheetItem(box, 'list-plus', 'إضافة إلى قائمة الانتظار', then(() => playNextInQueue(track)));
+  if (currentTrack) sheetItem(box, 'queue', 'الذهاب إلى قائمة الانتظار', then(() => openQueue()));
+  sheetItem(box, downloaded ? 'check' : 'download', downloaded ? 'حذف التنزيل' : 'تنزيل للاستماع بدون إنترنت', then(() => toggleDownload(track)), downloaded ? 'gold' : '');
+  if (cat) sheetItem(box, 'album', `الانتقال إلى التصنيف: ${cat.title}`, toPage(() => openCategoryDetail(cat)));
+  if (track.reciterName !== UNKNOWN_RECITER) sheetItem(box, 'mic', 'الانتقال إلى الرادود', toPage(() => openArtistDetail(track.reciterName)));
+  sheetItem(box, 'circle-x', lib.excluded.has(track.id) ? 'إعادة المقطع إلى "لمحة عن ذوقك"' : 'استبعاد المقطع من "لمحة عن ذوقك"', then(() => toggleExcluded(track)));
+  sheetItem(box, 'timer', 'مؤقت النوم', then(() => openSleepTimerSheet()), '', $('sleep-timer-label').textContent);
+  sheetItem(box, 'radio', 'الانتقال إلى راديو المقطع', toPage(() => openRadioPage(track)));
+  sheetItem(box, 'playlist', 'عرض لائحة الشكر للمقطع', then(() => loadDetails(track).then(() => openCredits(track, reciterForTrack(track)))));
+  sheetItem(box, 'audio-lines', 'عرض رمز المقطع', then(() => openCodeSheet(track)));
   openSheet('track-options-modal');
+}
+
+// The track's code (Spotify's): its cover on its colour, a QR code that opens
+// it on any phone's camera, share and copy the link
+async function openCodeSheet(t) {
+  const url = `${SITE_URL}/track?id=${t.id}`;
+  let qrSvg = '';
+  try {
+    const { default: qrcode } = await import('qrcode-generator');
+    const qr = qrcode(0, 'M');
+    qr.addData(url);
+    qr.make();
+    const n = qr.getModuleCount();
+    let d = '';
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) d += `M${c + 1} ${r + 1}h1v1h-1z`;
+    qrSvg = `<svg viewBox="0 0 ${n + 2} ${n + 2}" shape-rendering="crispEdges" aria-label="رمز QR للمقطع"><path fill="#121212" d="${d}"/></svg>`;
+  } catch { /* offline: the code's script didn't load; the link still works */ }
+  const sheet = $('action-sheet');
+  sheet.innerHTML = `
+    <div class="sheet-handle"></div>
+    <h2 class="modal-title" style="border: none; text-align: center;">رمز المقطع</h2>
+    <div class="code-card">
+      <img src="${esc(thumb(t.coverImage, 320))}" alt="" class="code-cover" />
+      <div class="code-row">
+        ${qrSvg ? `<div class="code-qr">${qrSvg}</div>` : ''}
+        <div style="min-width: 0;">
+          <div class="code-title">${esc(t.title)}</div>
+          <div class="code-reciter ellipsis">${esc(t.reciterName)}</div>
+          <div class="code-hint">امسح الرمز بكاميرا أي هاتف لفتح المقطع</div>
+        </div>
+      </div>
+    </div>
+    <div class="code-actions">
+      <button class="secondary-btn code-share">${icon('share-nodes')} مشاركة</button>
+      <button class="secondary-btn code-copy">${icon('copy')} نسخ الرابط</button>
+    </div>`;
+  withShades(t, (sh) => { const card = sheet.querySelector('.code-card'); if (card) card.style.background = sh.top; });
+  sheet.querySelector('.code-share').onclick = () => closeOverlayThen(() => openShareSheet(t));
+  sheet.querySelector('.code-copy').onclick = async () => {
+    try { await navigator.clipboard.writeText(url); toast('تم نسخ الرابط'); } catch { prompt('انسخ الرابط:', url); }
+  };
+  openSheet('action-modal');
 }
 
 window.openCurrentTrackOptions = () => { if (currentTrack) openTrackOptions(currentTrack); };
@@ -2386,22 +2955,32 @@ const togglePlay = window.togglePlay;
 // Next track: from the queue; at its end repeat-all wraps, autoplay continues
 // with similar tracks, otherwise playback stops. Returns whether a track started.
 window.playNext = (fromEnded = false) => {
+  // Reached by itself, a hidden track is passed over (one picked by hand still plays)
+  for (let tries = 0; tries <= queue.length; tries++) {
+    if (!advanceQueue(fromEnded)) return false;
+    if (!fromEnded || !lib.hidden.has(queue[queueIndex]?.id)) break;
+  }
+  playTrack(queue[queueIndex]);
+  return true;
+};
+
+// One step on in the queue (see playNext); false when there is nowhere to go
+function advanceQueue(fromEnded) {
   if (queueIndex < queue.length - 1) {
     queueIndex++;
   } else if (repeatMode === 'all' && queue.length) {
     queueIndex = 0;
   } else if (isAutoplay && currentTrack) {
     const played = new Set(queue.map((t) => t.id));
-    const more = similarTo(currentTrack, 40).filter((t) => !played.has(t.id));
+    const more = visible(similarTo(currentTrack, 40)).filter((t) => !played.has(t.id));
     if (!more.length) return false;
     queue.push(...more.slice(0, 10));
     queueIndex++;
   } else {
     if (!fromEnded && queue.length) queueIndex = 0; else return false;
   }
-  playTrack(queue[queueIndex]);
   return true;
-};
+}
 
 window.playPrev = () => {
   if (audio.currentTime > 3 || queueIndex === 0) { audio.currentTime = 0; return; }
@@ -3077,6 +3656,8 @@ function updateProfileUI() {
   $('stat-listened').textContent = formatCount(lib.history.length);
   $('stat-likes').textContent = formatCount(likesCount());
   $('stat-playlists').textContent = formatCount(lib.playlists.length);
+  $('hidden-count').textContent = lib.hidden.size ? formatCount(lib.hidden.size) : '';
+  $('excluded-count').textContent = lib.excluded.size ? formatCount(lib.excluded.size) : '';
   paintSleepTimer();
 }
 
@@ -3279,9 +3860,7 @@ function handleDeepLink() {
     const r = reciters.find((x) => x.dbId === reciterId);
     if (r) openArtistDetail(r.name); else toast('هذا الرادود غير موجود');
   } else if (q) {
-    goSearch();
-    $('main-search-input').value = q;
-    runSearch();
+    openSearchPage(q, true);
   }
 }
 

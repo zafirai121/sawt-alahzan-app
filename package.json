@@ -17,6 +17,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",
     "hls.js": "^1.6.16",
-    "lucide": "^1.49.0"
+    "lucide": "^1.49.0",
+    "qrcode-generator": "^2.0.4"
   }
 }
