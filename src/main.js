@@ -1881,20 +1881,26 @@ const facesHtml = (urls) => `<div class="faces">${[urls[1], urls[2], urls[0]].ma
   ? `<img class="face ${['left', 'right', 'big'][i]}" src="${esc(thumb(u, i === 2 ? 240 : 160))}" alt="" loading="lazy" />` : '')).join('')}</div>`;
 const facesOf = (names, list) => names.slice(0, 3).map((n) => reciterByName.get(n)?.image || list.find((t) => t.reciterName === n)?.coverImage || '');
 
-// A radio to discover: its light colour and faces, "<track> الراديو", who is
-// in it. `label`: a reciter's radio, their name across the card instead
+// A radio to discover, as Spotify's card: its light colour and faces (the
+// side ones whole at the card's very edges), "<track> الراديو", who is in it.
+// `label`: a reciter's radio, their name large at the bottom instead
 function radioCard(t, label = null) {
   const radio = radioOf(t, 20);
   const names = recitersOfList(radio);
   const card = document.createElement('div');
   card.className = 'radio-card';
+  const size = label && (label.length > 16 ? ' s' : label.length > 12 ? ' m' : '');
   card.innerHTML = `
-    <div class="radio-art">${facesHtml(facesOf(names, radio))}
-      ${label ? `<span class="radio-tag">راديو</span><span class="radio-label ellipsis">${esc(label)}</span>` : '<span class="radio-word">الراديو</span>'}
+    <div class="radio-art">${facesHtml(facesOf(names, radio))}${sLogo('radio-logo')}
+      ${label ? `<span class="radio-tag">راديو</span><span class="radio-label ellipsis${size}">${esc(label)}</span>` : '<span class="radio-word">الراديو</span>'}
     </div>
     ${label ? '' : `<div class="radio-card-title">${esc(t.title)} الراديو</div>`}
     <div class="square-subtitle">${esc(label ? withMore(names.filter((n) => n !== label), 3) : `مع ${withMore(names, 2)}`)}</div>`;
-  withShades(t, (sh) => { card.querySelector('.radio-art').style.background = sh.pastel; });
+  withShades(t, (sh) => {
+    const art = card.querySelector('.radio-art');
+    art.style.background = sh.pastel;
+    art.style.setProperty('--ring', sh.pastel);
+  });
   return clickable(card, () => openRadioPage(t));
 }
 
