@@ -951,6 +951,7 @@ function showView(viewId, scrollTop = 0) {
   document.querySelector('.top-gradient').style.display = OWN_TOP.has(viewId) ? 'none' : '';
   mainEl().scrollTo(0, scrollTop);
   startPageScroll(viewId);
+  if (viewId === 'home-view') paintHomeBar();
 }
 
 // ─── Pages drawn from code (reciter, radio, daily mix) ───
@@ -1218,6 +1219,11 @@ function renderHome() {
   container.innerHTML = '';
   tabDrawnAt.home = tabStamp();
   $('home-greeting').textContent = greeting();
+  renderHomeBar();
+
+  // A category chosen in the top bar: its own home
+  const chosen = CATEGORIES.find((c) => c.id === homeFilter);
+  if (chosen) { renderCategoryHome(container, chosen); return; }
 
   const recent = historyTracks();
   const liked = likedTracks();
@@ -1240,16 +1246,7 @@ function renderHome() {
 
   // 2. Newest uploads
   const newest = allTracks.slice(0, 15);
-  container.appendChild(section('مضاف حديثاً', scroller(newest, (t) => {
-    const card = document.createElement('div');
-    card.className = 'wide-card';
-    card.innerHTML = `
-      <img src="${esc(thumb(t.coverImage, 320))}" alt="" loading="lazy" />
-      ${splashBadge}
-      <div class="wide-card-text"><div class="ellipsis wide-title">${esc(t.title)}</div></div>
-      <div class="fabric-band"><span class="ellipsis">${esc(t.reciterName)}</span></div>`;
-    return clickable(card, () => openTrackDetail(t));
-  }), () => openListPage('مضاف حديثاً', allTracks.slice(0, 100))));
+  container.appendChild(section('مضاف حديثاً', scroller(newest, wideCard), () => openListPage('مضاف حديثاً', allTracks.slice(0, 100))));
 
   // 3. Top reciters (with a real photo first)
   const topReciters = reciters.filter((r) => r.count > 0).sort((a, b) => (b.hasPhoto - a.hasPhoto) || (b.count - a.count)).slice(0, 12);
@@ -1306,8 +1303,80 @@ function mixCard(m) {
   return clickable(card, () => openMixPage(m.number));
 }
 
-// Several short rows per column, scrolling sideways
-function columnsScroller(list) {
+// A large card: the cover, the app's mark on a white splash, the title, and
+// the reciter's name on a band of woven cloth along the bottom
+function wideCard(t) {
+  const card = document.createElement('div');
+  card.className = 'wide-card';
+  card.innerHTML = `
+    <img src="${esc(thumb(t.coverImage, 320))}" alt="" loading="lazy" />
+    ${splashBadge}
+    <div class="wide-card-text"><div class="ellipsis wide-title">${esc(t.title)}</div></div>
+    <div class="fabric-band"><span class="ellipsis">${esc(t.reciterName)}</span></div>`;
+  return clickable(card, () => openTrackDetail(t));
+}
+
+// ─── The home screen's top bar (Spotify's): "all" and the categories ───
+// It stays on top as the page scrolls, on the page's dark ground once the
+// greeting has gone up; a category chosen turns the home screen into its own
+let homeFilter = null;
+function renderHomeBar() {
+  const bar = $('home-bar');
+  const withTracks = CATEGORIES.filter((c) => allTracks.some((t) => c.values.includes(t.category)));
+  if (homeFilter && !withTracks.some((c) => c.id === homeFilter)) homeFilter = null;
+  const chip = (id, label) => {
+    const b = document.createElement('button');
+    b.className = `filter-chip${homeFilter === id ? ' active' : ''}`;
+    b.textContent = label;
+    b.onclick = () => {
+      homeFilter = homeFilter === id && id ? null : id;
+      renderHome();
+      // Back to the top of the new feed, the bar still in view
+      const header = document.querySelector('#home-view .home-header');
+      if (mainEl().scrollTop > header.offsetHeight) mainEl().scrollTo(0, header.offsetHeight);
+    };
+    return b;
+  };
+  bar.replaceChildren(chip(null, 'الكل'), ...withTracks.map((c) => chip(c.id, c.title)));
+  bar.style.display = '';
+  paintHomeBar();
+}
+function paintHomeBar() {
+  const bar = $('home-bar');
+  if (bar.style.display === 'none' || $('home-view').style.display === 'none') return;
+  bar.classList.toggle('stuck', bar.getBoundingClientRect().top <= mainEl().getBoundingClientRect().top + 1);
+}
+let homeBarFrame = 0;
+mainEl().addEventListener('scroll', () => {
+  if (homeBarFrame) return;
+  homeBarFrame = requestAnimationFrame(() => { homeBarFrame = 0; paintHomeBar(); });
+}, { passive: true });
+
+// A category's own home: its newest, its most listened, its reciters, today's picks from it, and all of it
+function renderCategoryHome(container, cat) {
+  const tracks = visible(allTracks.filter((t) => cat.values.includes(t.category)));
+  if (!tracks.length) {
+    container.innerHTML = '<div class="empty-state">لا توجد مقاطع في هذا التصنيف بعد</div>';
+    return;
+  }
+  const source = { kind: 'category', id: cat.id };
+  container.appendChild(section(`الأحدث في ${cat.title}`, scroller(tracks.slice(0, 15), wideCard), () => openCategoryDetail(cat)));
+  const popular = [...tracks].sort((a, b) => b.listens - a.listens).slice(0, 25);
+  container.appendChild(section('الأكثر استماعاً', columnsScroller(popular, source)));
+  const counts = new Map();
+  tracks.forEach((t) => { if (t.reciterName !== UNKNOWN_RECITER) counts.set(t.reciterName, (counts.get(t.reciterName) || 0) + 1); });
+  const catReciters = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([n]) => reciterByName.get(n)).filter(Boolean).slice(0, 12);
+  if (catReciters.length) container.appendChild(section(`رواديد ${cat.title}`, scroller(catReciters, reciterCard)));
+  container.appendChild(section('توصيات اليوم', scroller(seededShuffle(tracks, todaySeed()).slice(0, 15), (t) => squareCard(t))));
+  const all = document.createElement('div');
+  all.className = 'pv-center section';
+  all.innerHTML = `<button class="pill-btn">عرض كل ${esc(cat.title)}</button>`;
+  all.firstElementChild.onclick = () => openCategoryDetail(cat);
+  container.appendChild(all);
+}
+
+// Several short rows per column, scrolling sideways; `source`: what they are (for "recently played")
+function columnsScroller(list, source = null) {
   const row = document.createElement('div');
   row.className = 'horizontal-scroller snap';
   for (let c = 0; c * 5 < list.length && c < 5; c++) {
@@ -1320,7 +1389,7 @@ function columnsScroller(list) {
         <img src="${esc(thumb(t.coverImage, 48))}" alt="" loading="lazy" />
         <div class="mini-row-text"><div class="ellipsis">${esc(t.title)}</div><div class="ellipsis muted">${esc(t.reciterName)}${t.listens ? ` • ${formatCount(t.listens)} استماع` : ''}</div></div>
         <button class="icon-btn row-more" aria-label="خيارات">${icon('more')}</button>`;
-      clickable(item, () => playFromList(list, c * 5 + i));
+      clickable(item, () => playFromList(list, c * 5 + i, { source }));
       item.querySelector('.row-more').onclick = (e) => { e.stopPropagation(); openTrackOptions(t); };
       col.appendChild(item);
     });

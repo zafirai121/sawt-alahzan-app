@@ -49,10 +49,12 @@
 
         <!-- Home -->
         <div id="home-view" class="view">
-          <header>
+          <header class="home-header">
             <h1 class="greeting" id="home-greeting">صوت الأحزان</h1>
             <button class="avatar-btn" onclick="goProfile()" aria-label="حسابي"></button>
           </header>
+          <!-- Spotify's top bar: "all" and the categories, staying on top as the page scrolls -->
+          <div id="home-bar" class="home-bar horizontal-scroller" style="display: none;"></div>
           <div id="sections-container"></div>
         </div>
 
