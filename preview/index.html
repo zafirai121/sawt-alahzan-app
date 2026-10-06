@@ -31,8 +31,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" crossorigin />
-    <script type="module" crossorigin src="/sawt-alahzan-app/preview/assets/index-CQWNH2f8.js"></script>
-    <link rel="stylesheet" crossorigin href="/sawt-alahzan-app/preview/assets/index-CVMs8psC.css">
+    <script type="module" crossorigin src="/sawt-alahzan-app/preview/assets/index-C4JVlFxR.js"></script>
+    <link rel="stylesheet" crossorigin href="/sawt-alahzan-app/preview/assets/index-Czm3e-c8.css">
   </head>
   <body>
     <svg width="0" height="0" style="position: absolute;" aria-hidden="true">
@@ -50,10 +50,12 @@
 
         <!-- Home -->
         <div id="home-view" class="view">
-          <header>
+          <header class="home-header">
             <h1 class="greeting" id="home-greeting">صوت الأحزان</h1>
             <button class="avatar-btn" onclick="goProfile()" aria-label="حسابي"></button>
           </header>
+          <!-- Spotify's top bar: "all" and the categories, staying on top as the page scrolls -->
+          <div id="home-bar" class="home-bar horizontal-scroller" style="display: none;"></div>
           <div id="sections-container"></div>
         </div>
 
