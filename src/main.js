@@ -1230,69 +1230,364 @@ function renderHome() {
   // What they played from (a reciter, a playlist, the likes, a radio, a track...), newest first
   const recents = recentEntries(20);
 
-  // 1. Quick grid (Spotify's, six cards): what they played from last, each
-  // opening its page; otherwise the newest
-  const quick = recents.length >= 4 ? recents.slice(0, 6)
-    : allTracks.slice(0, 6).map((t) => ({ title: t.title, art: { cover: t.coverImage }, open: () => openTrackDetail(t) }));
-  const grid = document.createElement('div');
-  grid.className = 'recent-grid section animate-in';
-  quick.forEach((e) => {
-    const card = document.createElement('div');
-    card.className = 'recent-card';
-    card.innerHTML = `${artHtml(e.art, { small: true, width: 56 })}<div class="recent-title">${esc(e.title)}</div>`;
-    grid.appendChild(clickable(card, e.open));
-  });
-  container.appendChild(grid);
-
-  // 2. Newest uploads
   const newest = allTracks.slice(0, 15);
-  container.appendChild(section('مضاف حديثاً', scroller(newest, wideCard), () => openListPage('مضاف حديثاً', allTracks.slice(0, 100))));
-
-  // 3. Top reciters (with a real photo first)
+  const popularShown = popularTracks.slice(0, 25);
   const topReciters = reciters.filter((r) => r.count > 0).sort((a, b) => (b.hasPhoto - a.hasPhoto) || (b.count - a.count)).slice(0, 12);
-  container.appendChild(section('أشهر الرواديد', scroller(topReciters, reciterCard), () => openAllReciters()));
+  const returning = recent.length > 0 || lib.likes.size > 0 || lib.follows.size > 0;
+  const w = taste();
 
-  // 4. Recently played (Spotify's): tracks, reciters, playlists, the likes,
-  // radios, mixes; each opens its own page instead of playing at once
-  if (recents.length) {
-    container.appendChild(section('تم الاستماع إليه مؤخراً', recentColumns(recents), () => openListPage('تم الاستماع إليه مؤخراً', recent)));
-  }
+  const sections = {
+    // Quick grid (Spotify's, six cards): what they played from last, each
+    // opening its page; otherwise the newest
+    quick: () => {
+      const quick = recents.length >= 4 ? recents.slice(0, 6)
+        : allTracks.slice(0, 6).map((t) => ({ title: t.title, art: { cover: t.coverImage }, open: () => openTrackDetail(t) }));
+      const grid = document.createElement('div');
+      grid.className = 'recent-grid section animate-in';
+      quick.forEach((e) => {
+        const card = document.createElement('div');
+        card.className = 'recent-card';
+        card.innerHTML = `${artHtml(e.art, { small: true, width: 56 })}<div class="recent-title">${esc(e.title)}</div>`;
+        grid.appendChild(clickable(card, e.open));
+      });
+      return grid;
+    },
 
-  // 5. Made for you: Spotify's daily mixes, from their taste (what they play,
-  // like and follow); before there is enough for a mix, tracks picked for them
-  if (recent.length || lib.likes.size || lib.follows.size) {
-    const mixes = dailyMixes();
-    if (mixes.length) container.appendChild(section('مصممة من أجلك', scroller(mixes, mixCard)));
-    else {
+    // The hijri year's occasion today (or coming), and Thursday night / Friday
+    occasion: occasionSection,
+    friday: fridaySection,
+
+    // Made for you: Spotify's daily mixes, from their taste (what they play,
+    // like and follow); before there is enough for a mix, tracks picked for them
+    mixes: () => {
+      const mixes = dailyMixes();
+      if (mixes.length) return section('مصممة من أجلك', scroller(mixes, mixCard));
       const picks = madeForYou(15);
-      if (picks.length >= 3) container.appendChild(section('مصممة من أجلك', scroller(picks, (t) => squareCard(t))));
-    }
+      return picks.length >= 3 ? section('مصممة من أجلك', scroller(picks, (t) => squareCard(t))) : null;
+    },
+
+    // Recently played (Spotify's): tracks, reciters, playlists, the likes,
+    // radios, mixes; each opens its own page instead of playing at once
+    recents: () => (recents.length ? section('تم الاستماع إليه مؤخراً', recentColumns(recents), () => openListPage('تم الاستماع إليه مؤخراً', recent)) : null),
+
+    followed: followedSection,
+
+    // Newest uploads
+    newest: () => section('مضاف حديثاً', scroller(newest, wideCard), () => openListPage('مضاف حديثاً', allTracks.slice(0, 100))),
+
+    radios: () => radiosSection(w, topReciters, returning),
+
+    // Liked or played often, not lately (other than the likes shown below)
+    return: () => returnSection(new Set(liked.slice(0, 15).map((t) => t.id))),
+
+    // Your likes
+    likes: () => (liked.length ? section('استمع للقصائد التي أحببتها', scroller(liked.slice(0, 15), (t) => squareCard(t)), () => openLikesPage()) : null),
+
+    similar: () => similarRecitersSection(w),
+
+    // Most listened (real listen counts)
+    popular: () => (popularShown.length ? section('الأكثر استماعاً', columnsScroller(popularShown), () => openListPage('الأكثر استماعاً', popularTracks)) : null),
+
+    short: shortSection,
+
+    // More from their favourite reciter (from their taste), or the most popular one
+    more: () => {
+      const focus = reciterByName.get(topKeys(w, 1)[0]) || topReciters[0];
+      if (!focus) return null;
+      const more = visible([...tracksOf(focus.name)]).sort((a, b) => b.listens - a.listens).slice(0, 15);
+      return more.length >= 3 ? section(`المزيد من ${focus.name}`, scroller(more, (t) => squareCard(t)), () => openArtistDetail(focus.name)) : null;
+    },
+
+    // Top reciters (with a real photo first)
+    reciters: () => section('أشهر الرواديد', scroller(topReciters, reciterCard), () => openAllReciters()),
+
+    // Today's picks: the same all day, from the most listened, other than what
+    // the newest and the most listened above already show
+    daily: () => {
+      const shown = new Set([...newest, ...popularShown].map((t) => t.id));
+      const pool = [...allTracks].sort((a, b) => b.listens - a.listens).slice(0, 300).filter((t) => !shown.has(t.id));
+      const daily = seededShuffle(visible(pool), todaySeed()).slice(0, 15);
+      return daily.length >= 3 ? section('توصياتنا لك اليوم', scroller(daily, (t) => squareCard(t))) : null;
+    },
+  };
+
+  // What is theirs first for a listener who has played, liked or followed;
+  // for a new one, what is new and most listened first
+  const order = returning
+    ? ['quick', 'occasion', 'friday', 'mixes', 'recents', 'followed', 'newest', 'radios', 'return', 'likes', 'similar', 'popular', 'short', 'more', 'reciters', 'daily']
+    : ['quick', 'occasion', 'friday', 'newest', 'reciters', 'popular', 'radios', 'short', 'daily', 'more'];
+  order.forEach((key) => {
+    const el = sections[key]();
+    if (el) { el.dataset.home = key; container.appendChild(el); }
+  });
+}
+
+// ═══ The home screen's newer sections (the phone app's have the same rules) ═══
+
+// ─── The hijri year's occasions ───
+// What an occasion plays (mourning, joy or prayer), from which categories, on which colours
+const OCCASION_KINDS = {
+  mourning: { cats: ['naei', 'hussainiya'], colors: ['#4A0E17', '#16090B'] },
+  hussaini: { cats: ['hussainiya', 'naei'], colors: ['#5C1010', '#120708'] },
+  joy: { cats: ['muwalid', 'nasheed'], colors: ['#0E5A3A', '#6E5414'] },
+  prayer: { cats: ['dua', 'ziyarat'], colors: ['#123068', '#0A1530'] },
+};
+// Month 1 = Muharram. A season (the first nights of Muharram, Ramadan...) only
+// counts on its own days; a day of its own also counts the day after, as the
+// new moon is often seen a day later than the calendar says
+const OCCASIONS = (() => {
+  const day = (month, d, title, kind, ...words) => ({ month, from: d, to: d, title, kind, words });
+  const days = (month, from, to, title, kind, ...words) => ({ month, from, to, title, kind, words });
+  const season = (month, from, to, title, kind, ...words) => ({ month, from, to, title, kind, words, season: true });
+  return [
+    day(1, 10, 'يوم عاشوراء', 'hussaini', 'عاشوراء', 'الحسين', 'حسين', 'كربلاء', 'الطف'),
+    season(1, 1, 13, 'ليالي محرم الحرام', 'hussaini', 'محرم', 'عاشوراء', 'الحسين', 'حسين', 'العباس', 'كربلاء'),
+    day(1, 25, 'شهادة الإمام زين العابدين (ع)', 'mourning', 'السجاد', 'زين العابدين'),
+    day(2, 20, 'أربعين الإمام الحسين (ع)', 'hussaini', 'الأربعين', 'اربعين', 'الحسين', 'حسين', 'كربلاء'),
+    season(2, 13, 19, 'على طريق الأربعين', 'hussaini', 'الأربعين', 'اربعين', 'المشاية', 'مشاية', 'زوار', 'الحسين'),
+    day(2, 28, 'وفاة النبي (ص) وشهادة الإمام الحسن (ع)', 'mourning', 'النبي', 'الرسول', 'المصطفى', 'الحسن', 'المجتبى'),
+    days(2, 29, 30, 'شهادة الإمام الرضا (ع)', 'mourning', 'الرضا', 'غريب طوس'),
+    day(3, 8, 'شهادة الإمام العسكري (ع)', 'mourning', 'العسكري'),
+    day(3, 17, 'مولد النبي الأكرم (ص) والإمام الصادق (ع)', 'joy', 'النبي', 'الرسول', 'المصطفى', 'محمد', 'الصادق'),
+    day(4, 8, 'مولد الإمام العسكري (ع)', 'joy', 'العسكري'),
+    day(5, 5, 'مولد السيدة زينب (ع)', 'joy', 'زينب'),
+    day(5, 13, 'الأيام الفاطمية', 'mourning', 'الزهراء', 'فاطمة', 'فاطمية', 'الفاطمية'),
+    day(6, 3, 'شهادة السيدة الزهراء (ع)', 'mourning', 'الزهراء', 'فاطمة', 'فاطمية', 'الفاطمية'),
+    day(6, 20, 'مولد السيدة الزهراء (ع)', 'joy', 'الزهراء', 'فاطمة'),
+    day(7, 1, 'مولد الإمام الباقر (ع)', 'joy', 'الباقر'),
+    day(7, 3, 'شهادة الإمام الهادي (ع)', 'mourning', 'الهادي'),
+    day(7, 10, 'مولد الإمام الجواد (ع)', 'joy', 'الجواد'),
+    day(7, 13, 'مولد أمير المؤمنين (ع)', 'joy', 'علي', 'أمير المؤمنين', 'حيدر', 'الكرار', 'الغدير'),
+    day(7, 15, 'وفاة السيدة زينب (ع)', 'mourning', 'زينب'),
+    day(7, 25, 'شهادة الإمام الكاظم (ع)', 'mourning', 'الكاظم', 'موسى بن جعفر'),
+    day(7, 27, 'المبعث النبوي الشريف', 'joy', 'المبعث', 'النبي', 'الرسول', 'المصطفى', 'محمد'),
+    day(8, 3, 'مولد الإمام الحسين (ع)', 'joy', 'الحسين', 'حسين'),
+    day(8, 4, 'مولد أبي الفضل العباس (ع)', 'joy', 'العباس', 'أبو الفضل', 'ابا الفضل', 'أبي الفضل'),
+    day(8, 5, 'مولد الإمام زين العابدين (ع)', 'joy', 'السجاد', 'زين العابدين'),
+    day(8, 11, 'مولد علي الأكبر (ع)', 'joy', 'الأكبر'),
+    day(8, 15, 'مولد الإمام المهدي (عج)', 'joy', 'المهدي', 'الحجة', 'صاحب الزمان', 'المنتظر', 'القائم'),
+    day(9, 10, 'وفاة السيدة خديجة (ع)', 'mourning', 'خديجة'),
+    day(9, 15, 'مولد الإمام الحسن المجتبى (ع)', 'joy', 'الحسن', 'المجتبى'),
+    day(9, 21, 'شهادة أمير المؤمنين (ع)', 'mourning', 'علي', 'أمير المؤمنين', 'حيدر', 'الكوفة', 'المحراب'),
+    season(9, 19, 23, 'ليالي القدر', 'prayer', 'القدر', 'الجوشن', 'علي', 'أمير المؤمنين'),
+    season(9, 1, 30, 'شهر رمضان المبارك', 'prayer', 'رمضان', 'الافتتاح', 'السحر', 'أبو حمزة', 'الجوشن'),
+    day(10, 1, 'عيد الفطر المبارك', 'joy', 'العيد', 'عيد', 'الفطر'),
+    day(10, 25, 'شهادة الإمام الصادق (ع)', 'mourning', 'الصادق'),
+    day(11, 1, 'مولد السيدة المعصومة (ع)', 'joy', 'المعصومة'),
+    day(11, 11, 'مولد الإمام الرضا (ع)', 'joy', 'الرضا'),
+    days(11, 29, 30, 'شهادة الإمام الجواد (ع)', 'mourning', 'الجواد'),
+    day(12, 7, 'شهادة الإمام الباقر (ع)', 'mourning', 'الباقر'),
+    day(12, 9, 'يوم عرفة', 'prayer', 'عرفة', 'عرفه'),
+    day(12, 10, 'عيد الأضحى المبارك', 'joy', 'العيد', 'عيد', 'الأضحى'),
+    day(12, 15, 'مولد الإمام الهادي (ع)', 'joy', 'الهادي'),
+    day(12, 18, 'عيد الغدير الأغر', 'joy', 'الغدير', 'علي', 'أمير المؤمنين', 'حيدر'),
+    day(12, 24, 'يوم المباهلة', 'joy', 'المباهلة', 'أهل البيت', 'الكساء'),
+  ];
+})();
+const HIJRI_MONTHS = ['محرم', 'صفر', 'ربيع الأول', 'ربيع الآخر', 'جمادى الأولى', 'جمادى الآخرة', 'رجب', 'شعبان', 'رمضان', 'شوال', 'ذو القعدة', 'ذو الحجة'];
+const hijriText = (d) => `${d.day} ${HIJRI_MONTHS[d.month - 1]}`;
+
+// The hijri date (Umm al-Qura) at `ms`, in the listener's time zone; null
+// where the browser has no such calendar
+let hijriFormat;
+function hijriDate(ms) {
+  if (hijriFormat === undefined) {
+    try {
+      const f = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', { day: 'numeric', month: 'numeric' });
+      hijriFormat = f.resolvedOptions().calendar === 'islamic-umalqura' ? f : null;
+    } catch { hijriFormat = null; }
   }
+  if (!hijriFormat) return null;
+  const parts = hijriFormat.formatToParts(new Date(ms));
+  const n = (type) => Number(parts.find((p) => p.type === type)?.value);
+  return { month: n('month'), day: n('day') };
+}
 
-  // 6. Your likes
-  if (liked.length) {
-    container.appendChild(section('استمع للقصائد التي أحببتها', scroller(liked.slice(0, 15), (t) => squareCard(t)), () => openLikesPage()));
+const DAY_MS = 86400000;
+const inOccasion = (o, d) => d.month === o.month && d.day >= o.from && d.day <= o.to;
+// Today's occasion, or one coming in the next ten days: { occasion, date, inDays }
+function currentOccasion(now = Date.now()) {
+  const today = hijriDate(now);
+  if (!today) return null;
+  const yesterday = hijriDate(now - DAY_MS);
+  let o = OCCASIONS.find((x) => !x.season && inOccasion(x, today));
+  if (o) return { occasion: o, date: today, inDays: 0 };
+  o = OCCASIONS.find((x) => !x.season && inOccasion(x, yesterday));
+  if (o) return { occasion: o, date: yesterday, inDays: 0 };
+  o = OCCASIONS.find((x) => x.season && inOccasion(x, today));
+  if (o) return { occasion: o, date: today, inDays: 0 };
+  for (let d = 1; d <= 10; d++) {
+    const date = hijriDate(now + d * DAY_MS);
+    o = OCCASIONS.find((x) => date.month === x.month && date.day === x.from);
+    if (o) return { occasion: o, date, inDays: d };
   }
+  return null;
+}
 
-  // 7. Most listened (real listen counts)
-  if (popularTracks.length) {
-    container.appendChild(section('الأكثر استماعاً', columnsScroller(popularTracks.slice(0, 25)), () => openListPage('الأكثر استماعاً', popularTracks)));
+// A word in a title, as a whole word: also with و ف ب ك ل يا before it, and
+// "للحسين" for "الحسين"
+const reEscape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function wordPattern(word) {
+  const w = normalize(word);
+  const forms = [reEscape(w)];
+  if (w.startsWith('ال') && w.length > 3) forms.push(reEscape(`ل${w.slice(2)}`));
+  return new RegExp(`(?:^|[\\s\\p{P}])(?:و|ف|ب|ك|ل|يا)?(?:${forms.join('|')})(?=$|[\\s\\p{P}])`, 'u');
+}
+
+// Tracks for a time (`words` in their titles, from `categoryIds` or none), the
+// most listened first; then the rest of those categories, in a new order every day
+function tracksFor(categoryIds, words, n) {
+  const cats = categoryIds.map((id) => CATEGORIES.find((c) => c.id === id)).filter(Boolean);
+  const inCats = (t) => cats.some((c) => c.values.includes(t.category));
+  const patterns = words.map(wordPattern);
+  const shown = visible(allTracks);
+  const matched = shown.filter((t) => (inCats(t) || !categoryOf(t)) && patterns.some((p) => p.test(normalize(t.title))))
+    .sort((a, b) => b.listens - a.listens);
+  const rest = seededShuffle(shown.filter(inCats).sort((a, b) => b.listens - a.listens).slice(0, 150), todaySeed());
+  return uniqueById([...matched.slice(0, n), ...rest]).slice(0, n);
+}
+
+const inDaysText = (d) => (d === 1 ? 'غداً' : d === 2 ? 'بعد يومين' : `بعد ${d} أيام`);
+
+// Today's occasion (or the next one, ten days ahead): a banner that plays it, then its tracks
+function occasionSection() {
+  const now = currentOccasion();
+  if (!now) return null;
+  const o = now.occasion;
+  const kind = OCCASION_KINDS[o.kind];
+  const tracks = tracksFor(kind.cats, o.words, 40);
+  if (tracks.length < 3) return null;
+  const banner = document.createElement('div');
+  banner.className = 'occasion-banner';
+  banner.style.background = `linear-gradient(135deg, ${kind.colors[0]}, ${kind.colors[1]})`;
+  banner.innerHTML = `
+    <div class="occasion-text">
+      <div class="occasion-date">${esc(now.inDays ? `${inDaysText(now.inDays)} • ${hijriText(now.date)}` : hijriText(now.date))}</div>
+      <div class="occasion-title">${esc(o.title)}</div>
+      <div class="occasion-count">${formatCount(tracks.length)} مقطع لهذه المناسبة</div>
+    </div>
+    <div class="occasion-art">${artHtml({ covers: tracks.slice(0, 4).map((t) => t.coverImage) }, { width: 112 })}</div>`;
+  banner.querySelector('.occasion-text').appendChild(playAllButton(tracks, { kind: 'occasion', id: `${o.month}-${o.from}` }));
+  clickable(banner, () => openListPage(o.title, tracks));
+  const content = document.createElement('div');
+  content.append(banner, scroller(tracks.slice(0, 15), (t) => squareCard(t)));
+  return section(now.inDays ? 'مناسبة قادمة' : 'مناسبة اليوم', content);
+}
+
+// ─── Friday night ───
+// "ليلة الجمعة" from Thursday afternoon, "يوم الجمعة" on Friday; null on other days
+function fridayTitle(d = new Date()) {
+  if (d.getDay() === 4) return d.getHours() >= 15 ? 'ليلة الجمعة' : null;
+  return d.getDay() === 5 ? 'يوم الجمعة' : null;
+}
+const FRIDAY_WORDS = ['كميل', 'الندبة', 'السمات', 'وارث', 'عاشوراء', 'الجامعة', 'العهد', 'الفرج', 'الجمعة'];
+
+// On Thursday night and Friday: Kumayl, the Nudba, Warith and the rest, in short rows that play
+function fridaySection() {
+  const title = fridayTitle();
+  if (!title) return null;
+  const tracks = tracksFor(['dua', 'ziyarat'], FRIDAY_WORDS, 25);
+  if (tracks.length < 5) return null;
+  return noteSection(title, 'دعاء كميل وزيارة وارث وأعمال الليلة', columnsScroller(tracks), () => openListPage(title, tracks));
+}
+
+// ─── From their taste ───
+// The newest tracks of the reciters they follow
+function followedSection() {
+  if (!lib.follows.size) return null;
+  const tracks = visible(allTracks.filter((t) => lib.follows.has(t.reciterName))).slice(0, 100);
+  if (!tracks.length) return null;
+  return section('جديد من تتابعهم', scroller(tracks.slice(0, 15), (t) => squareCard(t)), () => openListPage('جديد من تتابعهم', tracks));
+}
+
+// A radio for each reciter they love (or the best known ones, for a new listener)
+function radiosSection(w, topReciters, personal) {
+  const names = (personal ? topKeys(w, 6) : []);
+  const seeds = (names.length ? names : topReciters.map((r) => r.name))
+    .filter((n) => n !== UNKNOWN_RECITER)
+    .map((name) => {
+      let best = null;
+      for (const t of tracksOf(name)) if (!lib.hidden.has(t.id) && (!best || t.listens > best.listens)) best = t;
+      return best && { name, t: best };
+    })
+    .filter(Boolean).slice(0, 6);
+  if (seeds.length < 2) return null;
+  return section(personal ? 'محطات راديو لك' : 'محطات الراديو', scroller(seeds, ({ name, t }) => radioCard(t, name)));
+}
+
+// Which categories they play most (as their taste in reciters, by category)
+function tasteCategories() {
+  const w = new Map();
+  const skip = (id) => lib.excluded.has(id) || lib.hidden.has(id);
+  const add = (t, v) => { const c = t && categoryOf(t); if (c) w.set(c.id, (w.get(c.id) || 0) + v); };
+  lib.history.forEach((h, i) => { if (!skip(h.id)) add(trackById.get(h.id), (1 + Math.log(lib.plays[h.id] || 1)) / (1 + i / 20)); });
+  lib.likes.forEach((id) => { if (!skip(id)) add(trackById.get(id), 1.5); });
+  return w;
+}
+
+// Reciters they may like: the most listened in the categories they play, other
+// than the ones they follow or play most; a new order every day
+function similarRecitersSection(w) {
+  const top = topKeys(w, 5);
+  if (!top.length) return null;
+  let catIds = topKeys(tasteCategories(), 2);
+  if (!catIds.length) {
+    const counts = new Map();
+    top.flatMap((n) => tracksOf(n)).forEach((t) => { const c = categoryOf(t); if (c) counts.set(c.id, (counts.get(c.id) || 0) + 1); });
+    catIds = topKeys(counts, 2);
   }
+  const cats = catIds.map((id) => CATEGORIES.find((c) => c.id === id)).filter(Boolean);
+  const skip = new Set([...lib.follows, ...top, UNKNOWN_RECITER]);
+  const score = new Map();
+  allTracks.forEach((t) => {
+    if (skip.has(t.reciterName) || !cats.some((c) => c.values.includes(t.category))) return;
+    score.set(t.reciterName, (score.get(t.reciterName) || 0) + t.listens + 1);
+  });
+  const ranked = topKeys(score, 30).map((n) => reciterByName.get(n)).filter(Boolean);
+  const list = seededShuffle(ranked, todaySeed()).sort((a, b) => b.hasPhoto - a.hasPhoto).slice(0, 10);
+  if (list.length < 3) return null;
+  return noteSection('رواديد قد تعجبك', 'بناءً على ما تستمع إليه', scroller(list, reciterCard));
+}
 
-  // 8. Today's picks: stable for the whole day
-  const daily = seededShuffle(popularTracks.length > 15 ? popularTracks : allTracks.slice(0, 200), todaySeed()).slice(0, 15);
-  container.appendChild(section('توصياتنا لك اليوم', scroller(daily, (t) => squareCard(t))));
+// Tracks to return to: liked or played more than once, but not lately (not in
+// their last 30 plays), the most played first
+function returnSection(skip) {
+  const lately = new Set(lib.history.slice(0, 30).map((h) => h.id));
+  const likes = [...lib.likes].reverse();
+  const likeRank = new Map(likes.map((id, i) => [id, i]));
+  const plays = lib.plays || {};
+  const ids = [...new Set([...likes, ...Object.keys(plays).filter((id) => plays[id] >= 2)])];
+  const tracks = ids.filter((id) => !lately.has(id) && !lib.hidden.has(id) && !skip.has(id))
+    .map((id) => trackById.get(id)).filter(Boolean)
+    .sort((a, b) => (plays[b.id] || 0) - (plays[a.id] || 0) || (likeRank.get(a.id) ?? 1e9) - (likeRank.get(b.id) ?? 1e9))
+    .slice(0, 15);
+  if (tracks.length < 4) return null;
+  return noteSection('عُد إليها', 'قصائد أحببتها ولم تسمعها منذ مدة', scroller(tracks, (t) => squareCard(t)));
+}
 
-  // 9. More from their favourite reciter (from their taste), or the most popular one
-  const focus = reciterByName.get(topKeys(taste(), 1)[0]) || topReciters[0];
-  if (focus) {
-    const more = [...tracksOf(focus.name)].sort((a, b) => b.listens - a.listens).slice(0, 15);
-    if (more.length >= 3) container.appendChild(section(`المزيد من ${focus.name}`, scroller(more, (t) => squareCard(t)), () => openArtistDetail(focus.name)));
-  }
+// "5:30" or "1:02:03" in seconds (0 when unknown)
+const durationSec = (d) => {
+  const parts = String(d || '').split(':').map(Number);
+  return !d || parts.some((x) => !Number.isFinite(x)) ? 0 : parts.reduce((a, x) => a * 60 + x, 0);
+};
 
-  // 10. Duas
-  const duas = allTracks.filter((t) => CATEGORIES[1].values.includes(t.category)).slice(0, 15);
-  if (duas.length >= 3) container.appendChild(section('أدعية ومناجاة', scroller(duas, (t) => squareCard(t)), () => openCategoryDetail(CATEGORIES[1])));
+// Short tracks (half a minute to five), the most listened, in a new order every day
+function shortSection() {
+  const pool = visible(allTracks).filter((t) => { const s = durationSec(t.duration); return s >= 30 && s <= 300; })
+    .sort((a, b) => b.listens - a.listens).slice(0, 100);
+  const tracks = seededShuffle(pool.slice(0, 60), todaySeed()).slice(0, 15);
+  if (tracks.length < 6) return null;
+  return noteSection('قصائد قصيرة', 'أقل من خمس دقائق', columnsScroller(tracks), () => openListPage('قصائد قصيرة', pool));
+}
+
+// A section with a small grey line over its title (Spotify's "more like...")
+function noteSection(title, note, content, onMore) {
+  const s = section(title, content, onMore);
+  const n = document.createElement('div');
+  n.className = 'section-note';
+  n.textContent = note;
+  s.prepend(n);
+  return s;
 }
 
 // A daily mix on the home screen: its cover, then who is in it
@@ -1303,16 +1598,15 @@ function mixCard(m) {
   return clickable(card, () => openMixPage(m.number));
 }
 
-// A large card: the cover, the app's mark on a white splash, the title, and
-// the reciter's name on a band of woven cloth along the bottom
+// A large card: the cover, the app's mark on a white splash, and the title
+// and the reciter over a dark fade
 function wideCard(t) {
   const card = document.createElement('div');
   card.className = 'wide-card';
   card.innerHTML = `
     <img src="${esc(thumb(t.coverImage, 320))}" alt="" loading="lazy" />
     ${splashBadge}
-    <div class="wide-card-text"><div class="ellipsis wide-title">${esc(t.title)}</div></div>
-    <div class="fabric-band"><span class="ellipsis">${esc(t.reciterName)}</span></div>`;
+    <div class="wide-card-text"><div class="ellipsis wide-title">${esc(t.title)}</div><div class="ellipsis muted">${esc(t.reciterName)}</div></div>`;
   return clickable(card, () => openTrackDetail(t));
 }
 
