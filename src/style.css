@@ -152,22 +152,51 @@ header { display: flex; justify-content: space-between; align-items: center; mar
 }
 .wide-title { font-size: 16px; font-weight: 800; margin-bottom: 2px; }
 
-/* The home screen's occasion: its colours (mourning, joy, prayer), its date,
-   title and play button, four of its covers */
-.occasion-banner {
-  display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 14px; margin-bottom: 16px;
-  cursor: pointer; box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+/* The home screen's occasion card, as on the app's posters: the shrine at
+   night, the app's name, the date drawn out, the title in gold calligraphy
+   with its blessing, a line with a flower, two lines under it. Sizes follow
+   the card's width (cqw), so it looks the same on a phone and a wide screen */
+@font-face {
+  font-family: 'Aref Ruqaa';
+  font-weight: 700;
+  font-display: swap;
+  src: url('./assets/ArefRuqaa-Bold.woff2') format('woff2');
 }
-.occasion-banner:active { opacity: 0.9; }
-.occasion-text { flex: 1; min-width: 0; }
-.occasion-date { font-size: 12px; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
-.occasion-title {
-  font-size: 20px; font-weight: 800; line-height: 1.3;
+.occasion-card {
+  position: relative; container-type: inline-size; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden;
+  margin-bottom: 16px; cursor: pointer; background: #0B0A08 center / cover no-repeat;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.5);
+}
+.occasion-card::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse 40% 58% at 50% 50%, rgba(0,0,0,0.55), rgba(0,0,0,0) 78%);
+}
+.occasion-card:active { opacity: 0.92; }
+.occ-inner {
+  position: absolute; inset: 0; padding: 3cqw 17cqw 3.5cqw;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+}
+.occ-brand { display: flex; flex-direction: column; align-items: center; color: #E2C17E; }
+.occ-wave { width: 10cqw; height: auto; }
+.occ-name {
+  font-size: 3.6cqw; font-weight: 800; line-height: 1.25; margin-top: 0.4cqw;
+  background: linear-gradient(180deg, #F6E3AE, #CFA25A); -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.occ-tag { display: flex; align-items: center; gap: 1.2cqw; font-size: 1.9cqw; color: #E9E1D1; opacity: 0.85; line-height: 1.4; }
+.occ-tag::before, .occ-tag::after { content: ''; width: 4cqw; height: 1px; background: #D9B46A; opacity: 0.8; }
+.occ-when { margin-top: 2.6cqw; font-size: 2.9cqw; color: #EFE7D6; line-height: 1.3; word-spacing: 1.2cqw; }
+.occ-title {
+  font-family: 'Aref Ruqaa', 'Tajawal', serif; font-weight: 700; font-size: 7.6cqw; line-height: 1.32; margin-top: 0.3cqw;
+  background: linear-gradient(180deg, #FBEFC6 0%, #E7C47E 45%, #B98A3E 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0.4cqw 1.2cqw rgba(0,0,0,0.75));
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.occasion-count { font-size: 12px; color: rgba(255,255,255,0.75); margin: 4px 0 12px; }
-.occasion-art { width: 112px; height: 112px; flex-shrink: 0; border-radius: 8px; overflow: hidden; box-shadow: 0 10px 24px rgba(0,0,0,0.45); }
-.occasion-art .art { width: 100%; height: 100%; border-radius: 0; }
+.occ-title.medium { font-size: 6.2cqw; }
+.occ-title.small { font-size: 5cqw; }
+.occ-honor { font-size: 0.34em; margin-inline-start: 0.3em; vertical-align: 1.5em; line-height: 0; }
+.occ-ornament { width: 50cqw; height: auto; margin: 0.2cqw 0 1cqw; }
+.occ-line { font-size: 2.7cqw; line-height: 1.65; color: #F1EBDD; white-space: pre-line; text-shadow: 0 1px 6px rgba(0,0,0,0.8); }
+.occasion-card .occ-play { position: absolute; right: 3cqw; bottom: 3cqw; width: 11cqw; height: 11cqw; max-width: 48px; max-height: 48px; font-size: min(4.6cqw, 20px); }
 /* A small grey line over a section's title */
 .section-note { font-size: 13px; color: var(--text-secondary); margin-bottom: 2px; }
 .horizontal-scroller > .radio-card { width: 38vw; max-width: 160px; flex-shrink: 0; }

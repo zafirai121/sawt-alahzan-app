@@ -1,6 +1,7 @@
 import { supabase, isPasswordRecovery } from './supabaseClient.js';
 import { icon, setIcon, startIcons } from './icons.js';
 import { dominantHsl, playerShades, mixHex } from './color.js';
+import occasionBg from './assets/occasion-bg.webp';
 
 // ═══ Constants ═══════════════════════════════════════════════════════════════
 const SITE_URL = 'https://web.soutalahzan.com';
@@ -1314,8 +1315,8 @@ function renderHome() {
   // What is theirs first for a listener who has played, liked or followed;
   // for a new one, what is new and most listened first
   const order = returning
-    ? ['quick', 'occasion', 'friday', 'mixes', 'recents', 'followed', 'newest', 'radios', 'return', 'likes', 'similar', 'popular', 'short', 'more', 'reciters', 'daily']
-    : ['quick', 'occasion', 'friday', 'newest', 'reciters', 'popular', 'radios', 'short', 'daily', 'more'];
+    ? ['quick', 'newest', 'occasion', 'friday', 'mixes', 'recents', 'followed', 'radios', 'return', 'likes', 'similar', 'popular', 'short', 'more', 'reciters', 'daily']
+    : ['quick', 'newest', 'occasion', 'friday', 'reciters', 'popular', 'radios', 'short', 'daily', 'more'];
   order.forEach((key) => {
     const el = sections[key]();
     if (el) { el.dataset.home = key; container.appendChild(el); }
@@ -1325,63 +1326,68 @@ function renderHome() {
 // ═══ The home screen's newer sections (the phone app's have the same rules) ═══
 
 // ─── The hijri year's occasions ───
-// What an occasion plays (mourning, joy or prayer), from which categories, on which colours
+// What an occasion plays (mourning, joy or prayer), from which categories
 const OCCASION_KINDS = {
-  mourning: { cats: ['naei', 'hussainiya'], colors: ['#4A0E17', '#16090B'] },
-  hussaini: { cats: ['hussainiya', 'naei'], colors: ['#5C1010', '#120708'] },
-  joy: { cats: ['muwalid', 'nasheed'], colors: ['#0E5A3A', '#6E5414'] },
-  prayer: { cats: ['dua', 'ziyarat'], colors: ['#123068', '#0A1530'] },
+  mourning: ['naei', 'hussainiya'],
+  hussaini: ['hussainiya', 'naei'],
+  joy: ['muwalid', 'nasheed'],
+  prayer: ['dua', 'ziyarat'],
 };
 // Month 1 = Muharram. A season (the first nights of Muharram, Ramadan...) only
 // counts on its own days; a day of its own also counts the day after, as the
-// new moon is often seen a day later than the calendar says
+// new moon is often seen a day later than the calendar says. `honor`: the
+// blessing written small after the name; `line`: two lines under the title;
+// `words`: what its tracks have in their titles
 const OCCASIONS = (() => {
-  const day = (month, d, title, kind, ...words) => ({ month, from: d, to: d, title, kind, words });
-  const days = (month, from, to, title, kind, ...words) => ({ month, from, to, title, kind, words });
-  const season = (month, from, to, title, kind, ...words) => ({ month, from, to, title, kind, words, season: true });
+  const make = (season) => (month, from, to, kind, title, honor, line, words) => ({ month, from, to, kind, title, honor, line, words, season });
+  const day = (month, d, ...rest) => make(false)(month, d, d, ...rest);
+  const days = make(false);
+  const season = make(true);
+  const HE = 'عليه السلام';
+  const SHE = 'عليها السلام';
   return [
-    day(1, 10, 'يوم عاشوراء', 'hussaini', 'عاشوراء', 'الحسين', 'حسين', 'كربلاء', 'الطف'),
-    season(1, 1, 13, 'ليالي محرم الحرام', 'hussaini', 'محرم', 'عاشوراء', 'الحسين', 'حسين', 'العباس', 'كربلاء'),
-    day(1, 25, 'شهادة الإمام زين العابدين (ع)', 'mourning', 'السجاد', 'زين العابدين'),
-    day(2, 20, 'أربعين الإمام الحسين (ع)', 'hussaini', 'الأربعين', 'اربعين', 'الحسين', 'حسين', 'كربلاء'),
-    season(2, 13, 19, 'على طريق الأربعين', 'hussaini', 'الأربعين', 'اربعين', 'المشاية', 'مشاية', 'زوار', 'الحسين'),
-    day(2, 28, 'وفاة النبي (ص) وشهادة الإمام الحسن (ع)', 'mourning', 'النبي', 'الرسول', 'المصطفى', 'الحسن', 'المجتبى'),
-    days(2, 29, 30, 'شهادة الإمام الرضا (ع)', 'mourning', 'الرضا', 'غريب طوس'),
-    day(3, 8, 'شهادة الإمام العسكري (ع)', 'mourning', 'العسكري'),
-    day(3, 17, 'مولد النبي الأكرم (ص) والإمام الصادق (ع)', 'joy', 'النبي', 'الرسول', 'المصطفى', 'محمد', 'الصادق'),
-    day(4, 8, 'مولد الإمام العسكري (ع)', 'joy', 'العسكري'),
-    day(5, 5, 'مولد السيدة زينب (ع)', 'joy', 'زينب'),
-    day(5, 13, 'الأيام الفاطمية', 'mourning', 'الزهراء', 'فاطمة', 'فاطمية', 'الفاطمية'),
-    day(6, 3, 'شهادة السيدة الزهراء (ع)', 'mourning', 'الزهراء', 'فاطمة', 'فاطمية', 'الفاطمية'),
-    day(6, 20, 'مولد السيدة الزهراء (ع)', 'joy', 'الزهراء', 'فاطمة'),
-    day(7, 1, 'مولد الإمام الباقر (ع)', 'joy', 'الباقر'),
-    day(7, 3, 'شهادة الإمام الهادي (ع)', 'mourning', 'الهادي'),
-    day(7, 10, 'مولد الإمام الجواد (ع)', 'joy', 'الجواد'),
-    day(7, 13, 'مولد أمير المؤمنين (ع)', 'joy', 'علي', 'أمير المؤمنين', 'حيدر', 'الكرار', 'الغدير'),
-    day(7, 15, 'وفاة السيدة زينب (ع)', 'mourning', 'زينب'),
-    day(7, 25, 'شهادة الإمام الكاظم (ع)', 'mourning', 'الكاظم', 'موسى بن جعفر'),
-    day(7, 27, 'المبعث النبوي الشريف', 'joy', 'المبعث', 'النبي', 'الرسول', 'المصطفى', 'محمد'),
-    day(8, 3, 'مولد الإمام الحسين (ع)', 'joy', 'الحسين', 'حسين'),
-    day(8, 4, 'مولد أبي الفضل العباس (ع)', 'joy', 'العباس', 'أبو الفضل', 'ابا الفضل', 'أبي الفضل'),
-    day(8, 5, 'مولد الإمام زين العابدين (ع)', 'joy', 'السجاد', 'زين العابدين'),
-    day(8, 11, 'مولد علي الأكبر (ع)', 'joy', 'الأكبر'),
-    day(8, 15, 'مولد الإمام المهدي (عج)', 'joy', 'المهدي', 'الحجة', 'صاحب الزمان', 'المنتظر', 'القائم'),
-    day(9, 10, 'وفاة السيدة خديجة (ع)', 'mourning', 'خديجة'),
-    day(9, 15, 'مولد الإمام الحسن المجتبى (ع)', 'joy', 'الحسن', 'المجتبى'),
-    day(9, 21, 'شهادة أمير المؤمنين (ع)', 'mourning', 'علي', 'أمير المؤمنين', 'حيدر', 'الكوفة', 'المحراب'),
-    season(9, 19, 23, 'ليالي القدر', 'prayer', 'القدر', 'الجوشن', 'علي', 'أمير المؤمنين'),
-    season(9, 1, 30, 'شهر رمضان المبارك', 'prayer', 'رمضان', 'الافتتاح', 'السحر', 'أبو حمزة', 'الجوشن'),
-    day(10, 1, 'عيد الفطر المبارك', 'joy', 'العيد', 'عيد', 'الفطر'),
-    day(10, 25, 'شهادة الإمام الصادق (ع)', 'mourning', 'الصادق'),
-    day(11, 1, 'مولد السيدة المعصومة (ع)', 'joy', 'المعصومة'),
-    day(11, 11, 'مولد الإمام الرضا (ع)', 'joy', 'الرضا'),
-    days(11, 29, 30, 'شهادة الإمام الجواد (ع)', 'mourning', 'الجواد'),
-    day(12, 7, 'شهادة الإمام الباقر (ع)', 'mourning', 'الباقر'),
-    day(12, 9, 'يوم عرفة', 'prayer', 'عرفة', 'عرفه'),
-    day(12, 10, 'عيد الأضحى المبارك', 'joy', 'العيد', 'عيد', 'الأضحى'),
-    day(12, 15, 'مولد الإمام الهادي (ع)', 'joy', 'الهادي'),
-    day(12, 18, 'عيد الغدير الأغر', 'joy', 'الغدير', 'علي', 'أمير المؤمنين', 'حيدر'),
-    day(12, 24, 'يوم المباهلة', 'joy', 'المباهلة', 'أهل البيت', 'الكساء'),
+    day(1, 10, 'hussaini', 'يوم عاشوراء', '', 'يومٌ بكت له السماء..\nوبقي الحسين نداءً لكل الأحرار.', ['عاشوراء', 'الحسين', 'حسين', 'كربلاء', 'الطف']),
+    season(1, 1, 13, 'hussaini', 'ليالي محرم الحرام', '', 'عادت ليالي العزاء..\nفلبيك يا حسين في كل عام.', ['محرم', 'عاشوراء', 'الحسين', 'حسين', 'العباس', 'كربلاء']),
+    day(1, 25, 'mourning', 'شهادة الإمام زين العابدين', HE, 'إمامٌ حمل كربلاء في قلبه..\nفكان دعاؤه نورًا للعارفين.', ['السجاد', 'زين العابدين']),
+    day(2, 20, 'hussaini', 'أربعين الإمام الحسين', HE, 'أربعون يومًا على الفاجعة..\nوالقلوب ما زالت تسير إلى كربلاء.', ['الأربعين', 'اربعين', 'الحسين', 'حسين', 'كربلاء']),
+    season(2, 13, 19, 'hussaini', 'على طريق الأربعين', '', 'خطى الزائرين تكتب العشق..\nعلى طريق الحسين إلى كربلاء.', ['الأربعين', 'اربعين', 'المشاية', 'مشاية', 'زوار', 'الحسين']),
+    day(2, 28, 'mourning', 'وفاة النبي (ص) وشهادة الإمام الحسن (ع)', '', 'رحل المصطفى ومضى سبطه المجتبى..\nفاتشحت المدينة بالسواد.', ['النبي', 'الرسول', 'المصطفى', 'الحسن', 'المجتبى']),
+    days(2, 29, 30, 'mourning', 'شهادة الإمام الرضا', HE, 'غريب طوس..\nشمسٌ أشرقت في أرض خراسان.', ['الرضا', 'غريب طوس']),
+    day(3, 8, 'mourning', 'شهادة الإمام العسكري', HE, 'إمامٌ عاش في حصار سامراء..\nومضى صابرًا محتسبًا.', ['العسكري']),
+    day(3, 17, 'joy', 'مولد النبي الأكرم (ص) والإمام الصادق (ع)', '', 'وُلد الهدى فالكائنات ضياء..\nوأشرق الصادق بعلوم آل محمد.', ['النبي', 'الرسول', 'المصطفى', 'محمد', 'الصادق']),
+    day(4, 8, 'joy', 'مولد الإمام العسكري', HE, 'نورٌ جديد في بيت النبوة..\nأبو الإمام المنتظر.', ['العسكري']),
+    day(5, 5, 'joy', 'مولد السيدة زينب', SHE, 'ميلاد نور في زمن الظلام..\nفكانت زينب، عنوان الصبر والكرامة.', ['زينب']),
+    day(5, 13, 'mourning', 'الأيام الفاطمية', '', 'أيام الحزن على بضعة المصطفى..\nفاطمة الزهراء سيدة نساء العالمين.', ['الزهراء', 'فاطمة', 'فاطمية', 'الفاطمية']),
+    day(6, 3, 'mourning', 'شهادة السيدة الزهراء', SHE, 'مضت الزهراء مظلومةً..\nوبقي قبرها سرًّا يشهد على المصاب.', ['الزهراء', 'فاطمة', 'فاطمية', 'الفاطمية']),
+    day(6, 20, 'joy', 'مولد السيدة الزهراء', SHE, 'وُلدت الكوثر..\nفأشرق بيت النبوة بنور فاطمة.', ['الزهراء', 'فاطمة']),
+    day(7, 1, 'joy', 'مولد الإمام الباقر', HE, 'باقر علوم الأولين والآخرين..\nوُلد فازدانت المدينة بنوره.', ['الباقر']),
+    day(7, 3, 'mourning', 'شهادة الإمام الهادي', HE, 'إمامٌ صابرٌ في سامراء..\nمضى شهيدًا بعيدًا عن مدينة جده.', ['الهادي']),
+    day(7, 10, 'joy', 'مولد الإمام الجواد', HE, 'جواد الأئمة..\nكرمٌ وعلمٌ منذ الصغر.', ['الجواد']),
+    day(7, 13, 'joy', 'مولد أمير المؤمنين', HE, 'وُلد في جوف الكعبة..\nفكان عليٌّ ميزان الحق والعدل.', ['علي', 'أمير المؤمنين', 'حيدر', 'الكرار', 'الغدير']),
+    day(7, 15, 'mourning', 'وفاة السيدة زينب', SHE, 'عقيلة بني هاشم..\nمضت بعد أن حملت رسالة كربلاء.', ['زينب']),
+    day(7, 25, 'mourning', 'شهادة الإمام الكاظم', HE, 'باب الحوائج إلى الله..\nصبرٌ في ظلمات السجون.', ['الكاظم', 'موسى بن جعفر']),
+    day(7, 27, 'joy', 'المبعث النبوي الشريف', '', 'أشرقت الرسالة..\nفكان محمدٌ رحمةً للعالمين.', ['المبعث', 'النبي', 'الرسول', 'المصطفى', 'محمد']),
+    day(8, 3, 'joy', 'مولد الإمام الحسين', HE, 'وُلد الحسين..\nمصباح الهدى وسفينة النجاة.', ['الحسين', 'حسين']),
+    day(8, 4, 'joy', 'مولد أبي الفضل العباس', HE, 'قمر بني هاشم..\nوُلد الوفاء بميلاد أبي الفضل.', ['العباس', 'أبو الفضل', 'ابا الفضل', 'أبي الفضل']),
+    day(8, 5, 'joy', 'مولد الإمام زين العابدين', HE, 'زين العابدين وسيد الساجدين..\nوُلد إمام الدعاء والمناجاة.', ['السجاد', 'زين العابدين']),
+    day(8, 11, 'joy', 'مولد علي الأكبر', HE, 'أشبه الناس برسول الله خَلقًا وخُلقًا..\nميلادٌ يملأ القلوب فرحًا.', ['الأكبر']),
+    day(8, 15, 'joy', 'مولد الإمام المهدي', 'عجّل الله فرجه', 'ميلاد الأمل المنتظر..\nيملأ الأرض قسطًا وعدلًا.', ['المهدي', 'الحجة', 'صاحب الزمان', 'المنتظر', 'القائم']),
+    day(9, 10, 'mourning', 'وفاة السيدة خديجة', SHE, 'أم المؤمنين..\nسند الرسالة في أيامها الأولى.', ['خديجة']),
+    day(9, 15, 'joy', 'مولد الإمام الحسن المجتبى', HE, 'كريم أهل البيت..\nوُلد الحسن فأضاء بيت النبوة.', ['الحسن', 'المجتبى']),
+    day(9, 21, 'mourning', 'شهادة أمير المؤمنين', HE, 'فزتُ وربِّ الكعبة..\nورحل أمير المؤمنين شهيد المحراب.', ['علي', 'أمير المؤمنين', 'حيدر', 'الكوفة', 'المحراب']),
+    season(9, 19, 23, 'prayer', 'ليالي القدر', '', 'ليلةٌ خيرٌ من ألف شهر..\nفأحيوها بالدعاء والقرآن.', ['القدر', 'الجوشن', 'علي', 'أمير المؤمنين']),
+    season(9, 1, 30, 'prayer', 'شهر رمضان المبارك', '', 'شهر الله..\nشهر الدعاء والقرآن والمغفرة.', ['رمضان', 'الافتتاح', 'السحر', 'أبو حمزة', 'الجوشن']),
+    day(10, 1, 'joy', 'عيد الفطر المبارك', '', 'عيدٌ سعيد..\nتقبّل الله طاعاتكم.', ['العيد', 'عيد', 'الفطر']),
+    day(10, 25, 'mourning', 'شهادة الإمام الصادق', HE, 'رئيس المذهب..\nمضى الصادق وبقيت علومه منارًا.', ['الصادق']),
+    day(11, 1, 'joy', 'مولد السيدة المعصومة', SHE, 'كريمة أهل البيت..\nميلاد فاطمة المعصومة.', ['المعصومة']),
+    day(11, 11, 'joy', 'مولد الإمام الرضا', HE, 'عالم آل محمد..\nوُلد الرضا فأشرقت المدينة.', ['الرضا']),
+    days(11, 29, 30, 'mourning', 'شهادة الإمام الجواد', HE, 'مضى جواد الأئمة شابًّا..\nمسمومًا غريبًا في بغداد.', ['الجواد']),
+    day(12, 7, 'mourning', 'شهادة الإمام الباقر', HE, 'باقر العلوم..\nمضى شهيدًا وبقي علمه نورًا.', ['الباقر']),
+    day(12, 9, 'prayer', 'يوم عرفة', '', 'يوم الدعاء والمناجاة..\nيومٌ تُرجى فيه المغفرة.', ['عرفة', 'عرفه']),
+    day(12, 10, 'joy', 'عيد الأضحى المبارك', '', 'عيد الأضحى المبارك..\nتقبّل الله أعمالكم.', ['العيد', 'عيد', 'الأضحى']),
+    day(12, 15, 'joy', 'مولد الإمام الهادي', HE, 'الإمام علي الهادي..\nنورٌ من أنوار آل محمد.', ['الهادي']),
+    day(12, 18, 'joy', 'عيد الغدير الأغر', '', 'من كنت مولاه فهذا عليٌّ مولاه..\nعيد الله الأكبر.', ['الغدير', 'علي', 'أمير المؤمنين', 'حيدر']),
+    day(12, 24, 'joy', 'يوم المباهلة', '', 'يوم المباهلة..\nيومٌ تجلّى فيه فضل أهل البيت.', ['المباهلة', 'أهل البيت', 'الكساء']),
   ];
 })();
 const HIJRI_MONTHS = ['محرم', 'صفر', 'ربيع الأول', 'ربيع الآخر', 'جمادى الأولى', 'جمادى الآخرة', 'رجب', 'شعبان', 'رمضان', 'شوال', 'ذو القعدة', 'ذو الحجة'];
@@ -1449,28 +1455,51 @@ function tracksFor(categoryIds, words, n) {
 
 const inDaysText = (d) => (d === 1 ? 'غداً' : d === 2 ? 'بعد يومين' : `بعد ${d} أيام`);
 
-// Today's occasion (or the next one, ten days ahead): a banner that plays it, then its tracks
+// The occasion card's touches: the app's sound mark over its name, and the
+// line with a flower under the title
+const OCC_WAVE = '<svg class="occ-wave" viewBox="0 0 70 22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M1 11h11M58 11h11"/><circle cx="15" cy="11" r="2.4"/><circle cx="55" cy="11" r="2.4"/><path d="M22 7v8M28 4v14M42 4v14M48 7v8"/><rect x="31.5" y="1" width="7" height="20" rx="3.5"/></svg>';
+const OCC_ORNAMENT = '<svg class="occ-ornament" viewBox="0 0 240 24" aria-hidden="true"><defs><linearGradient id="occ-l" x1="0" x2="1"><stop offset="0" stop-color="#D9B46A" stop-opacity="0"/><stop offset="1" stop-color="#D9B46A"/></linearGradient><linearGradient id="occ-r" x1="1" x2="0"><stop offset="0" stop-color="#D9B46A" stop-opacity="0"/><stop offset="1" stop-color="#D9B46A"/></linearGradient></defs><path d="M0 12H100" stroke="url(#occ-l)" stroke-width="1"/><path d="M140 12H240" stroke="url(#occ-r)" stroke-width="1"/><g fill="#D9B46A"><path d="M104 12l3-3 3 3-3 3z"/><path d="M130 12l3-3 3 3-3 3z"/></g><g fill="none" stroke="#D9B46A" stroke-width="0.9" transform="translate(120 12)">' + [0, 45, 90, 135, 180, 225, 270, 315].map((a) => `<path d="M0-2.6C2.4-4.6 2.4-7.6 0-10.4C-2.4-7.6-2.4-4.6 0-2.6Z" transform="rotate(${a})"/>`).join('') + '<circle r="1.6"/></g></svg>';
+
+// Letters drawn out with a tatweel between them, as on a poster: "مـنـاسـبـة"
+const DUAL_JOINING = 'بتثجحخسشصضطظعغفقكلمنهيئىـ';
+const stretched = (s) => [...s].map((c, i, a) => {
+  const next = a[i + 1] || '';
+  const joins = DUAL_JOINING.includes(c) && /[\u0621-\u064A]/.test(next) && !(c === 'ل' && 'اأإآ'.includes(next));
+  return joins ? `${c}ـ` : c;
+}).join('');
+
+// The occasion's card, as on the app's posters: the shrine at night, the app's
+// name, the date, the title in gold calligraphy with its blessing, two lines
+// under it, and a button that plays it
+function occasionCard(now, tracks) {
+  const o = now.occasion;
+  const when = now.inDays ? `${inDaysText(now.inDays)} • ${hijriText(now.date)}` : hijriText(now.date);
+  const size = o.title.length > 26 ? 'small' : o.title.length > 18 ? 'medium' : '';
+  const card = document.createElement('div');
+  card.className = 'occasion-card';
+  card.style.backgroundImage = `url("${occasionBg}")`;
+  card.innerHTML = `
+    <div class="occ-inner">
+      <div class="occ-brand">${OCC_WAVE}<div class="occ-name">صوت الأحزان</div><div class="occ-tag">منصة العزاء الحسيني</div></div>
+      <div class="occ-when">${esc(stretched(when))}</div>
+      <div class="occ-title ${size}">${esc(o.title)}${o.honor ? `<span class="occ-honor">${esc(o.honor)}</span>` : ''}</div>
+      ${OCC_ORNAMENT}
+      <div class="occ-line">${esc(o.line)}</div>
+    </div>`;
+  const play = playAllButton(tracks, { kind: 'occasion', id: `${o.month}-${o.from}` }, 'big-play occ-play');
+  card.appendChild(play);
+  return clickable(card, () => openListPage(o.title, tracks));
+}
+
+// Today's occasion (or the next one, ten days ahead): its card, then its tracks
 function occasionSection() {
   const now = currentOccasion();
   if (!now) return null;
   const o = now.occasion;
-  const kind = OCCASION_KINDS[o.kind];
-  const tracks = tracksFor(kind.cats, o.words, 40);
+  const tracks = tracksFor(OCCASION_KINDS[o.kind], o.words, 40);
   if (tracks.length < 3) return null;
-  const banner = document.createElement('div');
-  banner.className = 'occasion-banner';
-  banner.style.background = `linear-gradient(135deg, ${kind.colors[0]}, ${kind.colors[1]})`;
-  banner.innerHTML = `
-    <div class="occasion-text">
-      <div class="occasion-date">${esc(now.inDays ? `${inDaysText(now.inDays)} • ${hijriText(now.date)}` : hijriText(now.date))}</div>
-      <div class="occasion-title">${esc(o.title)}</div>
-      <div class="occasion-count">${formatCount(tracks.length)} مقطع لهذه المناسبة</div>
-    </div>
-    <div class="occasion-art">${artHtml({ covers: tracks.slice(0, 4).map((t) => t.coverImage) }, { width: 112 })}</div>`;
-  banner.querySelector('.occasion-text').appendChild(playAllButton(tracks, { kind: 'occasion', id: `${o.month}-${o.from}` }));
-  clickable(banner, () => openListPage(o.title, tracks));
   const content = document.createElement('div');
-  content.append(banner, scroller(tracks.slice(0, 15), (t) => squareCard(t)));
+  content.append(occasionCard(now, tracks), scroller(tracks.slice(0, 15), (t) => squareCard(t)));
   return section(now.inDays ? 'مناسبة قادمة' : 'مناسبة اليوم', content);
 }
 
