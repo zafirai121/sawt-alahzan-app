@@ -1606,7 +1606,34 @@ function shortSection() {
     .sort((a, b) => b.listens - a.listens).slice(0, 100);
   const tracks = seededShuffle(pool.slice(0, 60), todaySeed()).slice(0, 15);
   if (tracks.length < 6) return null;
-  return noteSection('قصائد قصيرة', 'أقل من خمس دقائق', columnsScroller(tracks), () => openListPage('قصائد قصيرة', pool));
+  return noteSection('قصائد قصيرة', 'أقل من خمس دقائق', scroller(tracks.map((t, i) => ({ t, i })), ({ t, i }) => shortCard(tracks, i)), () => openListPage('قصائد قصيرة', pool));
+}
+
+// A short track's card: its cover fading into the dark card, the title and
+// the reciter in the middle, and its length by a round play button; a thin
+// light edge around it. Tapping it plays it (or pauses it)
+function shortCard(list, i) {
+  const t = list[i];
+  const card = document.createElement('div');
+  card.className = 'short-card';
+  card.dataset.trackId = t.id;
+  card.innerHTML = `
+    <div class="short-art"><img src="${esc(thumb(t.coverImage, 190))}" alt="" loading="lazy" /></div>
+    <div class="short-title ellipsis">${esc(t.title)}</div>
+    <div class="short-sub ellipsis">${esc(t.reciterName)}</div>
+    <div class="short-meta"><span>${esc(t.duration || 'قصيرة')}</span><span class="short-play">${icon('play', { fill: true })}</span></div>`;
+  paintShortCard(card);
+  return clickable(card, () => {
+    if (currentTrack?.id === t.id) togglePlay();
+    else playFromList(list, i);
+  });
+}
+function paintShortCard(card) {
+  const current = currentTrack?.id === card.dataset.trackId;
+  const playing = current && !audio.paused;
+  card.classList.toggle('current', current);
+  setIcon(card.querySelector('.short-play .ic'), playing ? 'pause' : 'play', { fill: true });
+  card.setAttribute('aria-label', `${playing ? 'إيقاف' : 'تشغيل'} ${card.querySelector('.short-title').textContent}`);
 }
 
 // A section with a small grey line over its title (Spotify's "more like...")
@@ -3688,6 +3715,7 @@ function paintPlayButtons() {
   const td = $('td-play-btn');
   setIcon(td.querySelector('.ic'), playing && currentTrack?.id === td.dataset.trackId ? 'pause' : 'play', { fill: true });
   document.querySelectorAll('[data-plays]').forEach(paintPlayButton);
+  document.querySelectorAll('.short-card').forEach(paintShortCard);
   if ('mediaSession' in navigator) navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
 }
 
