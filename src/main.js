@@ -973,7 +973,10 @@ mainEl().addEventListener('scroll', () => {
 
 // The bar: `title` on `color()`, shown once the page has scrolled past `at()`;
 // `play`: a play button for the page's list at its end
-function pageScroller({ title, color, at, play = null, extra = null }) {
+// `own`: the page's own play button. The bar's shows only once that one has
+// gone under the bar (their centres past its edge), and that one hides then,
+// so the two never show together
+function pageScroller({ title, color, at, play = null, own = null, extra = null }) {
   const bar = $('page-bar');
   const handler = (top, init) => {
     if (init) {
@@ -985,6 +988,17 @@ function pageScroller({ title, color, at, play = null, extra = null }) {
     if (show !== bar.classList.contains('show')) {
       bar.classList.toggle('show', show);
       bar.setAttribute('aria-hidden', String(!show));
+    }
+    const barPlay = bar.querySelector('.page-bar-end .big-play');
+    const ownPlay = own?.();
+    if (barPlay) {
+      let on = show;
+      if (on && ownPlay) {
+        const r = ownPlay.getBoundingClientRect();
+        on = r.top + r.height / 2 < bar.getBoundingClientRect().bottom;
+      }
+      barPlay.classList.toggle('play-off', !on);
+      ownPlay?.classList.toggle('play-off', on);
     }
     extra?.(top);
   };
@@ -1610,8 +1624,8 @@ function shortSection() {
 }
 
 // A short track's card: its cover fading into the dark card, the title and
-// the reciter in the middle, and its length by a round play button; a thin
-// light edge around it. Tapping it plays it (or pauses it)
+// the reciter in the middle, and its length; a thin light edge around it.
+// Tapping it plays it (or pauses it); the one playing shows in gold
 function shortCard(list, i) {
   const t = list[i];
   const card = document.createElement('div');
@@ -1621,7 +1635,7 @@ function shortCard(list, i) {
     <div class="short-art"><img src="${esc(thumb(t.coverImage, 190))}" alt="" loading="lazy" /></div>
     <div class="short-title ellipsis">${esc(t.title)}</div>
     <div class="short-sub ellipsis">${esc(t.reciterName)}</div>
-    <div class="short-meta"><span>${esc(t.duration || 'قصيرة')}</span><span class="short-play">${icon('play', { fill: true })}</span></div>`;
+    <div class="short-meta">${esc(t.duration || 'قصيرة')}</div>`;
   paintShortCard(card);
   return clickable(card, () => {
     if (currentTrack?.id === t.id) togglePlay();
@@ -1632,7 +1646,6 @@ function paintShortCard(card) {
   const current = currentTrack?.id === card.dataset.trackId;
   const playing = current && !audio.paused;
   card.classList.toggle('current', current);
-  setIcon(card.querySelector('.short-play .ic'), playing ? 'pause' : 'play', { fill: true });
   card.setAttribute('aria-label', `${playing ? 'إيقاف' : 'تشغيل'} ${card.querySelector('.short-title').textContent}`);
 }
 
@@ -2180,6 +2193,7 @@ function renderRadioPage(seed) {
   const handler = pageScroller({
     title, color: () => deep, at: () => top.offsetHeight - barHeight() * 1.4,
     play: () => playAllButton(radio, source, 'big-play small'),
+    own: () => view.querySelector('.big-play'),
   });
   withShades(seed, (sh) => {
     if (view._token !== token) return;
@@ -2240,6 +2254,7 @@ function renderMixPage(number) {
   viewScroll['page-view'] = pageScroller({
     title, color: () => deep, at: () => top.offsetHeight - barHeight() * 1.6,
     play: () => playAllButton(tracks, source, 'big-play small'),
+    own: () => view.querySelector('.big-play'),
   });
 }
 
@@ -2412,6 +2427,7 @@ function renderCollection(spec) {
   const handler = pageScroller({
     title, color: () => color, at: () => top.offsetHeight - barHeight() * 1.6,
     play: list.length ? () => playAllButton(list, source, 'big-play small') : null,
+    own: () => view.querySelector('.big-play'),
   });
   const paint = (c) => { color = c; view.style.setProperty('--deep', c); handler.recolor(); };
   if (pl && list[0]) withShades(list[0], (sh) => { if (view._token === token) paint(sh.vivid); });
