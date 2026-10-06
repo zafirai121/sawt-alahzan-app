@@ -200,6 +200,8 @@ header { display: flex; justify-content: space-between; align-items: center; mar
 /* A small grey line over a section's title */
 .section-note { font-size: 13px; color: var(--text-secondary); margin-bottom: 2px; }
 .horizontal-scroller > .radio-card { width: 38vw; max-width: 160px; flex-shrink: 0; }
+/* The home screen's cards are larger than the other pages' (two in view, as the radio page's) */
+#home-view .horizontal-scroller > .square-card, #home-view .horizontal-scroller > .radio-card { width: 45vw; max-width: 190px; }
 
 .mini-col { display: flex; flex-direction: column; gap: 8px; width: 85vw; max-width: 350px; flex-shrink: 0; scroll-snap-align: start; }
 .mini-row { display: flex; align-items: center; gap: 10px; cursor: pointer; min-width: 0; }

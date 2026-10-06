@@ -1173,7 +1173,7 @@ function squareCard(track, onClick) {
   const card = document.createElement('div');
   card.className = 'square-card';
   card.innerHTML = `
-    <img src="${esc(thumb(track.coverImage, 160))}" alt="" class="square-cover" loading="lazy" />
+    <img src="${esc(thumb(track.coverImage, 190))}" alt="" class="square-cover" loading="lazy" />
     <div class="square-title">${esc(track.title)}</div>
     <div class="square-subtitle">${esc(track.reciterName)}</div>`;
   return clickable(card, onClick || (() => openTrackDetail(track)));
@@ -1183,7 +1183,7 @@ function reciterCard(r) {
   const card = document.createElement('div');
   card.className = 'square-card';
   card.innerHTML = `
-    <img src="${esc(thumb(r.image, 160))}" alt="" class="square-cover round" loading="lazy" />
+    <img src="${esc(thumb(r.image, 190))}" alt="" class="square-cover round" loading="lazy" />
     <div class="square-title" style="text-align: center;">${esc(r.name)}</div>
     <div class="square-subtitle" style="text-align: center;">${formatCount(r.count)} مقطع</div>`;
   return clickable(card, () => openArtistDetail(r.name));
@@ -1623,7 +1623,7 @@ function noteSection(title, note, content, onMore) {
 function mixCard(m) {
   const card = document.createElement('div');
   card.className = 'square-card';
-  card.innerHTML = `${mixCoverHtml(m, 160)}<div class="square-subtitle mix-names">${esc(mixReciters(m))}</div>`;
+  card.innerHTML = `${mixCoverHtml(m, 190)}<div class="square-subtitle mix-names">${esc(mixReciters(m))}</div>`;
   return clickable(card, () => openMixPage(m.number));
 }
 
