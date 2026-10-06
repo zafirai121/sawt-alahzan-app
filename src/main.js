@@ -3,6 +3,11 @@ import { icon, setIcon, startIcons } from './icons.js';
 import { dominantHsl, playerShades, mixHex } from './color.js';
 import occasionBg from './assets/occasion-bg.webp';
 
+// Sizes that follow a card's width (cqw: the occasion, radio and mix cards):
+// older iPhones (iOS 15 and before) don't know them; there, a small helper
+// works them out (loaded only on those)
+if (!(window.CSS && CSS.supports('width: 1cqw'))) import('container-query-polyfill');
+
 // ═══ Constants ═══════════════════════════════════════════════════════════════
 const SITE_URL = 'https://web.soutalahzan.com';
 const APP_URL = new URL(import.meta.env.BASE_URL, location.origin).href;
