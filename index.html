@@ -31,8 +31,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" crossorigin />
-    <script type="module" crossorigin src="/sawt-alahzan-app/assets/index-CGMXbyJ7.js"></script>
-    <link rel="stylesheet" crossorigin href="/sawt-alahzan-app/assets/index-CeJUpOpK.css">
+    <script type="module" crossorigin src="/sawt-alahzan-app/assets/index-l3Ys_h4y.js"></script>
+    <link rel="stylesheet" crossorigin href="/sawt-alahzan-app/assets/index-ZBu0pxDb.css">
   </head>
   <body>
     <svg width="0" height="0" style="position: absolute;" aria-hidden="true">
@@ -116,6 +116,7 @@
           <div class="list-actions">
             <div id="playlist-subtitle" class="muted"></div>
             <div class="list-actions-buttons">
+              <button class="icon-btn" id="playlist-share-btn" aria-label="مشاركة"><i class="ic" data-icon="share-nodes"></i></button>
               <button class="icon-btn shuffle-toggle" onclick="toggleShuffle()" aria-label="تشغيل عشوائي"><i class="ic" data-icon="shuffle"></i></button>
               <button class="big-play" id="playlist-play-all" aria-label="تشغيل الكل"><i class="ic" data-icon="play" data-fill></i></button>
             </div>
@@ -145,6 +146,7 @@
             <div class="list-actions">
               <div></div>
               <div class="list-actions-buttons">
+                <button class="icon-btn" id="category-share-btn" aria-label="مشاركة"><i class="ic" data-icon="share-nodes"></i></button>
                 <button class="icon-btn shuffle-toggle" onclick="toggleShuffle()" aria-label="تشغيل عشوائي"><i class="ic" data-icon="shuffle"></i></button>
                 <button class="big-play" id="category-play-all" aria-label="تشغيل الكل"><i class="ic" data-icon="play" data-fill></i></button>
               </div>
@@ -172,9 +174,13 @@
               <div class="list-actions-buttons">
                 <button class="icon-btn" id="td-like-btn" aria-label="إعجاب"><i class="ic" data-icon="heart"></i></button>
                 <button class="icon-btn" id="td-download-btn" aria-label="تنزيل"><i class="ic" data-icon="download"></i></button>
+                <button class="icon-btn" id="td-share-btn" aria-label="مشاركة"><i class="ic" data-icon="share-nodes"></i></button>
                 <button class="icon-btn" id="td-options-btn" aria-label="خيارات"><i class="ic" data-icon="more"></i></button>
               </div>
-              <button class="big-play" id="td-play-btn" aria-label="تشغيل"><i class="ic" data-icon="play" data-fill></i></button>
+              <div class="list-actions-buttons">
+                <button class="icon-btn shuffle-toggle" onclick="toggleShuffle()" aria-label="تشغيل عشوائي"><i class="ic" data-icon="shuffle"></i></button>
+                <button class="big-play" id="td-play-btn" aria-label="تشغيل"><i class="ic" data-icon="play" data-fill></i></button>
+              </div>
             </div>
 
             <div id="td-lyrics-section" style="display: none; margin-bottom: 30px;">
