@@ -640,6 +640,7 @@ function toggleExcluded(track) {
   toast(out ? 'استُبعد المقطع من لمحة ذوقك' : 'أُعيد المقطع إلى لمحة ذوقك');
 }
 const visible = (list) => (lib.hidden.size ? list.filter((t) => !lib.hidden.has(t.id)) : list);
+const NOT_SHARED = new Set(['المقاطع المخفية', 'المستبعدة من لمحة ذوقك']);
 window.openHiddenPage = () => openListPage('المقاطع المخفية', () => [...lib.hidden].map((id) => trackById.get(id)).filter(Boolean), null, true);
 window.openExcludedPage = () => openListPage('المستبعدة من لمحة ذوقك', () => [...lib.excluded].map((id) => trackById.get(id)).filter(Boolean), null, true);
 
@@ -1790,6 +1791,10 @@ function renderListPage(title, list, playlist, source = null) {
   $('playlist-search').value = '';
   renderTrackList($('playlist-tracks'), list, { numbered: true, playlist, source });
   $('playlist-play-all').onclick = () => playFromList(list, 0, { shuffleStart: isShuffle, source });
+  // Share the list (not the hidden or the excluded: those are the listener's own settings)
+  const shareBtn = $('playlist-share-btn');
+  shareBtn.style.display = list.length && !NOT_SHARED.has(title) ? '' : 'none';
+  shareBtn.onclick = () => share(`${title} | صوت الأحزان`, playlistText(title, list), APP_URL);
   const del = $('playlist-delete-btn');
   del.style.display = playlist ? 'flex' : 'none';
   del.onclick = () => {
@@ -1825,6 +1830,8 @@ function openAllReciters() {
     grid.innerHTML = '';
     withTracks.forEach((r) => grid.appendChild(reciterCard(r)));
     $('playlist-play-all').onclick = () => playFromList(popularTracks, 0);
+    $('playlist-share-btn').style.display = '';
+    $('playlist-share-btn').onclick = () => share('رواديد صوت الأحزان', `رواديد صوت الأحزان:\n${withTracks.slice(0, 15).map((r) => `• ${r.name}`).join('\n')}`, APP_URL);
   });
 }
 
@@ -1839,6 +1846,8 @@ function renderCategory(cat) {
   const source = { kind: 'category', id: cat.id };
   renderTrackList($('category-tracks'), list, { numbered: true, source, emptyText: 'لا توجد مقاطع في هذا التصنيف بعد' });
   $('category-play-all').onclick = () => playFromList(list, 0, { shuffleStart: isShuffle, source });
+  $('category-share-btn').style.display = list.length ? '' : 'none';
+  $('category-share-btn').onclick = () => share(`${cat.title} | صوت الأحزان`, playlistText(cat.title, list), APP_URL);
 }
 
 // ─── Shared by the reciter, radio and mix pages ───
@@ -1873,8 +1882,8 @@ function paintPlayButton(b) {
   b.setAttribute('aria-label', on ? 'إيقاف مؤقت' : 'تشغيل');
 }
 
-// Spotify's follow button: a fixed size, so nothing beside it moves when it
-// changes; filled with gold and a check once they follow
+// The follow button: an outlined "متابعة"; once they follow, a smaller pill
+// with a gold outline and Lucide's user-check
 function followButton(reciter, { small = false } = {}) {
   const b = document.createElement('button');
   b.className = `follow-btn${small ? ' small' : ''}`;
@@ -1934,7 +1943,7 @@ function downloadButton(list) {
   b.onclick = () => { if (!all) { setIcon(b.querySelector('.ic'), 'spinner'); downloadAll(list); } else toast('كل المقاطع منزّلة'); };
   return b;
 }
-function actionsRow(start, list, source) {
+function actionsRow(start, list, source, end = []) {
   const row = document.createElement('div');
   row.className = 'pv-actions';
   const shuffle = document.createElement('button');
@@ -1944,7 +1953,7 @@ function actionsRow(start, list, source) {
   shuffle.onclick = () => toggleShuffle();
   const spacer = document.createElement('span');
   spacer.className = 'pv-spacer';
-  row.append(...start, spacer, shuffle, playAllButton(list, source));
+  row.append(...start, spacer, ...end, shuffle, playAllButton(list, source));
   return row;
 }
 const iconButton = (name, label, onClick, cls = 'icon-btn pv-icon') => {
@@ -2019,9 +2028,10 @@ function renderReciterPage(name) {
     </section>
     ${fans.length ? '<section class="pv-section rc-fans"><h2 class="sub-title">المعجبون يحبون أيضاً</h2></section>' : ''}`;
 
-  // Listens, then the actions: follow, ⋮ ... shuffle, play
+  // Listens, then the actions: follow, ⋮ ... share, shuffle, play
   const more = iconButton('more', 'خيارات', () => openReciterOptions(name), 'icon-btn rc-more');
-  view.querySelector('.rc-top').appendChild(actionsRow([followButton(r), more], list, source));
+  const shareBtn = iconButton('share-nodes', 'مشاركة', () => share(`${name} | صوت الأحزان`, `استمع إلى قصائد ${name}`, r.dbId ? `${SITE_URL}/reciter?id=${r.dbId}` : APP_URL));
+  view.querySelector('.rc-top').appendChild(actionsRow([followButton(r), more], list, source, [shareBtn]));
 
   // Popular: numbered, how often each was heard, a check on the liked ones
   const paintPopular = () => {
@@ -2187,7 +2197,9 @@ function renderRadioPage(seed) {
     ${more.length >= 2 ? '<section class="pv-section"><h2 class="pv-big-title">قد يعجبك أيضاً</h2><div class="pv-grid rd-more"></div></section>' : ''}`;
 
   view.querySelector('.pv-actions-slot').replaceWith(actionsRow([
-    keepButton(title, radio, kept), downloadButton(radio), iconButton('more', 'خيارات', () => openTrackOptions(seed)),
+    keepButton(title, radio, kept), downloadButton(radio),
+    iconButton('share-nodes', 'مشاركة', () => share(`${title} | صوت الأحزان`, playlistText(title, radio), APP_URL)),
+    iconButton('more', 'خيارات', () => openTrackOptions(seed)),
   ], radio, source));
   renderTrackList(view.querySelector('.pv-list'), radio, { source, likedMark: true });
   if (more.length >= 2) view.querySelector('.rd-more').append(...more.map((t) => radioCard(t)));
@@ -2594,6 +2606,7 @@ function renderTrackDetail(track) {
   const paintDl = () => { dl.classList.toggle('on', lib.downloads.has(track.id)); setIcon(dl.querySelector('.ic'), lib.downloads.has(track.id) ? 'check' : 'download'); };
   paintDl();
   dl.onclick = async () => { setIcon(dl.querySelector('.ic'), 'spinner'); await toggleDownload(track); paintDl(); };
+  $('td-share-btn').onclick = () => openShareSheet(track);
   $('td-options-btn').onclick = () => openTrackOptions(track);
   refreshLikeButtons();
 
@@ -3963,7 +3976,7 @@ function exploreCard(t, onClick) {
 function paintFollowButtons() {
   document.querySelectorAll('[data-follow]').forEach(paintFollowButton);
 }
-// "متابعة", or the gold fill with a check; it pops when they follow
+// "متابعة", or the gold outline with user-check; it draws in and pops when they follow
 function paintFollowButton(b) {
   const on = lib.follows.has(b.dataset.follow);
   const was = b.dataset.state;
@@ -3972,7 +3985,7 @@ function paintFollowButton(b) {
   b.setAttribute('aria-label', on ? `تتابع ${b.dataset.follow}` : `متابعة ${b.dataset.follow}`);
   if (was === b.dataset.state) return;
   b.classList.toggle('on', on);
-  b.innerHTML = on ? icon('tick', { strokeWidth: 3 }) : '<span>متابعة</span>';
+  b.innerHTML = on ? icon('following') : '<span>متابعة</span>';
   const fresh = was === undefined && followedNow?.name === b.dataset.follow && Date.now() - followedNow.at < 500;
   if (on && (was === 'off' || fresh)) {
     b.classList.remove('pop');

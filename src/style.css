@@ -309,20 +309,19 @@ header { display: flex; justify-content: space-between; align-items: center; mar
 .pill-btn.on { border-color: var(--accent); color: var(--accent); }
 .pill-btn.small { padding: 5px 14px; font-size: 13px; flex-shrink: 0; }
 
-/* Follow: a fixed size, so nothing beside it moves; gold with a check once followed */
+/* Follow: an outlined "متابعة"; once followed, the outline turns gold, the button
+   draws in to a smaller pill and Lucide's user-check pops up in its middle */
 .follow-btn {
   position: relative; width: 84px; height: 32px; border-radius: 16px; flex-shrink: 0; cursor: pointer; overflow: hidden;
   background: transparent; border: 1px solid rgba(255,255,255,0.45); color: var(--primary);
   font-size: 13.5px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; padding: 0;
-  transition: border-color 0.28s ease, color 0.28s ease, transform 0.15s ease;
+  transition: width 0.32s cubic-bezier(0.3, 1.35, 0.5, 1), border-color 0.24s ease, color 0.24s ease, transform 0.15s ease;
 }
-.follow-btn::before { content: ''; position: absolute; inset: 0; background: var(--gold); opacity: 0; transition: opacity 0.28s ease; }
-.follow-btn > * { position: relative; }
-.follow-btn span { line-height: 1; padding-top: 2px; }
-.follow-btn.on { border-color: transparent; color: #121212; }
-.follow-btn.on::before { opacity: 1; }
+.follow-btn span { line-height: 1; padding-top: 2px; white-space: nowrap; }
+.follow-btn.on { width: 58px; border: 1.5px solid var(--accent); color: var(--accent); }
 .follow-btn .ic { font-size: 19px; }
 .follow-btn.small { width: 70px; height: 28px; font-size: 12.5px; }
+.follow-btn.small.on { width: 48px; }
 .follow-btn.small .ic { font-size: 16px; }
 .follow-btn:active { transform: scale(0.94); }
 .follow-btn.pop { animation: followPop 0.55s cubic-bezier(0.3, 1.6, 0.5, 1); }
@@ -540,6 +539,8 @@ header { display: flex; justify-content: space-between; align-items: center; mar
 }
 .td-poet { font-size: 15px; margin-bottom: 4px; }
 .td-body { position: relative; z-index: 1; padding: 64px 18px 0; }
+/* Six buttons in a row: side by side, as on Android, so they fit a 320px phone */
+.td-body .list-actions-buttons { gap: 2px; }
 .td-cover {
   width: 72vw; max-width: 340px; aspect-ratio: 1; border-radius: 12px; object-fit: cover; display: block;
   margin: 0 auto 30px; box-shadow: 0 24px 60px rgba(0,0,0,0.55); background: var(--dark-surface);
