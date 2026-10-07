@@ -1086,7 +1086,7 @@ function goTab(tab) {
   }
   currentTab = tab;
   showView(TABS[tab]);
-  // The bar holds home, search, the library and the downloads (the profile opens from the avatar);
+  // The bar holds home, search, the library, the downloads and the profile;
   // the open tab's icon is lit, the library's filled as on Spotify
   document.querySelectorAll('.nav-item').forEach((n, i) => {
     const open = Object.keys(TABS)[i] === tab;
