@@ -47,6 +47,12 @@ input, textarea { font-family: inherit; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .muted { color: var(--text-secondary); }
+/* While a cover comes: Lucide's microphone on the dark, under the picture
+   (the same as the one shown when there is no cover, see FALLBACK_COVER) */
+img[loading="lazy"]:not(.explore-bg), img.track-img, img.player-cover, img.fp-cover, img.td-cover, img.code-cover,
+img#track-options-img, img#td-artist-img, img#fp-about-img, img#category-detail-image {
+  background: #242424 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236A6A6A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 19v3'/%3E%3Cpath d='M19 10v2a7 7 0 0 1-14 0v-2'/%3E%3Crect x='9' y='2' width='6' height='13' rx='3'/%3E%3C/svg%3E") center / 36% no-repeat;
+}
 .ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ─── Layout ─── */

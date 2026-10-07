@@ -11,7 +11,10 @@ if (!(window.CSS && CSS.supports('width: 1cqw'))) import('container-query-polyfi
 // ═══ Constants ═══════════════════════════════════════════════════════════════
 const SITE_URL = 'https://web.soutalahzan.com';
 const APP_URL = new URL(import.meta.env.BASE_URL, location.origin).href;
-const FALLBACK_COVER = `${import.meta.env.BASE_URL}icon-512.png`;
+// Lucide's microphone (lucide-static 1.52, ISC): shown while a cover comes, or
+// when there is none or it can't load, instead of the app's logo
+const MIC_PATHS = "<path d='M12 19v3'/><path d='M19 10v2a7 7 0 0 1-14 0v-2'/><rect x='9' y='2' width='6' height='13' rx='3'/>";
+const FALLBACK_COVER = `data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='#242424'/><g transform='translate(32 32) scale(1.5)' fill='none' stroke='#6A6A6A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>${MIC_PATHS}</g></svg>`)}`;
 const AUDIO_CACHE = 'sawt-alahzan-audio-cache-v1';
 const PAGE_SIZE = 1000; // Supabase returns at most 1000 rows per request
 // Lyrics are left out of the library download (they can be long, and are only
@@ -4523,7 +4526,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ═══ Boot ════════════════════════════════════════════════════════════════════
-// A cover that can't load (missing file, or offline) shows the app icon instead
+// A cover that can't load (missing file, or offline) shows the microphone instead
 document.addEventListener('error', (e) => {
   const img = e.target;
   if (img.tagName === 'IMG' && img.getAttribute('src') && img.getAttribute('src') !== FALLBACK_COVER) img.src = FALLBACK_COVER;
