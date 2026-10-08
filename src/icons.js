@@ -10,6 +10,7 @@ import {
   Download, Trash2, Timer, Disc3, WifiOff, Cast, Smartphone, Bluetooth,
   Share2, MonitorSpeaker, Check, CirclePlus, Link, MessageSquareMore, Ellipsis, ImageDown, MessageCircle, Send,
   ArrowDownUp, LayoutGrid, Pin, CircleMinus, ArrowUp, ArrowDown, Pencil, Copy, CircleX, Album, Blend, Flame, AudioLines, QrCode,
+  Lock, Upload, CloudUpload, Sparkles, ImagePlus,
 } from 'lucide';
 
 // Spotify's "Your Library": two books standing and one leaning on them
@@ -21,6 +22,7 @@ const LibraryBooks = [
 ];
 
 const ICONS = {
+  lock: Lock, upload: Upload, 'cloud-upload': CloudUpload, sparkles: Sparkles, 'image-plus': ImagePlus,
   home: House, search: Search, library: LibraryBooks, user: User, plus: Plus,
   back: ArrowRight, 'chevron-right': ChevronRight, 'chevron-left': ChevronLeft, 'chevron-down': ChevronDown,
   more: EllipsisVertical, heart: Heart, download: CircleArrowDown, 'download-plain': Download,

@@ -2,6 +2,7 @@ import { supabase, isPasswordRecovery } from './supabaseClient.js';
 import { icon, setIcon, startIcons } from './icons.js';
 import { dominantHsl, playerShades, mixHex } from './color.js';
 import occasionBg from './assets/occasion-bg.webp';
+import { readTags, readDuration, shrinkCover, fixTag, guess as guessUpload, dbCategory, extFor, countWord } from './uploads.js';
 
 // Sizes that follow a card's width (cqw: the occasion, radio and mix cards):
 // older iPhones (iOS 15 and before) don't know them; there, a small helper
@@ -80,13 +81,27 @@ const SIZE_STEPS = [96, 160, 320, 480, 640, 800, 1080, 1280, 1600];
 // Phones draw 2 to 3 real pixels per CSS pixel: covers are asked for at the
 // screen's own density, so none is enlarged into a blur
 const PIXEL_RATIO = Math.min(Math.max(window.devicePixelRatio || 2, 2), 3);
+const RESIZER = 'https://soutalahzan.com/cdn-cgi/image/';
+// Covers Cloudflare would not resize (see storedCover): asked for as stored from then on
+const unresized = new Set();
 function thumb(url, cssWidth) {
   if (!url) return FALLBACK_COVER;
+  if (unresized.has(url)) return url;
   try {
     if (!IMAGE_HOSTS.has(new URL(url).hostname)) return url;
   } catch { return url; }
   const px = SIZE_STEPS.find((s) => s >= cssWidth * PIXEL_RATIO) ?? SIZE_STEPS.at(-1);
-  return `https://soutalahzan.com/cdn-cgi/image/width=${px},quality=85,format=auto,fit=scale-down/${url}`;
+  return `${RESIZER}width=${px},quality=85,format=auto,fit=scale-down/${url}`;
+}
+// The cover as stored behind one of thumb's resized addresses (null when `src`
+// is not one), for when the resize fails: Cloudflare refuses new ones once the
+// month's are used up (429, "ERROR 9422"), so every newly uploaded cover
+// failed while the older ones, resized before, still came
+function storedCover(src) {
+  if (!src.startsWith(RESIZER)) return null;
+  const rest = src.slice(RESIZER.length);
+  const stored = rest.slice(rest.indexOf('/') + 1);
+  return rest.includes('/') && stored.startsWith('https://') ? stored : null;
 }
 
 // "0:00" means the duration was never measured
@@ -146,6 +161,7 @@ let popularTracks = [];    // most listened
 let reciters = [];         // { id, dbId, name, image, count }
 let reciterByName = new Map();
 let fullyLoaded = false;
+let reciterRows = [];      // the reciters table as last read
 let resolveDataReady;
 const dataReady = new Promise((resolve) => { resolveDataReady = resolve; });
 
@@ -253,7 +269,8 @@ async function loadData() {
   dataVersion++;
   allTracks = first.rows.map(mapTrack);
   popularTracks = (popular.data || []).map(mapTrack);
-  buildReciters(recRes.data || []);
+  reciterRows = recRes.data || [];
+  buildReciters(reciterRows);
   renderHome();
   resolveDataReady();
   restoreLastTrack();
@@ -660,10 +677,16 @@ let queueSource = null;   // what the queue was played from
 let playingFrom = '';     // its name, under "now playing"
 const sameSource = (a, b) => !!a && !!b && a.kind === b.kind && String(a.id) === String(b.id);
 
-function rememberPlayedFrom(source) {
+// What "recently played" keeps: tracks, playlists, radios and mixes (as the
+// phone app's); played from anything else (a reciter, the likes, the
+// downloads, a category...), the track itself
+const RECENT_KINDS = new Set(['track', 'playlist', 'radio', 'mix']);
+function rememberPlayedFrom(source, trackId = null) {
   const id = String(source.id ?? '');
   queueSource = { kind: source.kind, id };
-  recentPlayed = [queueSource, ...recentPlayed.filter((r) => !sameSource(r, queueSource))].slice(0, 40);
+  const kept = RECENT_KINDS.has(source.kind) ? queueSource : trackId != null ? { kind: 'track', id: String(trackId) } : null;
+  if (!kept) return;
+  recentPlayed = [kept, ...recentPlayed.filter((r) => !sameSource(r, kept))].slice(0, 40);
   store.set('sawt_recent_played', recentPlayed);
 }
 
@@ -711,7 +734,8 @@ function recentEntry(r) {
 // Newest first, only what still exists (a deleted playlist drops out); topped
 // up with the tracks they played while the list is short
 function recentEntries(n = 20) {
-  const items = recentPlayed.length >= 8 ? recentPlayed : [...recentPlayed, ...lib.history.map((h) => ({ kind: 'track', id: h.id }))];
+  const kept = recentPlayed.filter((r) => RECENT_KINDS.has(r.kind));
+  const items = kept.length >= 8 ? kept : [...kept, ...lib.history.map((h) => ({ kind: 'track', id: h.id }))];
   const out = [];
   const seen = new Set();
   for (const r of items) {
@@ -953,12 +977,13 @@ const pageStamp = (e) => `${dataVersion}|${e.library ? libVersion : ''}`;
 const mainEl = () => document.querySelector('.main-container');
 const topPage = () => [...navStack].reverse().find((e) => e.type === 'page');
 
-// Pages with a picture or a colour of their own across the top don't take the gold glow
-const OWN_TOP = new Set(['category-view', 'track-detail-view', 'page-view']);
+// The main tabs have no glow on top (as the phone app's); a list opened from a
+// section glows in the colour of its first cover, bright (see paintGlow)
+const GLOW_VIEWS = new Set(['playlist-detail-view']);
 
 function showView(viewId, scrollTop = 0) {
   document.querySelectorAll('.view').forEach((v) => { v.style.display = v.id === viewId ? 'block' : 'none'; });
-  document.querySelector('.top-gradient').style.display = OWN_TOP.has(viewId) ? 'none' : '';
+  document.querySelector('.top-gradient').style.display = GLOW_VIEWS.has(viewId) ? 'block' : 'none';
   mainEl().scrollTo(0, scrollTop);
   startPageScroll(viewId);
   if (viewId === 'home-view') paintHomeBar();
@@ -975,6 +1000,11 @@ function startPageScroll(viewId) {
   $('page-bar').classList.remove('show');
   onPageScroll?.(mainEl().scrollTop, true);
 }
+// The library's bar: a hairline under it once the page has scrolled
+mainEl().addEventListener('scroll', () => {
+  const bar = $('lib-bar');
+  if (bar.offsetParent) bar.classList.toggle('lined', mainEl().scrollTop > 4);
+}, { passive: true });
 mainEl().addEventListener('scroll', () => {
   if (!onPageScroll || scrollFrame) return;
   scrollFrame = requestAnimationFrame(() => { scrollFrame = 0; onPageScroll?.(mainEl().scrollTop, false); });
@@ -1413,6 +1443,93 @@ const OCCASIONS = (() => {
     day(12, 24, 'joy', 'يوم المباهلة', '', 'يوم المباهلة..\nيومٌ تجلّى فيه فضل أهل البيت.', ['المباهلة', 'أهل البيت', 'الكساء']),
   ];
 })();
+// A short word about each occasion, shown on its page
+const OCCASION_ABOUT = {
+  "يوم عاشوراء":
+    "العاشر من محرم سنة 61 للهجرة، يوم استشهد فيه الإمام الحسين بن علي (ع) مع أهل بيته وأصحابه في كربلاء بعد أن أبى البيعة ليزيد، فصار يومه رمزًا للتضحية والإباء ورفض الظلم.",
+  "ليالي محرم الحرام":
+    "في الليالي الأولى من محرم تُقام مجالس العزاء الحسيني، يُستذكر فيها مسير الإمام الحسين (ع) إلى كربلاء ومواقف أهل بيته وأصحابه ليلةً بعد ليلة حتى يوم العاشر.",
+  "شهادة الإمام زين العابدين":
+    "الإمام علي بن الحسين السجاد (ع)، رابع أئمة أهل البيت، شهد واقعة كربلاء وحمل رسالتها من بعدها، وترك للأمة الصحيفة السجادية. استشهد مسمومًا سنة 95 للهجرة على المشهور، ودُفن في البقيع.",
+  "أربعين الإمام الحسين":
+    "العشرون من صفر، بعد أربعين يومًا من عاشوراء، يقصد فيه الملايين كربلاء سيرًا على الأقدام لزيارة الإمام الحسين (ع)، وزيارة الأربعين من علامات المؤمن كما رُوي عن الإمام العسكري (ع).",
+  "على طريق الأربعين":
+    "في الأيام التي تسبق الأربعين يسير الزائرون من مدن العراق وخارجه إلى كربلاء مشيًا على الأقدام، وتنتشر على الطريق المواكب التي تخدمهم وتطعمهم حبًّا للحسين (ع).",
+  "وفاة النبي (ص) وشهادة الإمام الحسن (ع)":
+    "في الثامن والعشرين من صفر سنة 11 للهجرة رحل رسول الله محمد (ص)، وفي اليوم نفسه سنة 50 للهجرة على المشهور استشهد سبطه الإمام الحسن المجتبى (ع) مسمومًا، ودُفن في البقيع.",
+  "شهادة الإمام الرضا":
+    "الإمام علي بن موسى الرضا (ع)، ثامن أئمة أهل البيت، استشهد مسمومًا في طوس سنة 203 للهجرة، ومرقده في مشهد بخراسان يقصده الزائرون من كل مكان.",
+  "شهادة الإمام العسكري":
+    "الإمام الحسن بن علي العسكري (ع)، الحادي عشر من أئمة أهل البيت ووالد الإمام المهدي (عج)، عاش تحت رقابة العباسيين في سامراء، واستشهد سنة 260 للهجرة ودُفن فيها.",
+  "مولد النبي الأكرم (ص) والإمام الصادق (ع)":
+    "السابع عشر من ربيع الأول ذكرى مولد رسول الله محمد (ص) في مكة عام الفيل، وفيه وُلد حفيده الإمام جعفر الصادق (ع) سنة 83 للهجرة، الذي نشر علوم أهل البيت حتى عُرف المذهب باسمه.",
+  "مولد الإمام العسكري":
+    "في الثامن من ربيع الآخر سنة 232 للهجرة على المشهور وُلد الإمام الحسن العسكري (ع) في المدينة المنورة، وهو الحادي عشر من أئمة أهل البيت ووالد الإمام المهدي (عج).",
+  "مولد السيدة زينب":
+    "في الخامس من جمادى الأولى سنة 5 للهجرة وُلدت السيدة زينب بنت علي وفاطمة (ع)، عقيلة بني هاشم، التي شهدت كربلاء وحملت رسالتها بخطبها في الكوفة والشام.",
+  "الأيام الفاطمية":
+    "على رواية أن السيدة الزهراء (ع) بقيت بعد أبيها (ص) خمسة وسبعين يومًا، تبدأ في الثالث عشر من جمادى الأولى الأيام الفاطمية، تُقام فيها مجالس العزاء على بضعة المصطفى.",
+  "شهادة السيدة الزهراء":
+    "على الرواية المشهورة استشهدت السيدة فاطمة الزهراء (ع) في الثالث من جمادى الآخرة سنة 11 للهجرة، بعد خمسة وتسعين يومًا من رحيل أبيها (ص)، ودُفنت ليلًا وأُخفي قبرها بوصية منها.",
+  "مولد السيدة الزهراء":
+    "في العشرين من جمادى الآخرة وُلدت السيدة فاطمة الزهراء (ع)، بنت رسول الله (ص) وخديجة (ع)، سيدة نساء العالمين وأم الأئمة من أهل البيت.",
+  "مولد الإمام الباقر":
+    "في الأول من رجب سنة 57 للهجرة وُلد الإمام محمد بن علي الباقر (ع)، خامس أئمة أهل البيت، الذي بقر العلم أي شقّه وتوسّع فيه، وقد حضر كربلاء صغيرًا.",
+  "شهادة الإمام الهادي":
+    "الإمام علي بن محمد الهادي (ع)، عاشر أئمة أهل البيت، أُشخص من المدينة إلى سامراء وعاش فيها تحت رقابة العباسيين، واستشهد سنة 254 للهجرة، ومرقده فيها مع ابنه الإمام العسكري (ع).",
+  "مولد الإمام الجواد":
+    "في العاشر من رجب سنة 195 للهجرة وُلد الإمام محمد بن علي الجواد (ع)، تاسع أئمة أهل البيت، تولّى الإمامة صغيرًا وعُرف بعلمه وكرمه.",
+  "مولد أمير المؤمنين":
+    "في الثالث عشر من رجب، قبل البعثة بعشر سنين، وُلد الإمام علي بن أبي طالب (ع) في جوف الكعبة المشرفة، ولم يولد فيها أحد قبله ولا بعده.",
+  "وفاة السيدة زينب":
+    "على رواية مشهورة توفيت السيدة زينب (ع) في الخامس عشر من رجب سنة 62 للهجرة، بعد أن حملت رسالة كربلاء، ومرقدها في الشام يقصده الزائرون.",
+  "شهادة الإمام الكاظم":
+    "الإمام موسى بن جعفر الكاظم (ع)، سابع أئمة أهل البيت وباب الحوائج، قضى سنين طويلة في سجون هارون العباسي، واستشهد مسمومًا في سجن بغداد سنة 183 للهجرة، ومرقده في الكاظمية.",
+  "المبعث النبوي الشريف":
+    "في السابع والعشرين من رجب بُعث النبي محمد (ص) بالرسالة، ونزل عليه الوحي في غار حراء بأول آيات سورة العلق: «اقرأ باسم ربك الذي خلق».",
+  "مولد الإمام الحسين":
+    "في الثالث من شعبان سنة 4 للهجرة وُلد الإمام الحسين بن علي (ع) في المدينة المنورة، سبط رسول الله (ص) الذي قال فيه: «حسينٌ مني وأنا من حسين».",
+  "مولد أبي الفضل العباس":
+    "في الرابع من شعبان سنة 26 للهجرة وُلد أبو الفضل العباس بن علي (ع)، قمر بني هاشم وحامل لواء الحسين (ع) يوم عاشوراء، ورمز الوفاء والإيثار.",
+  "مولد الإمام زين العابدين":
+    "في الخامس من شعبان سنة 38 للهجرة على المشهور وُلد الإمام علي بن الحسين زين العابدين (ع)، رابع أئمة أهل البيت وصاحب الصحيفة السجادية.",
+  "مولد علي الأكبر":
+    "في الحادي عشر من شعبان وُلد علي الأكبر بن الإمام الحسين (ع)، أشبه الناس برسول الله (ص) خَلقًا وخُلقًا ومنطقًا، وأول من استشهد من بني هاشم يوم عاشوراء.",
+  "مولد الإمام المهدي":
+    "في النصف من شعبان سنة 255 للهجرة وُلد الإمام محمد بن الحسن المهدي (عج) في سامراء، الثاني عشر من أئمة أهل البيت، الذي يملأ الأرض قسطًا وعدلًا كما مُلئت ظلمًا وجورًا.",
+  "وفاة السيدة خديجة":
+    "في العاشر من رمضان، قبل الهجرة بثلاث سنين، توفيت أم المؤمنين خديجة بنت خويلد (ع)، أول من آمن برسول الله (ص) وبذلت مالها في سبيل الرسالة، وسُمّي عام وفاتها عام الحزن.",
+  "مولد الإمام الحسن المجتبى":
+    "في النصف من رمضان سنة 3 للهجرة وُلد الإمام الحسن بن علي المجتبى (ع) في المدينة المنورة، أول سبطي رسول الله (ص)، وعُرف بكريم أهل البيت.",
+  "شهادة أمير المؤمنين":
+    "ضُرب أمير المؤمنين علي (ع) في محراب مسجد الكوفة فجر التاسع عشر من رمضان سنة 40 للهجرة فقال: «فزتُ وربِّ الكعبة»، واستشهد في الحادي والعشرين منه، ودُفن في النجف.",
+  "ليالي القدر":
+    "ليالي التاسع عشر والحادي والعشرين والثالث والعشرين من رمضان، تُرجى فيها ليلة القدر التي هي خير من ألف شهر، فتُحيا بالدعاء وقراءة القرآن ودعاء الجوشن الكبير.",
+  "شهر رمضان المبارك":
+    "شهر الله الذي أُنزل فيه القرآن، أيامه صيام ولياليه قيام ودعاء، ومن أدعيته دعاء الافتتاح في لياليه ودعاء أبي حمزة الثمالي في أسحاره.",
+  "عيد الفطر المبارك":
+    "أول أيام شوال، يفطر فيه الصائمون بعد شهر رمضان، وتُخرج فيه زكاة الفطرة، وتُقام صلاة العيد شكرًا لله على التوفيق للطاعة.",
+  "شهادة الإمام الصادق":
+    "الإمام جعفر بن محمد الصادق (ع)، سادس أئمة أهل البيت، تتلمذ على يديه آلاف العلماء والرواة، واستشهد مسمومًا سنة 148 للهجرة، ودُفن في البقيع.",
+  "مولد السيدة المعصومة":
+    "في الأول من ذي القعدة سنة 173 للهجرة وُلدت السيدة فاطمة المعصومة (ع)، بنت الإمام موسى الكاظم (ع) وأخت الإمام الرضا (ع)، ومرقدها في قم.",
+  "مولد الإمام الرضا":
+    "في الحادي عشر من ذي القعدة سنة 148 للهجرة وُلد الإمام علي بن موسى الرضا (ع) في المدينة المنورة، ثامن أئمة أهل البيت، ولُقّب بعالم آل محمد.",
+  "شهادة الإمام الجواد":
+    "الإمام محمد الجواد (ع)، تاسع أئمة أهل البيت، استشهد مسمومًا في بغداد سنة 220 للهجرة وهو في الخامسة والعشرين من عمره، ودُفن إلى جوار جده الإمام الكاظم (ع) في الكاظمية.",
+  "شهادة الإمام الباقر":
+    "الإمام محمد الباقر (ع)، خامس أئمة أهل البيت، استشهد مسمومًا سنة 114 للهجرة، ودُفن في البقيع إلى جوار أبيه الإمام زين العابدين (ع).",
+  "يوم عرفة":
+    "اليوم التاسع من ذي الحجة، يقف فيه الحجاج على صعيد عرفات، وهو يوم دعاء ومغفرة، ومن أعماله دعاء الإمام الحسين (ع) في يوم عرفة وزيارته.",
+  "عيد الأضحى المبارك":
+    "العاشر من ذي الحجة، يوم النحر الذي يُتم فيه الحجاج مناسكهم، ويُستذكر فيه فداء إسماعيل (ع) بذبحٍ عظيم.",
+  "مولد الإمام الهادي":
+    "في النصف من ذي الحجة سنة 212 للهجرة وُلد الإمام علي بن محمد الهادي (ع) قرب المدينة المنورة، عاشر أئمة أهل البيت.",
+  "عيد الغدير الأغر":
+    "في الثامن عشر من ذي الحجة سنة 10 للهجرة، عند غدير خم في طريق العودة من حجة الوداع، أخذ رسول الله (ص) بيد علي (ع) وقال: «من كنت مولاه فهذا عليٌّ مولاه».",
+  "يوم المباهلة":
+    "في الرابع والعشرين من ذي الحجة خرج رسول الله (ص) لمباهلة نصارى نجران بأهل بيته: علي وفاطمة والحسن والحسين (ع)، فنزلت فيهم آية المباهلة، وامتنع النصارى عن المباهلة.",
+};
 const HIJRI_MONTHS = ['محرم', 'صفر', 'ربيع الأول', 'ربيع الآخر', 'جمادى الأولى', 'جمادى الآخرة', 'رجب', 'شعبان', 'رمضان', 'شوال', 'ذو القعدة', 'ذو الحجة'];
 const hijriText = (d) => `${d.day} ${HIJRI_MONTHS[d.month - 1]}`;
 
@@ -1476,7 +1593,7 @@ function tracksFor(categoryIds, words, n) {
   return uniqueById([...matched.slice(0, n), ...rest]).slice(0, n);
 }
 
-const inDaysText = (d) => (d === 1 ? 'غداً' : d === 2 ? 'بعد يومين' : `بعد ${d} أيام`);
+const inDaysText = (d) => (d === 1 ? 'غداً' : d === 2 ? 'بعد يومين' : d <= 10 ? `بعد ${d} أيام` : `بعد ${d} يوماً`);
 
 // The occasion card's touches: the app's sound mark over its name, and the
 // line with a flower under the title
@@ -1494,14 +1611,11 @@ const stretched = (s) => [...s].map((c, i, a) => {
 // The occasion's card, as on the app's posters: the shrine at night, the app's
 // name, the date, the title in gold calligraphy with its blessing, two lines
 // under it, and a button that plays it
-function occasionCard(now, tracks) {
+function posterWords(now) {
   const o = now.occasion;
   const when = now.inDays ? `${inDaysText(now.inDays)} • ${hijriText(now.date)}` : hijriText(now.date);
   const size = o.title.length > 26 ? 'small' : o.title.length > 18 ? 'medium' : '';
-  const card = document.createElement('div');
-  card.className = 'occasion-card';
-  card.style.backgroundImage = `url("${occasionBg}")`;
-  card.innerHTML = `
+  return `
     <div class="occ-inner">
       <div class="occ-brand">${OCC_WAVE}<div class="occ-name">صوت الأحزان</div><div class="occ-tag">منصة العزاء الحسيني</div></div>
       <div class="occ-when">${esc(stretched(when))}</div>
@@ -1509,9 +1623,94 @@ function occasionCard(now, tracks) {
       ${OCC_ORNAMENT}
       <div class="occ-line">${esc(o.line)}</div>
     </div>`;
-  const play = playAllButton(tracks, { kind: 'occasion', id: `${o.month}-${o.from}` }, 'big-play occ-play');
-  card.appendChild(play);
-  return clickable(card, () => openListPage(o.title, tracks));
+}
+const occasionSource = (o) => ({ kind: 'occasion', id: `${o.month}-${o.from}` });
+
+function occasionCard(now, tracks) {
+  const o = now.occasion;
+  const card = document.createElement('div');
+  card.className = 'occasion-card';
+  card.style.backgroundImage = `url("${occasionBg}")`;
+  card.innerHTML = posterWords(now);
+  card.appendChild(playAllButton(tracks, occasionSource(o), 'big-play occ-play'));
+  return clickable(card, () => openOccasionPage(o.title));
+}
+
+// The occasion called `title`: today's, or when it next comes (within the year)
+function occasionNamed(title, now = Date.now()) {
+  const current = currentOccasion(now);
+  if (current?.occasion.title === title) return current;
+  const o = OCCASIONS.find((x) => x.title === title);
+  if (!o) return null;
+  const today = hijriDate(now);
+  if (today && inOccasion(o, today)) return { occasion: o, date: today, inDays: 0 };
+  if (today) {
+    for (let d = 1; d <= 360; d++) {
+      const date = hijriDate(now + d * DAY_MS);
+      if (date.month === o.month && date.day === o.from) return { occasion: o, date, inDays: d };
+    }
+  }
+  return { occasion: o, date: { month: o.month, day: o.from }, inDays: 0 };
+}
+const occasionTracks = (o) => tracksFor(OCCASION_KINDS[o.kind], o.words, 40);
+
+// ═══ An occasion's page (as the radio's) ══════════════════════════════════════
+// Its poster across the top (the shrine at night, the same words a size
+// larger), who is in it, a word about the occasion, how long it is, the
+// actions, then its tracks
+const OCCASION_DEEP = '#3A2B14';
+window.openOccasionPage = (title) => openPage('page-view', () => renderOccasionPage(title), { library: true });
+
+function renderOccasionPage(title) {
+  const view = $('page-view');
+  newPageToken(view);
+  view.style.removeProperty('--tint');
+  const now = occasionNamed(title);
+  if (!now) {
+    view.innerHTML = `<header class="page-header pv-plain"><button class="icon-btn" onclick="history.back()" aria-label="رجوع">${icon('back')}</button></header>
+      <div class="empty-state">هذه المناسبة غير متوفرة</div>`;
+    viewScroll['page-view'] = null;
+    return;
+  }
+  const o = now.occasion;
+  const tracks = occasionTracks(o);
+  const names = recitersOfList(tracks);
+  const about = OCCASION_ABOUT[o.title] || '';
+  const source = occasionSource(o);
+  const name = [o.title, o.honor].filter(Boolean).join(' ');
+  view.innerHTML = `
+    <div class="occ-hero" style="background-image: url('${occasionBg}')">
+      <button class="pv-round-back" onclick="history.back()" aria-label="رجوع">${icon('back')}</button>
+      ${posterWords(now)}
+    </div>
+    <div class="pv-details occ-details">
+      ${names.length ? `<div class="muted pv-line">مع ${esc(withMore(names))}</div>` : ''}
+      <div class="made-for">${sLogo()} مختارة لهذه المناسبة</div>
+      ${about ? `<p class="pv-about"><b>حول هذه المناسبة</b> ${esc(about)}</p>` : ''}
+      ${tracks.length ? `<div class="muted pv-line">${totalDuration(tracks)} • ${formatCount(tracks.length)} مقطع</div>` : ''}
+    </div>
+    <div class="pv-actions-slot"></div>
+    <div class="track-list pv-list"></div>`;
+
+  // Keep it in the library (as a playlist), download it, send it with a word about it
+  const text = `${name}\n${about}\n\nقصائد المناسبة على صوت الأحزان:\n${tracks.slice(0, 10).map((t) => `• ${t.title} — ${t.reciterName}`).join('\n')}`;
+  view.querySelector('.pv-actions-slot').replaceWith(actionsRow([
+    keepButton(o.title, tracks, lib.playlists.find((p) => p.name === o.title)), downloadButton(tracks),
+    iconButton('share-nodes', 'مشاركة', () => share(`${name} | صوت الأحزان`, text, APP_URL)),
+  ], tracks, source));
+  renderTrackList(view.querySelector('.pv-list'), tracks, { source, likedMark: true, emptyText: 'لا توجد قصائد لهذه المناسبة بعد' });
+
+  // Scrolled: a bar in the poster's deep gold with its name; the poster darkens as it goes up
+  const hero = view.querySelector('.occ-hero');
+  viewScroll['page-view'] = pageScroller({
+    title: o.title, color: () => OCCASION_DEEP, at: () => hero.offsetHeight - barHeight() * 1.4,
+    play: () => playAllButton(tracks, source, 'big-play small'),
+    own: () => view.querySelector('.pv-actions .big-play'),
+    extra: (top) => {
+      hero.style.setProperty('--shift', `${Math.max(0, top) * 0.45}px`);
+      hero.style.setProperty('--dim', Math.min(1, Math.max(0, top) / (hero.offsetHeight * 0.9)));
+    },
+  });
 }
 
 // Today's occasion (or the next one, ten days ahead): its card, then its tracks
@@ -1782,8 +1981,18 @@ const likedTracks = () => [...lib.likes].map((id) => trackById.get(id)).filter(B
 const likesCount = () => (fullyLoaded ? likedTracks().length : lib.likes.size);
 const playlistTracks = (pl) => pl.tracks.map((id) => trackById.get(id)).filter(Boolean);
 
+// The list page's glow: the colour of `t`'s cover (a track, or a reciter's photo as one), bright
+let glowFor = null;
+function paintGlow(t) {
+  const glow = document.querySelector('.top-gradient');
+  glowFor = t;
+  glow.style.visibility = t ? '' : 'hidden';
+  if (t) withShades(t, (sh) => { if (glowFor === t) glow.style.setProperty('--glow', sh.vivid); });
+}
+
 function renderListPage(title, list, playlist, source = null) {
   playlistPage = { title, list, playlist, source };
+  paintGlow(list.find((x) => x.coverImage) || null);
   $('playlist-tracks').className = 'track-list';
   $('playlist-search').parentElement.style.display = 'block';
   $('playlist-title').textContent = title;
@@ -1821,6 +2030,9 @@ function openAllReciters() {
   openPage('playlist-detail-view', () => {
     playlistPage = null;
     const withTracks = reciters.filter((r) => r.count > 0);
+    // The glow from the first reciter's photo
+    const first = withTracks.find((r) => r.image);
+    paintGlow(first ? { coverImage: first.image, reciterName: first.name } : null);
     $('playlist-title').textContent = 'كل الرواديد';
     $('playlist-subtitle').textContent = `${formatCount(withTracks.length)} رادود`;
     $('playlist-delete-btn').style.display = 'none';
@@ -1842,7 +2054,12 @@ function renderCategory(cat) {
   $('category-detail-name').textContent = cat.title;
   $('category-detail-stats').textContent = `${formatCount(list.length)} مقطع`;
   $('category-detail-image').src = thumb(list[0]?.coverImage, 400);
-  $('category-view').querySelector('.hero-image').style.background = cat.color;
+  // Its picture fades into its cover's colour, and the actions sit on it
+  const view = $('category-view');
+  view.querySelector('.hero-image').style.background = cat.color;
+  view.style.setProperty('--tint', cat.color);
+  const token = newPageToken(view);
+  if (list[0]) withShades(list[0], (sh) => { if (view._token === token) view.style.setProperty('--tint', sh.vivid); });
   const source = { kind: 'category', id: cat.id };
   renderTrackList($('category-tracks'), list, { numbered: true, source, emptyText: 'لا توجد مقاطع في هذا التصنيف بعد' });
   $('category-play-all').onclick = () => playFromList(list, 0, { shuffleStart: isShuffle, source });
@@ -3112,11 +3329,388 @@ window.openCreateSheet = () => {
     b.onclick = onClick;
     sheet.appendChild(b);
   };
+  item('upload', 'رفع مقاطع صوتية', 'حتى عشرة مقاطع في المرة، بعناوينها وأغلفتها', () => closeOverlayThen(() => openUploadPage()));
   item('music', 'قائمة تشغيل', 'أنشئ قائمة للمقاطع التي تحبها', () => closeOverlayThen(() => promptCreatePlaylist()));
   item('blend', 'مزيج من ذوقك', 'قائمة جاهزة من مقاطع تناسب ذوقك', () => makeFrom('مزيج من ذوقك', madeForYou(30)));
   item('flame', 'الأكثر استماعاً لديك', 'المقاطع التي تكرر الاستماع إليها', () => makeFrom('الأكثر استماعاً لديك', mostPlayed(30)));
   openSheet('action-modal');
 };
+
+// ═══ Uploading their own tracks ═══════════════════════════════════════════════
+// Up to ten at once, as the phone app's: each file read as it is chosen (its
+// title, reciter, cover and length, see uploads.js), shown as a card to check
+// and change, then sent with its own progress, two at a time: the audio and
+// the cover to the site's storage (/api/upload), the row into audio_library
+// under their account. The sent ones are in the library at once.
+const MAX_UPLOADS = 10;
+const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
+const UPLOAD_DEFAULT_COVER = 'https://images.unsplash.com/photo-1542332213-9b5a5a3fad35?w=500';
+let uploads = [];      // { key, file, mime, title, reciter, category, duration, cover, coverUrl, coverFromFile, fromTags, step, progress, error, trackId }
+let uploadKey = 0;
+let uploadReading = 0; // files being read, before they show
+const SENDING = ['waiting', 'uploading', 'saving'];
+const uploadBusy = () => uploads.some((u) => SENDING.includes(u.step));
+const uploadEditable = (u) => u.step === 'ready' || u.step === 'failed';
+const uploadMissing = (u) => (!u.title.trim() && !u.reciter.trim() ? 'أضف العنوان واسم الرادود'
+  : !u.title.trim() ? 'أضف عنوان المقطع' : !u.reciter.trim() ? 'أضف اسم الرادود'
+    : u.file.size > MAX_UPLOAD_BYTES ? 'الملف أكبر من 100 ميغابايت' : null);
+const signedInUser = () => (currentUser && !currentUser.is_anonymous ? currentUser : null);
+
+window.openUploadPage = () => openPage('page-view', renderUploadPage);
+const onUploadPage = () => navStack.at(-1)?.render === renderUploadPage;
+// The page's parts, while it is the one drawn (it is drawn before it is on the stack)
+const uploadBody = () => $('page-view').querySelector(':scope > .up-body');
+
+function renderUploadPage() {
+  const view = $('page-view');
+  newPageToken(view);
+  view.style.removeProperty('--tint');
+  viewScroll['page-view'] = null;
+  view.innerHTML = `
+    <header class="page-header pv-plain up-head">
+      <button class="icon-btn" onclick="history.back()" aria-label="رجوع">${icon('back')}</button>
+      <h1 class="search-header" style="flex: 1;">رفع مقاطع</h1>
+      <span class="up-count"></span>
+    </header>
+    <div class="up-body"></div>
+    <div class="up-bar"></div>
+    <input type="file" class="up-files" accept="audio/*" multiple hidden />
+    <input type="file" class="up-cover-file" accept="image/*" hidden />`;
+  const files = view.querySelector('.up-files');
+  files.onchange = () => { addUploads([...files.files]); files.value = ''; };
+  const coverInput = view.querySelector('.up-cover-file');
+  coverInput.onchange = async () => {
+    const u = uploads.find((x) => x.key === Number(coverInput.dataset.key));
+    const file = coverInput.files[0];
+    coverInput.value = '';
+    if (!u || !file) return;
+    const cover = await shrinkCover(file);
+    if (!cover) { toast('تعذّرت قراءة الصورة'); return; }
+    setUploadCover(u, cover, false);
+    paintUpload(u);
+  };
+  uploads.forEach((u) => { u.el = null; });
+  paintUploadPage();
+}
+
+const pickUploadFiles = () => $('page-view').querySelector('.up-files')?.click();
+
+async function addUploads(files) {
+  const fresh = files.filter((f) => f.type.startsWith('audio/') || /\.(mp3|m4a|aac|wav|ogg|oga|opus|flac)$/i.test(f.name));
+  const room = Math.max(0, MAX_UPLOADS - uploads.length - uploadReading);
+  const taken = fresh.slice(0, room);
+  if (fresh.length > taken.length) toast(`تُرفع عشرة مقاطع في المرة الواحدة، لم يُضف منها ${fresh.length - taken.length}`);
+  if (fresh.length < files.length) toast('اختر ملفات صوتية فقط');
+  uploadReading += taken.length;
+  paintUploadPage();
+  for (const file of taken) {
+    const item = await readUpload(file).catch(() => null);
+    uploadReading--;
+    if (item) uploads.push(item);
+    else toast(`تعذّرت قراءة «${file.name}»`);
+    paintUploadPage();
+  }
+}
+
+// The file's tags, cover and length, and what is guessed from them
+async function readUpload(file) {
+  const [tags, length] = await Promise.all([readTags(file), readDuration(file)]);
+  const g = guessUpload(file.name, fixTag(tags.title), fixTag(tags.artist) || fixTag(tags.albumArtist), fixTag(tags.album), fixTag(tags.genre), reciters, translateReciterName);
+  const item = {
+    key: ++uploadKey, file, mime: file.type.startsWith('audio/') ? file.type : 'audio/mpeg',
+    title: g.title, reciter: g.reciter, category: g.category, duration: length,
+    cover: null, coverUrl: null, coverFromFile: false, fromTags: g.fromTags, step: 'ready', progress: 0, error: null, trackId: null,
+  };
+  if (tags.cover?.bytes?.length) {
+    const cover = await shrinkCover(new Blob([tags.cover.bytes], { type: tags.cover.mime }));
+    if (cover) setUploadCover(item, cover, true);
+  }
+  return item;
+}
+
+function setUploadCover(u, cover, fromFile) {
+  if (u.coverUrl) URL.revokeObjectURL(u.coverUrl);
+  u.cover = cover;
+  u.coverUrl = URL.createObjectURL(cover);
+  u.coverFromFile = fromFile;
+}
+
+function removeUpload(u) {
+  if (!uploadEditable(u) && u.step !== 'done') return;
+  if (u.coverUrl) URL.revokeObjectURL(u.coverUrl);
+  uploads = uploads.filter((x) => x !== u);
+  u.el?.remove();
+  paintUploadPage();
+}
+
+// The page: before any file, what it does and the button that picks them;
+// then the cards, the files being read, "add more", and the bar at the bottom
+function paintUploadPage() {
+  const body = uploadBody();
+  if (!body) return;
+  const view = $('page-view');
+  view.querySelector('.up-count').textContent = uploads.length ? `${uploads.length} / ${MAX_UPLOADS}` : '';
+  view.querySelector('.up-count').style.display = uploads.length ? '' : 'none';
+  if (!uploads.length && !uploadReading) {
+    body.innerHTML = `
+      <div class="up-pick">
+        <div class="up-pick-disc">${icon('cloud-upload')}</div>
+        <h2>ارفع مقاطعك الصوتية</h2>
+        <p class="muted">اختر حتى عشرة مقاطع في المرة الواحدة</p>
+        <ul>
+          <li>${icon('sparkles')} يقرأ عنوان المقطع واسم الرادود من الملف نفسه</li>
+          <li>${icon('sparkles')} ويأخذ صورة الغلاف المدمجة فيه</li>
+          <li>${icon('sparkles')} ويقترح التصنيف من كلمات العنوان</li>
+          <li>${icon('sparkles')} ويكتب اسم الرادود كما هو في المكتبة</li>
+        </ul>
+        <button class="up-gold">${icon('upload')} اختيار المقاطع</button>
+        ${signedInUser() ? '' : '<p class="muted up-pick-note">ستحتاج إلى تسجيل الدخول قبل الرفع</p>'}
+      </div>`;
+    body.querySelector('.up-pick').onclick = pickUploadFiles;
+    view.querySelector('.up-bar').innerHTML = '';
+    return;
+  }
+  if (body.querySelector('.up-pick') || !body.querySelector('.up-cards')) {
+    body.innerHTML = '<div class="up-note"></div><div class="up-cards"></div><div class="up-reading"></div><button class="up-more"></button>';
+    body.querySelector('.up-more').onclick = pickUploadFiles;
+  }
+  // What was read; and, when one reciter is known, the same for the rest
+  const known = [...new Set(uploads.map((u) => u.reciter.trim()).filter(Boolean))];
+  const without = uploads.filter((u) => uploadEditable(u) && !u.reciter.trim()).length;
+  const note = body.querySelector('.up-note');
+  note.innerHTML = `<div class="up-smart">${icon('sparkles')}<span>قرأ التطبيق العناوين والرواديد والأغلفة من الملفات، راجعها قبل الرفع</span></div>
+    ${known.length === 1 && without > 0 && uploads.length > 1 ? `<button class="up-all">${icon('user')} «${esc(known[0])}» لبقية المقاطع</button>` : ''}`;
+  note.querySelector('.up-all')?.addEventListener('click', () => {
+    uploads.forEach((u) => { if (uploadEditable(u) && !u.reciter.trim()) { u.reciter = known[0]; u.el = null; } });
+    paintUploadPage();
+  });
+  const cards = body.querySelector('.up-cards');
+  uploads.forEach((u) => {
+    if (!u.el || !cards.contains(u.el)) {
+      const old = u.el;
+      u.el = uploadCard(u);
+      if (old?.parentNode === cards) old.replaceWith(u.el); else cards.appendChild(u.el);
+    }
+    paintUpload(u);
+  });
+  body.querySelector('.up-reading').innerHTML = uploadReading
+    ? `<div class="up-reading-row">${icon('spinner')}<span>${uploadReading === 1 ? 'جارٍ قراءة الملف…' : `جارٍ قراءة ${countWord(uploadReading)}…`}</span></div>` : '';
+  const room = MAX_UPLOADS - uploads.length - uploadReading;
+  const more = body.querySelector('.up-more');
+  more.style.display = room > 0 && !uploadBusy() && !uploads.some((u) => u.step === 'done') ? '' : 'none';
+  more.innerHTML = `${icon('plus')} إضافة مقاطع أخرى <span class="muted">(يتبقى ${room})</span>`;
+  paintUploadBar();
+}
+
+// One track: its cover, title and reciter to change, its category, and how its sending goes
+function uploadCard(u) {
+  const card = document.createElement('div');
+  card.className = 'up-card';
+  card.innerHTML = `
+    <div class="up-row">
+      <button class="up-cover" aria-label="تغيير الغلاف"></button>
+      <div class="up-fields">
+        <div class="up-line">
+          <input class="up-input up-title" placeholder="عنوان المقطع" maxlength="200" />
+          <button class="icon-btn up-remove" aria-label="إزالة">${icon('close')}</button>
+        </div>
+        <input class="up-input up-reciter" placeholder="اسم الرادود" maxlength="100" />
+        <div class="up-suggest"></div>
+        <div class="up-meta"></div>
+      </div>
+    </div>
+    <div class="up-cats horizontal-scroller"></div>
+    <div class="up-status"></div>`;
+  const title = card.querySelector('.up-title');
+  const reciter = card.querySelector('.up-reciter');
+  title.value = u.title;
+  reciter.value = u.reciter;
+  title.oninput = () => { u.title = title.value; paintUpload(u); paintUploadBar(); };
+  reciter.oninput = () => { u.reciter = reciter.value; paintUpload(u); paintSuggestions(u); paintUploadBar(); };
+  card.querySelector('.up-remove').onclick = () => removeUpload(u);
+  card.querySelector('.up-cover').onclick = () => {
+    if (!uploadEditable(u)) { if (u.trackId) openTrackById(u.trackId); return; }
+    const input = $('page-view').querySelector('.up-cover-file');
+    input.dataset.key = u.key;
+    input.click();
+  };
+  const cats = card.querySelector('.up-cats');
+  CATEGORIES.forEach((c) => {
+    const b = document.createElement('button');
+    b.className = 'filter-chip up-cat';
+    b.dataset.cat = c.id;
+    b.textContent = c.title;
+    b.onclick = () => { u.category = c.id; paintUpload(u); };
+    cats.appendChild(b);
+  });
+  paintSuggestions(u, card);
+  return card;
+}
+
+// Reciters of the library like what they typed: tapping one writes it as the library does
+function paintSuggestions(u, card = u.el) {
+  const box = card?.querySelector('.up-suggest');
+  if (!box) return;
+  const typed = normalize(u.reciter.trim());
+  const list = typed.length < 2 || reciterByName.has(u.reciter.trim()) || !uploadEditable(u) ? []
+    : reciters.filter((r) => r.name !== UNKNOWN_RECITER && r.count > 0 && normalize(r.name).includes(typed)).slice(0, 3);
+  box.innerHTML = list.map((r) => `<button class="up-chip" data-name="${esc(r.name)}"><img src="${esc(thumb(r.image, 24))}" alt="" />${esc(r.name)}</button>`).join('');
+  box.querySelectorAll('.up-chip').forEach((b) => {
+    b.onclick = () => {
+      u.reciter = b.dataset.name;
+      card.querySelector('.up-reciter').value = u.reciter;
+      paintSuggestions(u);
+      paintUpload(u);
+      paintUploadPage();
+    };
+  });
+}
+
+function paintUpload(u) {
+  const card = u.el;
+  if (!card) return;
+  const editable = uploadEditable(u);
+  const done = u.step === 'done';
+  card.classList.toggle('done', done);
+  card.querySelectorAll('.up-input').forEach((i) => { i.disabled = !editable; });
+  card.querySelector('.up-title').classList.toggle('empty', editable && !u.title.trim());
+  card.querySelector('.up-reciter').classList.toggle('empty', editable && !u.reciter.trim());
+  card.querySelector('.up-remove').style.display = editable || done ? '' : 'none';
+  // The cover: the file's own, one they chose, or the reciter's photo (used when there is none)
+  const photo = reciterByName.get(u.reciter.trim());
+  const cover = card.querySelector('.up-cover');
+  cover.innerHTML = u.coverUrl ? `<img src="${u.coverUrl}" alt="" />`
+    : photo?.hasPhoto ? `<img src="${esc(thumb(photo.image, 88))}" alt="" /><span class="up-cover-tag">صورة الرادود</span>`
+      : `${icon('image-plus')}<span>أضف غلافاً</span>`;
+  if (editable && (u.coverUrl || photo?.hasPhoto)) cover.insertAdjacentHTML('beforeend', `<span class="up-camera">${icon('camera')}</span>`);
+  const parts = [u.duration !== '0:00' ? u.duration : '', `${(u.file.size / 1048576).toFixed(1)} ميغا`].filter(Boolean);
+  card.querySelector('.up-meta').innerHTML = `<span>${parts.join(' • ')}</span>${u.fromTags || u.coverFromFile ? `<span class="up-from">${icon('sparkles')} من بيانات الملف</span>` : ''}`;
+  card.querySelector('.up-cats').style.display = editable ? '' : 'none';
+  card.querySelectorAll('.up-cat').forEach((b) => b.classList.toggle('active', b.dataset.cat === u.category));
+  const status = card.querySelector('.up-status');
+  const missing = uploadMissing(u);
+  if (u.step === 'ready') status.innerHTML = missing ? `<div class="up-line-msg bad">${icon('circle-x')} ${esc(missing)}</div>` : '';
+  else if (u.step === 'waiting') status.innerHTML = `<div class="up-line-msg">${icon('clock')} في الانتظار…</div>`;
+  else if (u.step === 'uploading' || u.step === 'saving') {
+    status.innerHTML = `<div class="up-progress"><span style="width: ${Math.max(2, Math.round(u.progress * 100))}%"></span></div>
+      <div class="up-line-msg">${u.step === 'saving' ? 'جارٍ الحفظ في المكتبة…' : `جارٍ الرفع ${Math.round(u.progress * 100)}%`}</div>`;
+  } else if (done) {
+    status.innerHTML = `<div class="up-line-msg good">${icon('check')} <span style="flex: 1;">تم الرفع، وهو الآن في المكتبة</span>${u.trackId ? '<button class="link-btn up-open">فتح</button>' : ''}</div>`;
+    status.querySelector('.up-open')?.addEventListener('click', () => openTrackById(u.trackId));
+  } else {
+    status.innerHTML = `<div class="up-line-msg bad">${icon('circle-x')} <span style="flex: 1;">${esc(u.error || 'تعذّر الرفع')}</span><button class="link-btn up-retry">إعادة المحاولة</button></div>`;
+    status.querySelector('.up-retry').onclick = () => startUploads();
+  }
+}
+const openTrackById = (id) => { const t = trackById.get(String(id)); if (t) openTrackDetail(t); };
+
+// At the bottom: send them (or sign in first), how the sending goes, or what next once all are sent
+function paintUploadBar() {
+  if (!uploadBody()) return;
+  const bar = $('page-view').querySelector('.up-bar');
+  const sent = uploads.filter((u) => u.step === 'done');
+  const ready = uploads.filter((u) => uploadEditable(u) && !uploadMissing(u)).length;
+  if (uploadBusy()) {
+    const going = uploads.filter((u) => SENDING.includes(u.step)).length;
+    bar.innerHTML = `<div class="up-bar-busy">${icon('spinner')}<span>جارٍ رفع ${countWord(going + sent.length)}… تم ${sent.length}</span></div>`;
+  } else if (sent.length && !ready) {
+    bar.innerHTML = '<div class="up-bar-pair"><button class="up-plain">رفع مقاطع أخرى</button><button class="up-gold">عرض المقاطع</button></div>';
+    bar.querySelector('.up-plain').onclick = () => { uploads.forEach((u) => u.coverUrl && URL.revokeObjectURL(u.coverUrl)); uploads = []; paintUploadPage(); };
+    bar.querySelector('.up-gold').onclick = () => openListPage('مقاطعك المرفوعة', sent.map((u) => trackById.get(String(u.trackId))).filter(Boolean));
+  } else if (!signedInUser()) {
+    bar.innerHTML = '<button class="up-gold">سجّل الدخول لرفع المقاطع</button>';
+    bar.querySelector('button').onclick = () => openAuthModal();
+  } else if (!ready) {
+    bar.innerHTML = '<div class="up-bar-off">أكمل بيانات المقاطع للرفع</div>';
+  } else {
+    bar.innerHTML = `<button class="up-gold">${icon('upload')} رفع ${countWord(ready)}</button>`;
+    bar.querySelector('button').onclick = () => startUploads();
+  }
+}
+
+// Sends every track ready to go, two at a time
+async function startUploads() {
+  if (uploadBusy()) return;
+  const todo = uploads.filter((u) => uploadEditable(u) && !uploadMissing(u));
+  if (!todo.length) return;
+  todo.forEach((u) => { u.step = 'waiting'; u.progress = 0; u.error = null; paintUpload(u); });
+  paintUploadPage();
+  const queue = todo.slice();
+  const rows = [];
+  const worker = async () => {
+    while (queue.length) {
+      const row = await sendUpload(queue.shift());
+      if (row) rows.push(row);
+    }
+  };
+  await Promise.all([worker(), worker()]);
+  if (rows.length) {
+    // In the library at once: on top of the newest
+    const fresh = rows.map(mapTrack);
+    allTracks = [...new Set([...fresh, ...allTracks])];
+    buildReciters(reciterRows);
+    dataVersion++;
+    toast(rows.length === todo.length ? `تم رفع ${countWord(rows.length)}` : `رُفع ${rows.length} من ${todo.length}، ويمكنك إعادة محاولة الباقي`);
+  }
+  paintUploadPage();
+}
+
+async function sendUpload(u) {
+  const step = (name, progress, error = null) => { u.step = name; u.progress = progress; u.error = error; paintUpload(u); paintUploadBar(); };
+  try {
+    step('uploading', 0.01);
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = signedInUser();
+    if (!session || !user) throw new Error('انتهت الجلسة، سجّل الدخول مجدداً');
+    const ext = extFor(u.file.name, u.mime);
+    // The audio is most of the way; the cover and the saving the rest
+    const audioShare = u.cover ? 0.86 : 0.92;
+    const audioUrl = await storeUpload('audio', ext, u.file, u.mime, session.access_token, (p) => { u.progress = Math.max(u.progress, p * audioShare); paintUpload(u); });
+    const coverUrl = u.cover ? await storeUpload('image', 'jpg', u.cover, 'image/jpeg', session.access_token, (p) => { u.progress = audioShare + p * (0.94 - audioShare); paintUpload(u); }) : null;
+    step('saving', 0.96);
+    const title = u.title.trim();
+    const reciter = u.reciter.trim();
+    const photo = reciterByName.get(reciter);
+    const { data, error } = await supabase.from('audio_library').insert([{
+      file_name: `${reciter} - ${title}.${ext}`,
+      title,
+      reciter_name: reciter,
+      file_url: audioUrl,
+      // No cover of its own: the reciter's photo, else the website's default
+      image_url: coverUrl || (photo?.hasPhoto ? photo.image : UPLOAD_DEFAULT_COVER),
+      user_id: user.id,
+      duration: u.duration,
+      status: 'public',
+      category: dbCategory(u.category),
+    }]).select(TRACK_COLUMNS);
+    if (error || !data?.[0]) throw new Error('رُفع الملف لكن تعذّر حفظه في المكتبة');
+    u.trackId = String(data[0].id);
+    step('done', 1);
+    return data[0];
+  } catch (err) {
+    step('failed', 0, err.message || 'تعذّر الرفع، تأكد من اتصالك وحاول مجدداً');
+    return null;
+  }
+}
+
+// POST /api/upload: the file into the site's storage, its public address back (with the share sent so far)
+function storeUpload(kind, ext, body, type, token, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${SITE_URL}/api/upload?kind=${kind}&ext=${encodeURIComponent(ext)}`);
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.setRequestHeader('Content-Type', type);
+    xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(e.loaded / e.total); };
+    xhr.onload = () => {
+      let url = null;
+      try { url = JSON.parse(xhr.responseText).url; } catch { /* not JSON */ }
+      if (xhr.status >= 200 && xhr.status < 300 && url) { resolve(url); return; }
+      reject(new Error({ 401: 'انتهت الجلسة، سجّل الدخول مجدداً', 403: 'حسابات الضيوف لا تستطيع الرفع، أنشئ حساباً أولاً', 413: 'الملف كبير جداً', 415: 'نوع الملف غير مدعوم' }[xhr.status] || `تعذّر الرفع (${xhr.status})`));
+    };
+    xhr.onerror = () => reject(new Error('تعذّر الرفع، تأكد من اتصالك وحاول مجدداً'));
+    xhr.send(body);
+  });
+}
 
 // ═══ Prompts, options, playlists ═════════════════════════════════════════════
 function openPrompt({ title, hint = '', value = '', placeholder = '', type = 'text', minLength = 1, onSubmit }) {
@@ -3587,7 +4181,7 @@ function playFromList(list, index, { shuffleStart = false, source = null } = {})
     queueIndex = index;
   }
   const from = source || { kind: 'track', id: queue[queueIndex].id };
-  rememberPlayedFrom(from);
+  rememberPlayedFrom(from, queue[queueIndex].id);
   playingFrom = source ? recentEntry(source)?.title || '' : '';
   playTrack(queue[queueIndex]);
 }
@@ -4384,20 +4978,29 @@ $('auth-modal').addEventListener('click', (e) => { if (e.target.id === 'auth-mod
 
 window.skipAuth = () => { store.set('sawt_auth_skipped', true); closeAuthModal(); };
 
+// The card's two faces: signing in (Google and Facebook too), and making an
+// account (a name, the password twice, back to signing in)
 function paintAuthMode() {
   const signup = authMode === 'signup';
-  $('auth-name-field').style.display = signup ? 'block' : 'none';
+  $('auth-sheet').classList.toggle('signup', signup);
+  const show = (id, on) => { $(id).style.display = on ? '' : 'none'; };
+  show('auth-name-field', signup);
+  show('auth-confirm-field', signup);
+  show('auth-back', signup);
+  show('auth-note', signup);
+  show('auth-forgot-btn', !signup);
+  show('auth-social', !signup);
+  show('auth-switch', !signup);
+  show('auth-skip', !signup);
   $('auth-btn-text').textContent = signup ? 'إنشاء الحساب' : 'دخول';
-  $('auth-toggle-text').textContent = signup ? 'لديك حساب؟' : 'ليس لديك حساب؟';
-  $('auth-toggle-btn').textContent = signup ? 'دخول' : 'إنشاء حساب';
-  $('auth-title').textContent = signup ? 'إنشاء حساب جديد' : 'أهلاً بك في صوت الأحزان';
+  $('auth-title').textContent = signup ? 'إنشاء حساب' : 'تسجيل الدخول';
   $('auth-password').autocomplete = signup ? 'new-password' : 'current-password';
-  $('auth-forgot-btn').style.display = signup ? 'none' : 'inline-block';
+  $('auth-sheet').scrollTop = 0;
 }
 window.toggleAuthMode = () => { authMode = authMode === 'login' ? 'signup' : 'login'; paintAuthMode(); $('auth-message').style.display = 'none'; };
 
 function resetAuthForm() {
-  ['auth-email', 'auth-password', 'auth-name'].forEach((id) => { $(id).value = ''; });
+  ['auth-email', 'auth-password', 'auth-confirm', 'auth-name'].forEach((id) => { $(id).value = ''; });
   $('auth-message').style.display = 'none';
   authMode = 'login';
   paintAuthMode();
@@ -4420,6 +5023,17 @@ window.signInWithGoogle = async () => {
   const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: APP_URL } });
   if (error) { showAuthMessage('فشل تسجيل الدخول بواسطة جوجل'); console.error(error); }
 };
+window.signInWithFacebook = async () => {
+  $('auth-message').style.display = 'none';
+  const { error } = await supabase.auth.signInWithOAuth({ provider: 'facebook', options: { redirectTo: APP_URL } });
+  if (error) { showAuthMessage('فشل تسجيل الدخول بواسطة فيسبوك'); console.error(error); }
+};
+
+// Signed in: the home screen (unless they signed in to send their tracks: that page stays)
+function afterSignIn() {
+  closeAuthModal();
+  if (!onUploadPage()) goHome();
+}
 
 // Supabase's messages are English: the listener gets the Arabic meaning
 function authErrorText(err) {
@@ -4462,6 +5076,7 @@ window.submitAuth = async () => {
   const name = $('auth-name').value.trim();
   if (!email || !password) { showAuthMessage('يرجى تعبئة جميع الحقول'); return; }
   if (password.length < 6) { showAuthMessage('كلمة المرور يجب أن تكون 6 أحرف على الأقل'); return; }
+  if (authMode === 'signup' && password !== $('auth-confirm').value) { showAuthMessage('كلمتا المرور غير متطابقتين'); return; }
 
   setAuthLoading(true);
   $('auth-message').style.display = 'none';
@@ -4472,12 +5087,12 @@ window.submitAuth = async () => {
       // With e-mail confirmation on, Supabase answers an existing address with a
       // user that has no identities instead of an error
       if (data.user && !data.session && data.user.identities?.length === 0) throw new Error('already registered');
-      if (data.session) { closeAuthModal(); toast('أهلاً بك! تم إنشاء حسابك'); }
+      if (data.session) { afterSignIn(); toast('أهلاً بك! تم إنشاء حسابك'); }
       else showAuthMessage('تم إنشاء الحساب! تفقد بريدك لتفعيله ثم سجّل الدخول.', false);
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      closeAuthModal();
+      afterSignIn();
       toast('تم تسجيل الدخول');
     }
   } catch (err) {
@@ -4486,17 +5101,23 @@ window.submitAuth = async () => {
   setAuthLoading(false);
 };
 
+// Signing out stops what is playing (it was theirs); the home screen underneath, the sign-in screen on top
 window.doLogout = async () => {
+  audio.pause();
   await supabase.auth.signOut();
   toast('تم تسجيل الخروج');
+  goHome();
+  openAuthModal();
 };
 
 window.toggleAuthPasswordVisibility = () => {
-  const input = $('auth-password');
-  const show = input.type === 'password';
-  input.type = show ? 'text' : 'password';
+  const show = $('auth-password').type === 'password';
+  ['auth-password', 'auth-confirm'].forEach((id) => { $(id).type = show ? 'text' : 'password'; });
   setIcon($('auth-eye-icon'), show ? 'eye-off' : 'eye');
 };
+
+// The logo on the card: the S in the brand's gold
+$('auth-logo').innerHTML = `<svg viewBox="0 0 215.4 253" aria-hidden="true"><defs><linearGradient id="auth-gold-s" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F6E073"/><stop offset="0.28" stop-color="#C28F1A"/><stop offset="0.52" stop-color="#F9E37A"/><stop offset="0.76" stop-color="#B78C1A"/><stop offset="1" stop-color="#F0D96C"/></linearGradient></defs><path fill="url(#auth-gold-s)" d="${S_PATH}"/></svg>`;
 
 // ═══ Links into the app ══════════════════════════════════════════════════════
 // ?track=<id> | ?reciter=<id> | ?q=<search> (the website forwards phones here)
@@ -4539,10 +5160,19 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ═══ Boot ════════════════════════════════════════════════════════════════════
-// A cover that can't load (missing file, or offline) shows the microphone instead
+// A cover the server would not resize comes as stored; one that can't load at
+// all (missing file, or offline) shows the microphone instead
 document.addEventListener('error', (e) => {
   const img = e.target;
-  if (img.tagName === 'IMG' && img.getAttribute('src') && img.getAttribute('src') !== FALLBACK_COVER) img.src = FALLBACK_COVER;
+  const src = img.tagName === 'IMG' && img.getAttribute('src');
+  if (!src || src === FALLBACK_COVER) return;
+  const stored = storedCover(src);
+  if (stored) {
+    unresized.add(stored);
+    img.src = stored;
+  } else {
+    img.src = FALLBACK_COVER;
+  }
 }, true);
 
 // A reload keeps the old page's history entries behind this one; marking this
