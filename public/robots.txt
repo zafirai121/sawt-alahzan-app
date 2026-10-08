@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://sout-al-ahzan-web.pages.dev/sitemap.xml

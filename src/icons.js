@@ -3,15 +3,27 @@
 // <i> at 1em, so the element's font-size and color size and tint it.
 // Filled glyphs (play/pause, a liked heart) add data-fill.
 import {
-  House, Search, Library, User, Plus, ArrowRight, ChevronRight, ChevronLeft, ChevronDown,
+  House, Search, User, Plus, ArrowRight, ChevronRight, ChevronLeft, ChevronDown,
   EllipsisVertical, Heart, CircleArrowDown, CircleCheck, Shuffle, Repeat, Repeat1, Play, Pause,
   SkipBack, SkipForward, Settings, Camera, Music, ListMusic, List, ListPlus, Mic, Mail, SquarePen,
   LogOut, Maximize2, LoaderCircle, Eye, EyeOff, Share, Radio, Clock3, UserPlus, UserCheck, X,
-  Download, Trash2, Timer, Disc3,
+  Download, Trash2, Timer, Disc3, WifiOff, Cast, Smartphone, Bluetooth,
+  Share2, MonitorSpeaker, Check, CirclePlus, Link, MessageSquareMore, Ellipsis, ImageDown, MessageCircle, Send,
+  ArrowDownUp, LayoutGrid, Pin, CircleMinus, ArrowUp, ArrowDown, Pencil, Copy, CircleX, Album, Blend, Flame, AudioLines, QrCode,
+  Lock, Upload, CloudUpload, Sparkles, ImagePlus,
 } from 'lucide';
 
+// Spotify's "Your Library": two books standing and one leaning on them
+// (filled when the tab is open)
+const LibraryBooks = [
+  ['path', { d: 'M4 3v18' }],
+  ['path', { d: 'M9.5 3v18' }],
+  ['path', { d: 'M14 3.6 20.5 7.3V21H14z' }],
+];
+
 const ICONS = {
-  home: House, search: Search, library: Library, user: User, plus: Plus,
+  lock: Lock, upload: Upload, 'cloud-upload': CloudUpload, sparkles: Sparkles, 'image-plus': ImagePlus,
+  home: House, search: Search, library: LibraryBooks, user: User, plus: Plus,
   back: ArrowRight, 'chevron-right': ChevronRight, 'chevron-left': ChevronLeft, 'chevron-down': ChevronDown,
   more: EllipsisVertical, heart: Heart, download: CircleArrowDown, 'download-plain': Download,
   check: CircleCheck, shuffle: Shuffle, repeat: Repeat, 'repeat-one': Repeat1, play: Play, pause: Pause,
@@ -19,12 +31,20 @@ const ICONS = {
   playlist: ListMusic, list: List, 'list-plus': ListPlus, mic: Mic, mail: Mail, edit: SquarePen,
   logout: LogOut, expand: Maximize2, spinner: LoaderCircle, eye: Eye, 'eye-off': EyeOff,
   share: Share, radio: Radio, clock: Clock3, follow: UserPlus, following: UserCheck, close: X,
-  trash: Trash2, timer: Timer, disc: Disc3,
+  trash: Trash2, timer: Timer, disc: Disc3, 'wifi-off': WifiOff,
+  // Spotify's now-playing row, from Lucide's own set as in the phone app
+  queue: ListMusic, 'share-nodes': Share2, devices: MonitorSpeaker, cast: Cast, smartphone: Smartphone, bluetooth: Bluetooth,
+  tick: Check, 'circle-plus': CirclePlus, link: Link, message: MessageSquareMore, ellipsis: Ellipsis, 'image-down': ImageDown,
+  whatsapp: MessageCircle, send: Send,
+  sort: ArrowDownUp, grid: LayoutGrid, pin: Pin, 'circle-minus': CircleMinus, 'arrow-up': ArrowUp, 'arrow-down': ArrowDown,
+  pencil: Pencil, copy: Copy, 'circle-x': CircleX, album: Album, blend: Blend, flame: Flame, 'audio-lines': AudioLines, qr: QrCode,
 };
 
 const escAttr = (v) => String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
 
-// SVG markup for an icon; `fill` paints the shape (play, pause, liked heart)
+// SVG markup for an icon; `fill` paints the shape (play, pause, liked heart).
+// The outline stays: some glyphs have parts that are lines only (the bar of
+// skip back / forward).
 export function iconSvg(name, { fill = false, strokeWidth = 2 } = {}) {
   const node = ICONS[name];
   if (!node) return '';
@@ -32,7 +52,7 @@ export function iconSvg(name, { fill = false, strokeWidth = 2 } = {}) {
     .map(([tag, attrs]) => `<${tag} ${Object.entries(attrs).map(([k, v]) => `${k}="${escAttr(v)}"`).join(' ')}/>`)
     .join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" ` +
-    `fill="${fill ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="${fill ? 0 : strokeWidth}" ` +
+    `fill="${fill ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="${strokeWidth}" ` +
     `stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"${name === 'spinner' ? ' class="ic-spin"' : ''}>${children}</svg>`;
 }
 
