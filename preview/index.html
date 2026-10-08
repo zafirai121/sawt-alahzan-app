@@ -32,8 +32,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" crossorigin />
-    <script type="module" crossorigin src="/sawt-alahzan-app/preview/assets/index-B83eMnUm.js"></script>
-    <link rel="stylesheet" crossorigin href="/sawt-alahzan-app/preview/assets/index-DB-Dgg-Z.css">
+    <script type="module" crossorigin src="/sawt-alahzan-app/preview/assets/index-CUCMntfJ.js"></script>
+    <link rel="stylesheet" crossorigin href="/sawt-alahzan-app/preview/assets/index-DIiLijUc.css">
   </head>
   <body>
     <svg width="0" height="0" style="position: absolute;" aria-hidden="true">
@@ -244,6 +244,12 @@
             <button class="settings-row" onclick="openUploadPage()">
               <div class="settings-icon"><i class="ic" data-icon="upload"></i></div>
               <div style="flex: 1;">رفع مقاطع صوتية</div>
+              <i class="ic muted" data-icon="chevron-left"></i>
+            </button>
+            <button class="settings-row" id="profile-my-uploads" onclick="openMyUploads()" style="display: none;">
+              <div class="settings-icon"><i class="ic" data-icon="pencil"></i></div>
+              <div style="flex: 1;">مقاطعي المرفوعة</div>
+              <span id="my-uploads-count" class="muted" style="font-size: 13px;"></span>
               <i class="ic muted" data-icon="chevron-left"></i>
             </button>
             <button class="settings-row" onclick="openSleepTimerSheet()">
