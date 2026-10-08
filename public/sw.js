@@ -5,7 +5,7 @@
 //    player asks for, whichever host the file lives on.
 //  - Fonts: cached copy first, so text keeps its typeface offline.
 //  - The database and everything else are left alone, so data is always fresh.
-const APP_CACHE = 'sawt-alahzan-app-v4';
+const APP_CACHE = 'sawt-alahzan-app-v5';
 const AUDIO_CACHE = 'sawt-alahzan-audio-cache-v1';
 // Where audio files and covers are stored: R2 (own domain and r2.dev) and
 // Supabase Storage (older uploads)

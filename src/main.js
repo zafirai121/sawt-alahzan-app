@@ -4307,7 +4307,7 @@ function updateProfileUI() {
   $('profile-edit-name').style.display = signedIn ? 'flex' : 'none';
   $('profile-email-row').style.display = signedIn ? 'flex' : 'none';
   $('profile-camera-btn').style.display = signedIn ? 'flex' : 'none';
-  $('profile-avatar-img').src = signedIn ? avatarUrl() : `${import.meta.env.BASE_URL}icon-192.png`;
+  $('profile-avatar-img').src = signedIn ? avatarUrl() : `${import.meta.env.BASE_URL}app-icon-192.png`;
   document.querySelectorAll('.avatar-btn').forEach((b) => {
     b.innerHTML = signedIn ? `<img src="${esc(avatarUrl())}" alt="" />` : icon('user');
   });
