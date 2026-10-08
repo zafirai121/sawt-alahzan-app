@@ -2,7 +2,7 @@
 // person would (the same cases as the phone app's TrackGuessTest). npm test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fixTag, cleanTitle, guess, category, dbCategory, duration } from '../src/uploads.js';
+import { fixTag, cleanTitle, guess, category, dbCategory, duration, checkReciter, reciterSuggestions, reciterProblem } from '../src/uploads.js';
 
 const r = (name, count = 40) => ({ name, count });
 const library = [r('باسم الكربلائي', 300), r('سيد فاقد الموسوي', 120), r('علي الدلفي', 90), r('حسين فيصل', 60), r('علي', 2)];
@@ -59,6 +59,35 @@ test('category from its words', () => {
   assert.equal(category('عرس القاسم'), 'hussainiya');
   assert.equal(category('يا حسين'), 'hussainiya');
   assert.equal(dbCategory('hussainiya'), 'hussainiya_poems');
+});
+
+test('a reciter is chosen, not written again', () => {
+  const c = (typed) => checkReciter(typed, library, translate);
+  assert.deepEqual(c('باسم الكربلائي'), { kind: 'known', reciters: [library[0]] });
+  // The same name written otherwise: chosen from the library, never a second page
+  assert.deepEqual(c('الرادود باسم الكربلائى'), { kind: 'same', reciters: [library[0]] });
+  assert.deepEqual(c('فاقد الموسوي'), { kind: 'same', reciters: [library[1]] });
+  assert.deepEqual(c('حسين الفيصل'), { kind: 'same', reciters: [library[3]] });
+  assert.deepEqual(c('Basim Karbalaei'), { kind: 'same', reciters: [library[0]] });
+  // A letter apart, or begun: offered
+  assert.deepEqual(c('علي الدلفى ي'), { kind: 'like', reciters: [library[2]] });
+  assert.deepEqual(c('باسم الكربلاني'), { kind: 'like', reciters: [library[0]] });
+  assert.deepEqual(c('علي الدل'), { kind: 'like', reciters: [library[2]] });
+  // Someone else
+  assert.deepEqual(c('حيدر العطار'), { kind: 'new', reciters: [] });
+  assert.deepEqual(c('  '), { kind: 'empty', reciters: [] });
+  // What stops the sending: the same one until chosen; one like it until chosen or confirmed as new
+  assert.match(reciterProblem(c('فاقد الموسوي'), 'فاقد الموسوي', null), /سيد فاقد الموسوي/);
+  assert.match(reciterProblem(c('باسم الكربلاني'), 'باسم الكربلاني', null), /هل تقصد/);
+  assert.equal(reciterProblem(c('باسم الكربلاني'), 'باسم الكربلاني ', 'باسم الكربلاني'), null);
+  assert.equal(reciterProblem(c('حيدر العطار'), 'حيدر العطار', null), null);
+});
+
+test('names offered while typing', () => {
+  assert.deepEqual(reciterSuggestions('باسم', library), [library[0]]);
+  assert.deepEqual(reciterSuggestions('الدلفى', library), [library[2]]);
+  assert.deepEqual(reciterSuggestions('ب', library), []);
+  assert.deepEqual(reciterSuggestions('علي الدلفي', library), []);
 });
 
 test('lengths', () => {

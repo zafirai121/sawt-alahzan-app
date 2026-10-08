@@ -2,7 +2,7 @@ import { supabase, isPasswordRecovery } from './supabaseClient.js';
 import { icon, setIcon, startIcons } from './icons.js';
 import { dominantHsl, playerShades, mixHex } from './color.js';
 import occasionBg from './assets/occasion-bg.webp';
-import { readTags, readDuration, shrinkCover, fixTag, guess as guessUpload, dbCategory, extFor, countWord } from './uploads.js';
+import { readTags, readDuration, shrinkCover, fixTag, guess as guessUpload, dbCategory, extFor, countWord, checkReciter, reciterSuggestions, reciterProblem } from './uploads.js';
 
 // Sizes that follow a card's width (cqw: the occasion, radio and mix cards):
 // older iPhones (iOS 15 and before) don't know them; there, a small helper
@@ -20,7 +20,7 @@ const AUDIO_CACHE = 'sawt-alahzan-audio-cache-v1';
 const PAGE_SIZE = 1000; // Supabase returns at most 1000 rows per request
 // Lyrics are left out of the library download (they can be long, and are only
 // needed for the track being viewed or played), see loadDetails()
-const TRACK_COLUMNS = 'id,title,file_name,reciter_name,reciter_id,image_url,file_url,category,duration,listen_count';
+const TRACK_COLUMNS = 'id,title,file_name,reciter_name,reciter_id,image_url,file_url,category,duration,listen_count,user_id';
 const NO_LYRICS = 'الكلمات غير متوفرة لهذا المقطع';
 
 // Same groups as the website's category pages (the database mixes Arabic and
@@ -185,6 +185,7 @@ function mapTrack(row) {
     category: row.category || '',
     duration: formatDuration(row.duration),
     listens: row.listen_count || 0,
+    uploaderId: row.user_id || null, // the account that uploaded it (they may edit it)
     searchKey: undefined, // see searchKey()
   };
   // undefined = not fetched yet; '' = the track has none
@@ -1164,7 +1165,7 @@ function libraryChanged() {
 // `source`: what the list is (a reciter, a playlist...) for "recently played";
 // `subtitle`: the line under the title; `likedMark`: a gold check on liked
 // tracks; `playList`: the whole list a row plays from, when `list` is its start
-function renderTrackList(container, list, { numbered = false, emptyText = 'لا توجد مقاطع هنا بعد', playlist = null, source = null, subtitle = null, likedMark = false, playList = null } = {}) {
+function renderTrackList(container, list, { numbered = false, emptyText = 'لا توجد مقاطع هنا بعد', playlist = null, source = null, subtitle = null, likedMark = false, playList = null, onEdit = null } = {}) {
   container._io?.disconnect(); // the previous drawing's "load more" watcher
   container.innerHTML = '';
   if (!list.length) {
@@ -1188,8 +1189,10 @@ function renderTrackList(container, list, { numbered = false, emptyText = 'لا 
           <div class="track-artist">${meta}</div>
         </div>
         ${likedMark && lib.likes.has(track.id) ? `<span class="liked-mark" aria-label="في المفضلة">${icon('tick')}</span>` : ''}
+        ${onEdit ? `<button class="icon-btn row-edit" aria-label="تعديل المقطع">${icon('pencil')}</button>` : ''}
         <button class="icon-btn row-more" aria-label="خيارات">${icon('more')}</button>`;
       clickable(el, () => playFromList(playList || list, index, { source }));
+      if (onEdit) el.querySelector('.row-edit').onclick = (e) => { e.stopPropagation(); onEdit(track); };
       el.querySelector('.row-more').onclick = (e) => { e.stopPropagation(); openTrackOptions(track, { playlist }); };
       frag.appendChild(el);
     });
@@ -3356,6 +3359,18 @@ const uploadMissing = (u) => (!u.title.trim() && !u.reciter.trim() ? 'أضف ا�
     : u.file.size > MAX_UPLOAD_BYTES ? 'الملف أكبر من 100 ميغابايت' : null);
 const signedInUser = () => (currentUser && !currentUser.is_anonymous ? currentUser : null);
 
+// What each typed reciter is to the library (see checkReciter), kept while its reciters stay the same
+let reciterChecks = new Map();
+let reciterChecksFor = null;
+function reciterCheck(typed) {
+  if (reciterChecksFor !== reciters) { reciterChecks = new Map(); reciterChecksFor = reciters; }
+  const name = String(typed || '').trim();
+  if (!reciterChecks.has(name)) reciterChecks.set(name, checkReciter(name, reciters, translateReciterName));
+  return reciterChecks.get(name);
+}
+// What keeps a card from being sent: what it is missing, or a reciter to choose from the library
+const uploadProblem = (u) => uploadMissing(u) || reciterProblem(reciterCheck(u.reciter), u.reciter, u.newReciter);
+
 window.openUploadPage = () => openPage('page-view', renderUploadPage);
 const onUploadPage = () => navStack.at(-1)?.render === renderUploadPage;
 // The page's parts, while it is the one drawn (it is drawn before it is on the stack)
@@ -3547,23 +3562,43 @@ function uploadCard(u) {
   return card;
 }
 
-// Reciters of the library like what they typed: tapping one writes it as the library does
+// Under a card's reciter: what the name is to the library (see paintReciterChoice)
 function paintSuggestions(u, card = u.el) {
   const box = card?.querySelector('.up-suggest');
   if (!box) return;
-  const typed = normalize(u.reciter.trim());
-  const list = typed.length < 2 || reciterByName.has(u.reciter.trim()) || !uploadEditable(u) ? []
-    : reciters.filter((r) => r.name !== UNKNOWN_RECITER && r.count > 0 && normalize(r.name).includes(typed)).slice(0, 3);
-  box.innerHTML = list.map((r) => `<button class="up-chip" data-name="${esc(r.name)}"><img src="${esc(thumb(r.image, 24))}" alt="" />${esc(r.name)}</button>`).join('');
-  box.querySelectorAll('.up-chip').forEach((b) => {
-    b.onclick = () => {
-      u.reciter = b.dataset.name;
-      card.querySelector('.up-reciter').value = u.reciter;
+  if (!uploadEditable(u)) { box.innerHTML = ''; return; }
+  paintReciterChoice(box, u.reciter, u.newReciter, {
+    onPick: (name) => {
+      u.reciter = name;
+      card.querySelector('.up-reciter').value = name;
       paintSuggestions(u);
-      paintUpload(u);
       paintUploadPage();
-    };
+    },
+    onNew: () => { u.newReciter = u.reciter.trim(); paintSuggestions(u); paintUpload(u); paintUploadBar(); },
   });
+}
+
+// What the typed reciter is to the library, so one reciter never gets a second
+// page: the same one written otherwise (to choose), ones like it (choose one,
+// or say it is someone new), the library's names holding what is typed so
+// far, or a new reciter, whose page the library will make
+function paintReciterChoice(box, typed, newReciter, { onPick, onNew }) {
+  const name = String(typed || '').trim();
+  const check = reciterCheck(name);
+  const line = (ic, text, cls = '') => `<div class="up-line-msg ${cls}">${icon(ic)}<span>${esc(text)}</span></div>`;
+  const chips = (list, withNew = false) => `<div class="up-suggest-chips">${list.map((r) => `<button class="up-chip" data-name="${esc(r.name)}"><img src="${esc(thumb(r.image, 24))}" alt="" />${esc(r.name)}</button>`).join('')}${withNew ? '<button class="up-chip up-chip-new">لا، رادود جديد</button>' : ''}</div>`;
+  const fresh = line('plus', 'رادود جديد، ستُنشأ له صفحة في المكتبة');
+  let html = '';
+  if (check.kind === 'known') html = line('check', 'من رواديد المكتبة', 'good');
+  else if (check.kind === 'same') html = line('circle-x', check.reciters.length === 1 ? 'هذا الرادود موجود في المكتبة، اختره:' : 'هذا الرادود موجود في المكتبة، اختر اسمه:', 'bad') + chips(check.reciters);
+  else if (check.kind === 'like') html = newReciter === name ? chips(check.reciters) + fresh : line('sparkles', 'هل تقصد أحد رواديد المكتبة؟', 'bad') + chips(check.reciters, true);
+  else if (check.kind === 'new') {
+    const hints = reciterSuggestions(name, reciters);
+    html = (hints.length ? chips(hints) : '') + fresh;
+  }
+  box.innerHTML = html;
+  box.querySelectorAll('.up-chip[data-name]').forEach((b) => { b.onclick = () => onPick(b.dataset.name); });
+  box.querySelector('.up-chip-new')?.addEventListener('click', onNew);
 }
 
 function paintUpload(u) {
@@ -3574,7 +3609,7 @@ function paintUpload(u) {
   card.classList.toggle('done', done);
   card.querySelectorAll('.up-input').forEach((i) => { i.disabled = !editable; });
   card.querySelector('.up-title').classList.toggle('empty', editable && !u.title.trim());
-  card.querySelector('.up-reciter').classList.toggle('empty', editable && !u.reciter.trim());
+  card.querySelector('.up-reciter').classList.toggle('empty', editable && (!u.reciter.trim() || !!reciterProblem(reciterCheck(u.reciter), u.reciter, u.newReciter)));
   card.querySelector('.up-remove').style.display = editable || done ? '' : 'none';
   // The cover: the file's own, one they chose, or the reciter's photo (used when there is none)
   const photo = reciterByName.get(u.reciter.trim());
@@ -3595,8 +3630,9 @@ function paintUpload(u) {
     status.innerHTML = `<div class="up-progress"><span style="width: ${Math.max(2, Math.round(u.progress * 100))}%"></span></div>
       <div class="up-line-msg">${u.step === 'saving' ? 'جارٍ الحفظ في المكتبة…' : `جارٍ الرفع ${Math.round(u.progress * 100)}%`}</div>`;
   } else if (done) {
-    status.innerHTML = `<div class="up-line-msg good">${icon('check')} <span style="flex: 1;">تم الرفع، وهو الآن في المكتبة</span>${u.trackId ? '<button class="link-btn up-open">فتح</button>' : ''}</div>`;
+    status.innerHTML = `<div class="up-line-msg good">${icon('check')} <span style="flex: 1;">تم الرفع، وهو الآن في المكتبة</span>${u.trackId ? '<button class="link-btn up-edit">تعديل</button><button class="link-btn up-open">فتح</button>' : ''}</div>`;
     status.querySelector('.up-open')?.addEventListener('click', () => openTrackById(u.trackId));
+    status.querySelector('.up-edit')?.addEventListener('click', () => openEditTrack(u.trackId));
   } else {
     status.innerHTML = `<div class="up-line-msg bad">${icon('circle-x')} <span style="flex: 1;">${esc(u.error || 'تعذّر الرفع')}</span><button class="link-btn up-retry">إعادة المحاولة</button></div>`;
     status.querySelector('.up-retry').onclick = () => startUploads();
@@ -3609,7 +3645,7 @@ function paintUploadBar() {
   if (!uploadBody()) return;
   const bar = $('page-view').querySelector('.up-bar');
   const sent = uploads.filter((u) => u.step === 'done');
-  const ready = uploads.filter((u) => uploadEditable(u) && !uploadMissing(u)).length;
+  const ready = uploads.filter((u) => uploadEditable(u) && !uploadProblem(u)).length;
   if (uploadBusy()) {
     const going = uploads.filter((u) => SENDING.includes(u.step)).length;
     bar.innerHTML = `<div class="up-bar-busy">${icon('spinner')}<span>جارٍ رفع ${countWord(going + sent.length)}… تم ${sent.length}</span></div>`;
@@ -3631,7 +3667,7 @@ function paintUploadBar() {
 // Sends every track ready to go, two at a time
 async function startUploads() {
   if (uploadBusy()) return;
-  const todo = uploads.filter((u) => uploadEditable(u) && !uploadMissing(u));
+  const todo = uploads.filter((u) => uploadEditable(u) && !uploadProblem(u));
   if (!todo.length) return;
   todo.forEach((u) => { u.step = 'waiting'; u.progress = 0; u.error = null; paintUpload(u); });
   paintUploadPage();
@@ -3710,6 +3746,250 @@ function storeUpload(kind, ext, body, type, token, onProgress) {
     xhr.onerror = () => reject(new Error('تعذّر الرفع، تأكد من اتصالك وحاول مجدداً'));
     xhr.send(body);
   });
+}
+
+// ═══ Changing a track they uploaded ═══════════════════════════════════════════
+// Its cover, title, reciter (the library's own when it has them, as on the
+// upload cards), category and lyrics; saved through the website's
+// /api/update-track (it checks the track is theirs) and shown at once.
+let editDraft = null; // what they changed so far, kept while the page is open (it is redrawn on coming back)
+
+window.openEditTrack = (id) => {
+  const render = () => renderEditTrack(String(id));
+  render.editId = String(id);
+  openPage('page-view', render);
+};
+const onEditPage = (id) => navStack.at(-1)?.render?.editId === id;
+
+function renderEditTrack(id) {
+  const view = $('page-view');
+  const token = newPageToken(view);
+  view.style.removeProperty('--tint');
+  viewScroll['page-view'] = null;
+  const t = trackById.get(id);
+  const me = signedInUser();
+  const head = (save) => `
+    <header class="page-header pv-plain up-head">
+      <button class="icon-btn" onclick="history.back()" aria-label="رجوع">${icon('back')}</button>
+      <h1 class="search-header" style="flex: 1;">تعديل المقطع</h1>
+      ${save ? '<button class="ed-pill ed-save-top">حفظ</button>' : ''}
+    </header>`;
+  const blocked = !t ? 'هذا المقطع غير متوفر' : !me ? 'سجّل الدخول لتعديل مقاطعك'
+    : t.uploaderId !== me.id ? 'لا يمكنك تعديل هذا المقطع، فهو ليس من رفعك' : null;
+  if (blocked) {
+    view.innerHTML = `${head(false)}<div class="empty-state">${esc(blocked)}</div>${t && !me ? '<div class="pv-center"><button class="pill-btn ed-signin">تسجيل الدخول</button></div>' : ''}`;
+    view.querySelector('.ed-signin')?.addEventListener('click', () => openAuthModal());
+    return;
+  }
+  const startCat = categoryOf(t)?.id || null;
+  if (editDraft?.id !== id) {
+    const lyrics = t.detailed ? t.lyrics || '' : null;
+    editDraft = { id, title: t.title, reciter: t.reciterName, newReciter: null, category: startCat, lyrics, savedLyrics: lyrics, cover: null, coverUrl: null, saving: false, error: null, lyricsFailed: false };
+  }
+  const d = editDraft;
+  view.innerHTML = `${head(true)}
+    <div class="ed-body">
+      <button class="ed-cover" aria-label="تغيير الغلاف"><img alt="" /><span class="ed-cover-tag">${icon('camera')} تغيير الغلاف</span></button>
+      <label class="ed-label">عنوان المقطع</label>
+      <input class="up-input up-title ed-title" maxlength="300" placeholder="عنوان المقطع" />
+      <label class="ed-label">الرادود</label>
+      <input class="up-input ed-reciter" maxlength="200" placeholder="اسم الرادود" />
+      <div class="up-suggest ed-suggest"></div>
+      <label class="ed-label">التصنيف</label>
+      <div class="up-cats ed-cats horizontal-scroller"></div>
+      <label class="ed-label">الكلمات</label>
+      <textarea class="ed-lyrics" rows="8"></textarea>
+      <div class="ed-msg"></div>
+      <button class="up-gold ed-save"></button>
+    </div>
+    <input type="file" class="ed-cover-file" accept="image/*" hidden />`;
+  const q = (sel) => view.querySelector(sel);
+  const img = q('.ed-cover img');
+  img.src = d.coverUrl || thumb(t.coverImage, 176);
+  const fileInput = q('.ed-cover-file');
+  q('.ed-cover').onclick = () => fileInput.click();
+  fileInput.onchange = async () => {
+    const file = fileInput.files[0];
+    fileInput.value = '';
+    if (!file) return;
+    const cover = await shrinkCover(file);
+    if (!cover) { toast('تعذّرت قراءة الصورة'); return; }
+    if (d.coverUrl) URL.revokeObjectURL(d.coverUrl);
+    d.cover = cover;
+    d.coverUrl = URL.createObjectURL(cover);
+    if (view._token === token) { img.src = d.coverUrl; paint(); }
+  };
+  const titleIn = q('.ed-title');
+  const reciterIn = q('.ed-reciter');
+  const lyricsIn = q('.ed-lyrics');
+  titleIn.value = d.title;
+  reciterIn.value = d.reciter;
+  titleIn.oninput = () => { d.title = titleIn.value; paint(); };
+  reciterIn.oninput = () => { d.reciter = reciterIn.value; paint(); };
+  lyricsIn.oninput = () => { d.lyrics = lyricsIn.value; paint(); };
+  const cats = q('.ed-cats');
+  CATEGORIES.forEach((c) => {
+    const b = document.createElement('button');
+    b.className = 'filter-chip up-cat';
+    b.dataset.cat = c.id;
+    b.textContent = c.title;
+    b.onclick = () => { d.category = c.id; paint(); };
+    cats.appendChild(b);
+  });
+  const paintLyrics = () => {
+    lyricsIn.disabled = d.lyrics === null;
+    lyricsIn.placeholder = d.lyrics !== null ? 'اكتب كلمات القصيدة هنا (اختياري)' : d.lyricsFailed ? 'تعذّر تحميل الكلمات، يمكنك تعديل الباقي' : 'جارٍ تحميل الكلمات…';
+    if (d.lyrics !== null && lyricsIn.value !== d.lyrics) lyricsIn.value = d.lyrics;
+  };
+  paintLyrics();
+  if (d.lyrics === null) {
+    loadDetails(t).then(() => {
+      if (editDraft !== d) return;
+      if (t.detailed) {
+        d.savedLyrics = t.lyrics || '';
+        if (d.lyrics === null) d.lyrics = d.savedLyrics;
+      } else {
+        d.lyricsFailed = true;
+      }
+      if (view._token === token) { paintLyrics(); paint(); }
+    });
+  }
+
+  const state = () => {
+    const name = d.reciter.trim();
+    const reciterChanged = name !== t.reciterName;
+    // A reciter changed must be the library's own when it has them (no second page for one reciter)
+    const reciterIssue = reciterChanged ? reciterProblem(reciterCheck(d.reciter), d.reciter, d.newReciter) : null;
+    const lyricsChanged = d.lyrics !== null && d.savedLyrics !== null && d.lyrics.trim() !== d.savedLyrics.trim();
+    const changed = d.title.trim() !== t.title || reciterChanged || d.category !== startCat || lyricsChanged || !!d.cover;
+    const problem = !d.title.trim() ? 'أضف عنوان المقطع' : !name ? 'أضف اسم الرادود' : reciterIssue;
+    return { name, reciterChanged, reciterIssue, lyricsChanged, changed, problem, can: changed && !problem && !d.saving };
+  };
+  function paint() {
+    if (view._token !== token) return;
+    const s = state();
+    titleIn.classList.toggle('empty', !d.title.trim());
+    reciterIn.classList.toggle('empty', !s.name || !!s.reciterIssue);
+    const box = q('.ed-suggest');
+    if (s.reciterChanged) {
+      paintReciterChoice(box, d.reciter, d.newReciter, {
+        onPick: (name) => { d.reciter = name; reciterIn.value = name; paint(); },
+        onNew: () => { d.newReciter = d.reciter.trim(); paint(); },
+      });
+    } else {
+      box.innerHTML = '';
+    }
+    cats.querySelectorAll('.up-cat').forEach((b) => b.classList.toggle('active', b.dataset.cat === d.category));
+    const msg = d.error || (s.changed ? s.problem : null);
+    q('.ed-msg').innerHTML = msg ? `<div class="up-line-msg bad">${icon('circle-x')}<span>${esc(msg)}</span></div>` : '';
+    const save = q('.ed-save');
+    save.disabled = !s.can;
+    save.innerHTML = d.saving ? `${icon('spinner')} جارٍ الحفظ…` : s.changed ? 'حفظ التعديلات' : 'لا تعديلات بعد';
+    save.classList.toggle('saving', d.saving);
+    q('.ed-save-top').disabled = !s.can;
+  }
+  const save = async () => {
+    const s = state();
+    if (!s.can) return;
+    d.saving = true;
+    d.error = null;
+    paint();
+    try {
+      const row = await saveTrackEdit(t, {
+        title: d.title,
+        reciter: d.reciter,
+        category: d.category !== startCat ? d.category : null,
+        lyrics: s.lyricsChanged ? d.lyrics : null,
+        cover: d.cover,
+      });
+      if (row) {
+        mapTrack(row);
+        allTracks = [...allTracks]; // the indexes built from the list (a reciter's tracks...) are made again
+        buildReciters(reciterRows);
+        dataVersion++;
+      }
+      if (d.coverUrl) URL.revokeObjectURL(d.coverUrl);
+      editDraft = null;
+      toast('تم حفظ التعديلات');
+      if (onEditPage(id)) history.back();
+    } catch (err) {
+      d.saving = false;
+      d.error = err.message || 'تعذّر الحفظ، تأكد من اتصالك وحاول مجدداً';
+      paint();
+    }
+  };
+  q('.ed-save').onclick = save;
+  q('.ed-save-top').onclick = save;
+  paint();
+}
+
+// POST /api/update-track: only what changed (null: left as it was); the saved row back
+async function saveTrackEdit(t, { title, reciter, category, lyrics, cover }) {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('انتهت الجلسة، سجّل الدخول مجدداً');
+  const fields = {};
+  if (title.trim() !== t.title) fields.title = title.trim();
+  if (reciter.trim() !== t.reciterName) fields.reciter_name = reciter.trim();
+  if (category) fields.category = dbCategory(category);
+  if (lyrics !== null) fields.lyrics = lyrics.trim() || null; // emptied: cleared
+  if (cover) fields.image_url = await storeUpload('image', 'jpg', cover, 'image/jpeg', session.access_token, () => {});
+  if (!Object.keys(fields).length) return null;
+  let res;
+  try {
+    res = await fetch(`${SITE_URL}/api/update-track`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${session.access_token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ id: Number(t.id), fields }),
+    });
+  } catch {
+    throw new Error('تعذّر الحفظ، تأكد من اتصالك وحاول مجدداً');
+  }
+  const body = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error({
+      401: 'انتهت الجلسة، سجّل الدخول مجدداً',
+      403: 'لا يمكنك تعديل هذا المقطع، فهو ليس من رفعك',
+      404: 'لم يعد هذا المقطع في المكتبة',
+      400: 'تحقق من العنوان واسم الرادود وحاول مجدداً',
+    }[res.status] || `تعذّر الحفظ (${res.status})`);
+  }
+  return body?.track || null;
+}
+
+// The tracks they uploaded, newest first, each with its pencil; and the way to send more
+const myUploads = (uid) => allTracks.filter((t) => t.uploaderId === uid);
+window.openMyUploads = () => openPage('page-view', renderMyUploads);
+function renderMyUploads() {
+  const view = $('page-view');
+  newPageToken(view);
+  view.style.removeProperty('--tint');
+  viewScroll['page-view'] = null;
+  const me = signedInUser();
+  const list = me ? myUploads(me.id) : [];
+  view.innerHTML = `
+    <header class="page-header pv-plain up-head">
+      <button class="icon-btn" onclick="history.back()" aria-label="رجوع">${icon('back')}</button>
+      <h1 class="search-header" style="flex: 1;">مقاطعي المرفوعة</h1>
+      ${me ? `<button class="ed-pill mu-upload">${icon('upload')} رفع</button>` : ''}
+    </header>
+    ${list.length ? `<p class="muted mu-note">${countWord(list.length)} • اضغط على القلم لتعديل أي مقطع</p>` : ''}
+    <div class="mu-list"></div>`;
+  view.querySelector('.mu-upload')?.addEventListener('click', () => openUploadPage());
+  const box = view.querySelector('.mu-list');
+  if (!me) {
+    box.innerHTML = '<div class="empty-state">سجّل الدخول لترى مقاطعك</div><div class="pv-center"><button class="pill-btn">تسجيل الدخول</button></div>';
+    box.querySelector('button').onclick = () => openAuthModal();
+    return;
+  }
+  if (!list.length && !fullyLoaded) {
+    box.innerHTML = '<div class="empty-state">جارٍ تحميل المكتبة…</div>';
+    return;
+  }
+  renderTrackList(box, list, { emptyText: 'لم ترفع مقاطع بعد', onEdit: (t) => openEditTrack(t.id) });
+  if (!list.length) {
+    box.insertAdjacentHTML('beforeend', '<div class="pv-center"><button class="pill-btn">رفع مقاطع</button></div>');
+    box.querySelector('.pill-btn').onclick = () => openUploadPage();
+  }
 }
 
 // ═══ Prompts, options, playlists ═════════════════════════════════════════════
@@ -3801,6 +4081,8 @@ function openTrackOptions(track, { playlist = null } = {}) {
   const cat = categoryOf(track);
 
   sheetItem(box, 'share-nodes', 'مشاركة', then(() => openShareSheet(track)));
+  const me = signedInUser();
+  if (me && (trackById.get(track.id) || track).uploaderId === me.id) sheetItem(box, 'pencil', 'تعديل المقطع', toPage(() => openEditTrack(track.id)));
   sheetItem(box, `<span class="liked-square">${icon('heart', { fill: true })}</span>`, liked ? 'إزالة من "المقاطع المفضلة"' : 'إضافة إلى "المقاطع المفضلة"', then(() => toggleLike(track)));
   sheetItem(box, 'circle-plus', 'إضافة إلى قائمة تشغيل', then(() => openPlaylistPicker(track)));
   if (playlist) {
@@ -4899,6 +5181,9 @@ function updateProfileUI() {
   $('profile-guest-section').style.display = signedIn ? 'none' : 'block';
   $('profile-logout-section').style.display = signedIn ? 'block' : 'none';
   $('profile-edit-name').style.display = signedIn ? 'flex' : 'none';
+  $('profile-my-uploads').style.display = signedIn ? 'flex' : 'none';
+  const mine = signedIn ? myUploads(currentUser.id).length : 0;
+  $('my-uploads-count').textContent = mine ? formatCount(mine) : '';
   $('profile-email-row').style.display = signedIn ? 'flex' : 'none';
   $('profile-camera-btn').style.display = signedIn ? 'flex' : 'none';
   $('profile-avatar-img').src = signedIn ? avatarUrl() : `${import.meta.env.BASE_URL}app-icon-192.png`;

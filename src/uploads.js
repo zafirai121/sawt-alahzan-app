@@ -318,6 +318,86 @@ export function matchReciter(candidate, reciters, translate = (x) => x) {
   }));
 }
 
+/**
+ * A typed reciter's name against the library, so one reciter never gets a
+ * second page under another spelling: { kind, reciters } where kind is
+ * 'empty'; 'known' (one of its reciters exactly); 'same' (the same name
+ * written otherwise — ال، ى، ة، "الرادود"… — which must then be chosen);
+ * 'like' (names a letter or two apart, or one within the other, offered to
+ * choose or to keep as a new reciter); or 'new'.
+ */
+export function checkReciter(typed, reciters, translate = (x) => x) {
+  const name = String(typed || '').trim();
+  if (!name) return { kind: 'empty', reciters: [] };
+  const all = reciters.filter((r) => r.name !== 'مجهول');
+  const exact = all.find((r) => r.name === name);
+  if (exact) return { kind: 'known', reciters: [exact] };
+  const key = nameKey(translate(name));
+  if (key.length < 2) return { kind: 'new', reciters: [] };
+  const keyed = all.filter((r) => r.count > 0 || r.hasPhoto).map((r) => [r, keyOf(r.name)]);
+  const loose = looseKey(key);
+  const same = keyed.filter(([, k]) => k === key || looseKey(k) === loose).map(([r]) => r);
+  if (same.length) return { kind: 'same', reciters: same.sort((a, b) => b.count - a.count).slice(0, 3) };
+  const limit = loose.length >= 10 ? 2 : 1;
+  const like = [];
+  for (const [r, k] of keyed) {
+    let d = null;
+    if (k.length >= 6 && k.includes(' ') && (key.includes(k) || (key.includes(' ') && key.length >= 6 && k.includes(key)))) d = 1;
+    else if (loose.length >= 5) {
+      const n = distance(loose, looseKey(k), limit);
+      if (n <= limit) d = n;
+    }
+    if (d !== null) like.push([r, d]);
+  }
+  like.sort((a, b) => a[1] - b[1] || b[0].count - a[0].count);
+  return like.length ? { kind: 'like', reciters: like.slice(0, 3).map(([r]) => r) } : { kind: 'new', reciters: [] };
+}
+
+/** Reciters whose names hold what was typed so far (two letters on), the most heard first: offered while typing. */
+export function reciterSuggestions(typed, reciters, n = 3) {
+  const t = nameKey(typed);
+  const name = String(typed || '').trim();
+  if (t.length < 2) return [];
+  return reciters
+    .filter((r) => r.name !== 'مجهول' && r.count > 0 && r.name !== name && keyOf(r.name).includes(t))
+    .sort((a, b) => b.count - a.count).slice(0, n);
+}
+
+/**
+ * Why a reciter can't go as typed, or null: the library has them written
+ * otherwise (to choose), or has one a letter or two apart (to choose, or to
+ * say it is someone new: `newReciter` is the name they confirmed).
+ */
+export function reciterProblem(check, typed, newReciter) {
+  if (check.kind === 'same') {
+    return check.reciters.length === 1 ? `الرادود موجود في المكتبة باسم «${check.reciters[0].name}»، اختره` : 'الرادود موجود في المكتبة، اختر اسمه';
+  }
+  if (check.kind === 'like' && newReciter !== String(typed || '').trim()) {
+    return `هل تقصد «${check.reciters[0].name}»؟ اختره، أو أكّد أنه رادود جديد`;
+  }
+  return null;
+}
+
+// Without "ال" at the words' starts nor spaces: "حسين الفيصل" and "حسين فيصل" alike
+const looseKey = (key) => key.split(' ').map((w) => (w.startsWith('ال') ? w.slice(2) : w)).join('');
+
+/** How many letters apart `a` and `b` are (Levenshtein), counting no further than `limit` + 1. */
+function distance(a, b, limit) {
+  if (Math.abs(a.length - b.length) > limit) return limit + 1;
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const row = [i];
+    let best = i;
+    for (let j = 1; j <= b.length; j++) {
+      row[j] = Math.min(prev[j] + 1, row[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      best = Math.min(best, row[j]);
+    }
+    if (best > limit) return limit + 1;
+    prev = row;
+  }
+  return prev[b.length];
+}
+
 /** A known reciter written in `title` ("يا حسين - باسم الكربلائي"), and the title without them: [reciter, rest] or null. */
 export function reciterInTitle(title, reciters, translate) {
   const sides = split(title);
