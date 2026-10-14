@@ -1368,6 +1368,16 @@ function renderHome() {
 
     short: shortSection,
 
+    // Playlists the app makes (a theme each), and albums (a reciter's work of one kind)
+    playlists: () => {
+      const lists = madePlaylists();
+      return lists.length >= 3 ? section('قوائم التشغيل', scroller(lists, playlistCard)) : null;
+    },
+    albums: () => {
+      const shown = albumsFor([...new Set([...lib.follows, ...topKeys(w, 10)])]);
+      return shown.length >= 3 ? section('الألبومات', scroller(shown, albumCard)) : null;
+    },
+
     // More from their favourite reciter (from their taste), or the most popular one
     more: () => {
       const focus = reciterByName.get(topKeys(w, 1)[0]) || topReciters[0];
@@ -1392,8 +1402,8 @@ function renderHome() {
   // What is theirs first for a listener who has played, liked or followed;
   // for a new one, what is new and most listened first
   const order = returning
-    ? ['quick', 'newest', 'occasion', 'friday', 'mixes', 'recents', 'followed', 'radios', 'return', 'likes', 'similar', 'popular', 'short', 'more', 'reciters', 'daily']
-    : ['quick', 'newest', 'occasion', 'friday', 'reciters', 'popular', 'radios', 'short', 'daily', 'more'];
+    ? ['quick', 'newest', 'occasion', 'friday', 'mixes', 'playlists', 'recents', 'followed', 'radios', 'albums', 'return', 'likes', 'similar', 'popular', 'short', 'more', 'reciters', 'daily']
+    : ['quick', 'newest', 'occasion', 'friday', 'playlists', 'reciters', 'popular', 'albums', 'radios', 'short', 'daily', 'more'];
   order.forEach((key) => {
     const el = sections[key]();
     if (el) { el.dataset.home = key; container.appendChild(el); }
@@ -1602,6 +1612,113 @@ function wordPattern(word) {
   const forms = [reEscape(w)];
   if (w.startsWith('ال') && w.length > 3) forms.push(reEscape(`ل${w.slice(2)}`));
   return new RegExp(`(?:^|[\\s\\p{P}])(?:و|ف|ب|ك|ل|يا)?(?:${forms.join('|')})(?=$|[\\s\\p{P}])`, 'u');
+}
+
+// ─── The home screen's playlists and albums (the phone app's rules) ───
+// Playlists the app makes, a theme each (an occasion, a figure, a kind of
+// work): [name, categories (none: all), words in their tracks' titles]
+const THEMES = [
+  ['عاشوراء', ['hussainiya', 'naei'], ['عاشوراء', 'محرم', 'الحسين', 'حسين', 'كربلاء', 'الطف']],
+  ['الأربعين', ['hussainiya', 'naei'], ['الأربعين', 'اربعين', 'المشاية', 'مشاية', 'زوار', 'الزائر']],
+  ['قمر بني هاشم', ['hussainiya', 'naei', 'muwalid'], ['العباس', 'أبو الفضل', 'ابا الفضل', 'أبي الفضل', 'قمر بني هاشم']],
+  ['الزهراء (ع)', ['naei', 'hussainiya', 'muwalid'], ['الزهراء', 'فاطمة', 'فاطمية', 'الفاطمية']],
+  ['أمير المؤمنين (ع)', ['hussainiya', 'naei', 'muwalid'], ['أمير المؤمنين', 'حيدر', 'الكرار', 'المحراب', 'الكوفة', 'يا علي']],
+  ['السيدة زينب (ع)', ['hussainiya', 'naei', 'muwalid'], ['زينب', 'العقيلة']],
+  ['مواليد أهل البيت', ['muwalid']],
+  ['صاحب الزمان (عج)', ['muwalid', 'nasheed', 'dua'], ['المهدي', 'الحجة', 'صاحب الزمان', 'المنتظر', 'القائم']],
+  ['عيد الغدير', ['muwalid', 'nasheed'], ['الغدير', 'غدير']],
+  ['نعي وعزاء', ['naei']],
+  ['أدعية ومناجاة', ['dua']],
+  ['زيارات', ['ziyarat']],
+  ['شهر رمضان', ['dua', 'quran'], ['رمضان', 'الافتتاح', 'السحر', 'أبو حمزة', 'الجوشن', 'القدر']],
+  ['أناشيد', ['nasheed']],
+  ['قرآن كريم', ['quran']],
+  ['الرسول الأعظم (ص)', ['muwalid', 'naei', 'nasheed', 'hussainiya'], ['النبي', 'الرسول', 'المصطفى', 'محمد']],
+  ['الإمام الرضا (ع)', ['hussainiya', 'naei', 'muwalid', 'ziyarat'], ['الرضا', 'غريب طوس']],
+  ['الإمام الكاظم (ع)', ['hussainiya', 'naei', 'muwalid'], ['الكاظم', 'موسى بن جعفر']],
+  ['علي الأكبر (ع)', ['hussainiya', 'naei', 'muwalid'], ['الأكبر']],
+  ['الأكثر استماعاً'],
+];
+const ROW = 15;
+const collectionsCache = { key: '', lists: null, albums: null };
+const collectionsKey = () => `${allTracks.length}:${lib.hidden.size}`;
+
+// The first fifteen themes with eight tracks at least; each up to fifty, the most listened first
+function madePlaylists() {
+  if (collectionsCache.key !== collectionsKey()) Object.assign(collectionsCache, { key: collectionsKey(), lists: null, albums: null });
+  if (collectionsCache.lists) return collectionsCache.lists;
+  const shown = visible(allTracks);
+  const lists = [];
+  for (const [title, catIds = [], words = []] of THEMES) {
+    if (lists.length >= ROW) break;
+    const cats = catIds.map((id) => CATEGORIES.find((c) => c.id === id)).filter(Boolean);
+    const inCats = (t) => !cats.length || cats.some((c) => c.values.includes(t.category));
+    const patterns = words.map(wordPattern);
+    const list = (words.length ? shown.filter((t) => (inCats(t) || !categoryOf(t)) && patterns.some((p) => p.test(normalize(t.title)))) : shown.filter(inCats))
+      .sort((a, b) => b.listens - a.listens).slice(0, 50);
+    if (list.length >= 8) lists.push({ title, tracks: list });
+  }
+  return (collectionsCache.lists = lists);
+}
+
+// Albums: a reciter's work of one kind (six tracks at least); the reciters they
+// love first, then the most listened; one per reciter before a second of anyone's
+function albumsFor(preferred) {
+  if (collectionsCache.key !== collectionsKey()) Object.assign(collectionsCache, { key: collectionsKey(), lists: null, albums: null });
+  if (!collectionsCache.albums) {
+    const groups = new Map();
+    for (const t of visible(allTracks)) {
+      const c = t.reciterName !== UNKNOWN_RECITER && categoryOf(t);
+      if (!c) continue;
+      const k = `${t.reciterName}\u0000${c.id}`;
+      if (!groups.has(k)) groups.set(k, { reciter: t.reciterName, category: c, tracks: [] });
+      groups.get(k).tracks.push(t);
+    }
+    collectionsCache.albums = [...groups.values()].filter((g) => g.tracks.length >= 6).map((g) => {
+      g.tracks.sort((a, b) => b.listens - a.listens);
+      return { ...g, title: `${g.category.title} – ${g.reciter}`, listens: g.tracks.reduce((sum, t) => sum + t.listens, 0) };
+    });
+  }
+  const rank = new Map(preferred.map((n, i) => [n, i]));
+  const ordered = [...collectionsCache.albums].sort((a, b) => ((rank.get(a.reciter) ?? 1e9) - (rank.get(b.reciter) ?? 1e9)) || b.listens - a.listens);
+  const seen = new Set();
+  const firsts = ordered.filter((a) => !seen.has(a.reciter) && seen.add(a.reciter));
+  return [...firsts, ...ordered.filter((a) => !firsts.includes(a))].slice(0, ROW);
+}
+
+// "مع باسم الكربلائي، علي الدلفي والمزيد"
+function withReciters(tracks) {
+  const names = [...new Set(tracks.map((t) => t.reciterName).filter((n) => n !== UNKNOWN_RECITER))];
+  if (!names.length) return 'صوت الأحزان';
+  return names.length <= 2 ? `مع ${names.join(' و')}` : `مع ${names.slice(0, 2).join('، ')} والمزيد`;
+}
+
+// A playlist's card: its first cover, the cover's colour rising from the bottom
+// with the playlist's name on it, the app's mark in the corner; who is in it under it
+function playlistCard(list) {
+  const first = list.tracks.find((t) => t.coverImage) || list.tracks[0];
+  const card = document.createElement('div');
+  card.className = 'square-card';
+  card.innerHTML = `
+    <div class="art pl-cover"><img src="${esc(thumb(first.coverImage, 190))}" alt="" loading="lazy" /><span class="pl-shade"></span>
+      ${sLogo('mix-logo')}<span class="pl-title">${esc(list.title)}</span></div>
+    <div class="square-subtitle">${esc(withReciters(list.tracks))}</div>`;
+  withShades(first, (sh) => card.querySelector('.pl-cover').style.setProperty('--pl', sh.vivid));
+  return clickable(card, () => openListPage(list.title, list.tracks));
+}
+
+// An album's card: its best known cover, a record in the category's colour half
+// out of the sleeve behind it; the reciter and what kind of work under it
+function albumCard(album) {
+  const first = album.tracks.find((t) => t.coverImage) || album.tracks[0];
+  const card = document.createElement('div');
+  card.className = 'square-card';
+  card.innerHTML = `
+    <div class="album-art"><span class="album-disc" style="--label:${album.category.color}"></span>
+      <img src="${esc(thumb(first.coverImage, 170))}" alt="" class="album-sleeve" loading="lazy" /></div>
+    <div class="square-title">${esc(album.reciter)}</div>
+    <div class="square-subtitle album-meta">ألبوم • ${esc(album.category.title)} • ${formatCount(album.tracks.length)}</div>`;
+  return clickable(card, () => openListPage(album.title, album.tracks));
 }
 
 // Tracks for a time (`words` in their titles, from `categoryIds` or none), the

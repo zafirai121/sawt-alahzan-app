@@ -1541,3 +1541,34 @@ body.has-player .up-bar { bottom: calc(var(--nav-height) + var(--safe-bottom) + 
   .pv-actions .follow-btn:not(.small) { width: 76px; height: 32px; font-size: 13px; }
   .pv-actions .follow-btn.on:not(.small) { width: 50px; }
 }
+
+/* ─── The home screen's playlists and albums ─── */
+/* A playlist: its first cover, the cover's colour rising from the bottom with the name on it */
+.pl-cover { container-type: inline-size; border-radius: 8px; }
+.square-card > .pl-cover { box-shadow: 0 8px 20px rgba(0,0,0,0.45); }
+.pl-shade {
+  position: absolute; inset: 0; pointer-events: none; transition: background 0.6s ease;
+  background: linear-gradient(180deg, transparent 30%, color-mix(in srgb, var(--pl, #333) 78%, transparent) 62%, var(--pl, #333) 100%);
+}
+.pl-cover .mix-logo { width: 13cqw; height: 13cqw; }
+.pl-title {
+  position: absolute; inset-inline: 7cqw; bottom: 7cqw; color: #fff; font-size: 11.5cqw; font-weight: 900; line-height: 1.2;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.35); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+/* An album: the sleeve at the start, a record in the category's colour peeking out at the end */
+.album-art { position: relative; width: 100%; aspect-ratio: 1.3; margin-bottom: 10px; }
+.album-sleeve {
+  position: absolute; inset-inline-start: 0; top: 0; height: 100%; width: auto; aspect-ratio: 1; object-fit: cover;
+  border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.45); z-index: 1;
+}
+.album-disc {
+  position: absolute; inset-inline-end: 0; top: 2%; height: 96%; aspect-ratio: 1; border-radius: 50%;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.45);
+  background:
+    radial-gradient(circle closest-side, #0b0b0b 0 5%, var(--label, #8400E7) 5.5% 33%, rgba(255,255,255,0.25) 33.5% 34.5%, transparent 35%),
+    radial-gradient(circle closest-side, transparent 0 92%, var(--label, #8400E7) 92.5% 97%, transparent 97.5%),
+    radial-gradient(circle closest-side, transparent 0 54.5%, rgba(255,255,255,0.1) 55% 56%, transparent 56.5% 64.5%, rgba(255,255,255,0.1) 65% 66%,
+      transparent 66.5% 74.5%, rgba(255,255,255,0.1) 75% 76%, transparent 76.5% 84.5%, rgba(255,255,255,0.1) 85% 86%, transparent 86.5%),
+    radial-gradient(circle closest-side, #3a3a3a, #101010);
+}
+.album-meta { -webkit-line-clamp: 1; }
