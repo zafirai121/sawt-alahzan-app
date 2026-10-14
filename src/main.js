@@ -4197,6 +4197,7 @@ async function sendUpload(u) {
     const audioShare = u.cover ? 0.86 : 0.92;
     const audioUrl = await storeUpload('audio', ext, u.file, u.mime, session.access_token, (p) => { u.progress = Math.max(u.progress, p * audioShare); paintUpload(u); });
     const coverUrl = u.cover ? await storeUpload('image', 'jpg', u.cover, 'image/jpeg', session.access_token, (p) => { u.progress = audioShare + p * (0.94 - audioShare); paintUpload(u); }) : null;
+    if (coverUrl) await storeSmallCopy(u.cover, coverUrl, session.access_token);
     step('saving', 0.96);
     const title = u.title.trim();
     const reciter = u.reciter.trim();
@@ -4206,7 +4207,6 @@ async function sendUpload(u) {
       title,
       reciter_name: reciter,
       file_url: audioUrl,
-      // No cover of its own: the reciter's photo, else the website's default
       // No cover of its own: the reciter's photo, else none (shown as the microphone)
       image_url: coverUrl || (photo?.hasPhoto ? photo.image : ''),
       user_id: user.id,
@@ -4241,6 +4241,34 @@ function storeUpload(kind, ext, body, type, token, onProgress) {
     xhr.onerror = () => reject(new Error('تعذّر الرفع، تأكد من اتصالك وحاول مجدداً'));
     xhr.send(body);
   });
+}
+
+// The small copy of a cover just stored (see SMALL_COVERS: shorter side 640
+// px; WebP, or JPEG where the browser can't write WebP), sent beside it
+// (the website's /api/thumbs) before the track is saved, so it is there
+// before anyone sees the track. Nothing is lost when it fails: the website
+// makes the missing ones every three hours.
+async function storeSmallCopy(image, coverUrl, token) {
+  try {
+    const bitmap = await createImageBitmap(image);
+    const scale = Math.min(1, SMALL_PX / Math.min(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close?.();
+    const encode = (type, quality) => new Promise((done) => canvas.toBlob(done, type, quality));
+    let small = await encode('image/webp', 0.82);
+    if (!small || small.type !== 'image/webp') small = await encode('image/jpeg', 0.85);
+    if (!small) return;
+    await fetch(`${SITE_URL}/api/thumbs?for=${encodeURIComponent(new URL(coverUrl).href)}`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, 'content-type': small.type },
+      body: small,
+    });
+  } catch { /* made by the website later */ }
 }
 
 // ═══ Changing a track they uploaded ═══════════════════════════════════════════
@@ -4427,7 +4455,10 @@ async function saveTrackEdit(t, { title, reciter, category, lyrics, cover }) {
   if (reciter.trim() !== t.reciterName) fields.reciter_name = reciter.trim();
   if (category) fields.category = dbCategory(category);
   if (lyrics !== null) fields.lyrics = lyrics.trim() || null; // emptied: cleared
-  if (cover) fields.image_url = await storeUpload('image', 'jpg', cover, 'image/jpeg', session.access_token, () => {});
+  if (cover) {
+    fields.image_url = await storeUpload('image', 'jpg', cover, 'image/jpeg', session.access_token, () => {});
+    await storeSmallCopy(cover, fields.image_url, session.access_token);
+  }
   if (!Object.keys(fields).length) return null;
   let res;
   try {
