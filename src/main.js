@@ -2825,6 +2825,9 @@ function renderTrackDetail(track) {
     $('td-poet').style.display = poet ? '' : 'none';
   };
   paintDetails();
+  // Marked as this track's page first: the checks below ask whether it still is (a colour
+  // already known is applied at once, and was skipped, leaving the page another colour)
+  $('td-play-btn').dataset.trackId = track.id;
   const shown = () => $('td-play-btn').dataset.trackId === track.id;
   loadDetails(track).then(() => { if (shown()) paintDetails(); });
   // The cover's colour, bright, glowing down from the top
