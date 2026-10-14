@@ -90,12 +90,15 @@ const RESIZER = 'https://soutalahzan.com/cdn-cgi/image/';
 const OWN_COVERS = 'https://soutalahzan.com/';
 const SMALL_COVERS = 'https://soutalahzan.com/thumbs/640/';
 const SMALL_PX = 640;
+// Cloudflare keeps a 404 for a day: a copy asked for before it was made would
+// stay "missing" that long. The query makes these links new ones.
+const SMALL_QUERY = '?v=1';
 const noSmall = new Set();
 function smallCover(url) {
   let href;
   try { href = new URL(url).href; } catch { return null; }
   if (!href.startsWith(OWN_COVERS) || href.startsWith(SMALL_COVERS) || href.startsWith(RESIZER) || noSmall.has(href)) return null;
-  return SMALL_COVERS + href.slice(OWN_COVERS.length);
+  return SMALL_COVERS + href.slice(OWN_COVERS.length) + SMALL_QUERY;
 }
 // Covers Cloudflare would not resize (see storedCover): asked for as stored
 // from then on, and kept on the phone for the month (its allowance of new
@@ -6117,7 +6120,7 @@ function coverFailed(img) {
   if (!src) return;
   if (src === FALLBACK_COVER) { img.style.visibility = 'hidden'; return; }
   if (src.startsWith(SMALL_COVERS)) {
-    const cover = OWN_COVERS + src.slice(SMALL_COVERS.length);
+    const cover = OWN_COVERS + src.slice(SMALL_COVERS.length).replace(/\?v=\d+$/, '');
     noSmall.add(cover);
     img.src = cover;
     return;
