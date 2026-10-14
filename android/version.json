@@ -1,7 +1,7 @@
 {
- "versionCode": 84,
- "versionName": "1.0.84",
- "url": "https://zafirai121.github.io/sawt-alahzan-app/android/sawt-alahzan-1.0.84.apk",
- "notes": "زر «حذف الحساب» في صفحة حسابي: يحذف حسابك وكل بياناته نهائياً\nالإبلاغ عن أي مقطع مسيء أو منتهك للحقوق من قائمة خيارات المقطع\nالتطبيق جاهز لأندرويد 16",
+ "versionCode": 85,
+ "versionName": "1.0.85",
+ "url": "https://zafirai121.github.io/sawt-alahzan-app/android/sawt-alahzan-1.0.85.apk",
+ "notes": "المقطع الذي يُرفع بدون غلاف يظهر بأيقونة الميكروفون بدل صورة عشوائية",
  "size": 3193959
 }
