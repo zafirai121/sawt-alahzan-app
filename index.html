@@ -32,8 +32,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" crossorigin />
-    <script type="module" crossorigin src="/sawt-alahzan-app/assets/index-5TdfHBbf.js"></script>
-    <link rel="stylesheet" crossorigin href="/sawt-alahzan-app/assets/index-BI79kIgQ.css">
+    <script type="module" crossorigin src="/sawt-alahzan-app/assets/index-ByuqBI2T.js"></script>
+    <link rel="stylesheet" crossorigin href="/sawt-alahzan-app/assets/index-D0baeBRR.css">
   </head>
   <body>
     <svg width="0" height="0" style="position: absolute;" aria-hidden="true">
@@ -277,6 +277,7 @@
           </div>
 
           <button id="profile-logout" class="profile-logout" onclick="doLogout()" style="display: none;"><i class="ic" data-icon="logout"></i> تسجيل الخروج</button>
+          <button id="profile-delete-account" class="profile-delete" onclick="confirmDeleteAccount()" style="display: none;">حذف الحساب</button>
           <div id="app-version-line" class="muted profile-version"></div>
         </div>
       </main>
@@ -465,6 +466,39 @@
         <div style="display: flex; gap: 15px;">
           <button class="outline-btn" onclick="history.back()">إلغاء</button>
           <button class="danger-btn" id="confirm-ok" style="border-radius: 30px;"></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Deleting the account for good (asked to confirm first) -->
+    <div id="delete-account-modal" class="modal" style="display: none;" role="alertdialog" aria-modal="true" aria-labelledby="delete-account-title">
+      <div class="modal-card" style="text-align: center;">
+        <h2 id="delete-account-title" class="modal-title" style="border: none;">حذف حسابك نهائياً؟</h2>
+        <p class="muted" style="font-size: 14px; line-height: 1.6; margin-bottom: 18px;">سيُحذف حسابك وكل ما فيه: اسمك وبريدك وصورتك، والمقاطع المفضلة وقوائم التشغيل والمتابعات. المقاطع التي رفعتها تبقى في المكتبة دون اسمك.<br />لا يمكن التراجع عن هذا.</p>
+        <p id="delete-account-error" class="dialog-error" style="display: none;"></p>
+        <div style="display: flex; gap: 15px;">
+          <button class="outline-btn" id="delete-account-cancel">إلغاء</button>
+          <button class="danger-btn" id="delete-account-ok" style="border-radius: 30px;">حذف الحساب</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reporting a track: why, a word about it, a guest's e-mail -->
+    <div id="report-modal" class="modal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="report-title">
+      <div class="modal-card report-card">
+        <h2 id="report-title" class="modal-title" style="border: none; text-align: center;">الإبلاغ عن المقطع</h2>
+        <div class="report-track">
+          <img id="report-img" alt="" />
+          <div><div id="report-track-title" class="report-track-title"></div><div id="report-track-artist" class="muted report-track-artist"></div></div>
+        </div>
+        <div class="report-question">ما المشكلة في هذا المقطع؟</div>
+        <div id="report-reasons" role="radiogroup" aria-labelledby="report-title"></div>
+        <textarea id="report-note" class="text-input report-note" maxlength="1000" rows="2" placeholder="أضف ملاحظة (اختياري)"></textarea>
+        <input type="email" id="report-email" class="text-input" maxlength="200" dir="auto" autocomplete="email" placeholder="بريدك، لنتواصل معك بشأن البلاغ" />
+        <p id="report-error" class="dialog-error" style="display: none;"></p>
+        <div style="display: flex; gap: 15px;">
+          <button class="outline-btn" id="report-cancel">إلغاء</button>
+          <button class="secondary-btn" id="report-send" style="border-radius: 30px;">إرسال البلاغ</button>
         </div>
       </div>
     </div>
