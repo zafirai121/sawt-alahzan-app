@@ -32,8 +32,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" crossorigin />
-    <script type="module" crossorigin src="/sawt-alahzan-app/preview/assets/index-CI0VL10o.js"></script>
-    <link rel="stylesheet" crossorigin href="/sawt-alahzan-app/preview/assets/index-aqAcBtud.css">
+    <script type="module" crossorigin src="/sawt-alahzan-app/preview/assets/index-C_a_mcD2.js"></script>
+    <link rel="stylesheet" crossorigin href="/sawt-alahzan-app/preview/assets/index-CDIzS6xG.css">
   </head>
   <body>
     <svg width="0" height="0" style="position: absolute;" aria-hidden="true">
@@ -213,13 +213,17 @@
           </header>
 
           <div class="profile-head">
-            <div style="position: relative;">
-              <img id="profile-avatar-img" src="app-icon-192.png" alt="" class="profile-avatar" />
-              <button id="profile-camera-btn" class="profile-camera" onclick="openAvatarUpload()" aria-label="تغيير الصورة"><i class="ic" data-icon="camera"></i></button>
-              <input type="file" id="avatar-file-input" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleAvatarUpload(event)" />
-            </div>
+            <img id="profile-avatar-img" src="app-icon-192.png" alt="" class="profile-avatar" />
             <h2 id="profile-display-name">ضيف</h2>
-            <div id="profile-status-badge" class="muted"></div>
+            <div id="profile-signed-in" style="display: none;">
+              <div id="profile-email" class="muted ellipsis profile-email"></div>
+              <div class="profile-badge"><i class="ic" data-icon="tick"></i> حساب مسجّل • مكتبتك متزامنة مع الموقع</div>
+            </div>
+            <div id="profile-guest">
+              <div class="muted profile-email">مكتبتك محفوظة على هذا الجهاز</div>
+              <button class="profile-signin" onclick="openAuthModal()">تسجيل الدخول</button>
+              <div class="muted profile-note">سجّل الدخول لحفظ مكتبتك على كل أجهزتك</div>
+            </div>
           </div>
 
           <div class="stats-grid">
@@ -229,17 +233,10 @@
           </div>
 
           <div class="settings-list">
-            <div class="settings-row" id="profile-email-row">
-              <div class="settings-icon"><i class="ic" data-icon="mail"></i></div>
-              <div style="flex: 1; min-width: 0;">
-                <div class="muted" style="font-size: 13px;">البريد الإلكتروني</div>
-                <div id="profile-email" class="ellipsis">غير مسجل</div>
-              </div>
-            </div>
-            <button class="settings-row" id="profile-edit-name" onclick="editDisplayName()">
-              <div class="settings-icon"><i class="ic" data-icon="edit"></i></div>
-              <div style="flex: 1;">تعديل الاسم</div>
-              <i class="ic muted" data-icon="chevron-left"></i>
+            <button class="settings-row" onclick="openSleepTimerSheet()">
+              <div class="settings-icon"><i class="ic" data-icon="timer"></i></div>
+              <div style="flex: 1;">مؤقت النوم</div>
+              <span id="sleep-timer-label" class="muted" style="font-size: 13px;"></span>
             </button>
             <button class="settings-row" onclick="openUploadPage()">
               <div class="settings-icon"><i class="ic" data-icon="upload"></i></div>
@@ -252,10 +249,10 @@
               <span id="my-uploads-count" class="muted" style="font-size: 13px;"></span>
               <i class="ic muted" data-icon="chevron-left"></i>
             </button>
-            <button class="settings-row" onclick="openSleepTimerSheet()">
-              <div class="settings-icon"><i class="ic" data-icon="timer"></i></div>
-              <div style="flex: 1;">مؤقت النوم</div>
-              <span id="sleep-timer-label" class="muted" style="font-size: 13px;"></span>
+            <button class="settings-row" onclick="goDownloads()">
+              <div class="settings-icon"><i class="ic" data-icon="download"></i></div>
+              <div style="flex: 1;">التنزيلات</div>
+              <i class="ic muted" data-icon="chevron-left"></i>
             </button>
             <button class="settings-row" onclick="openHiddenPage()">
               <div class="settings-icon"><i class="ic" data-icon="eye-off"></i></div>
@@ -267,6 +264,11 @@
               <div style="flex: 1;">المستبعدة من لمحة ذوقك</div>
               <span id="excluded-count" class="muted" style="font-size: 13px;"></span>
             </button>
+            <button class="settings-row" id="profile-check-update" onclick="checkForUpdate()">
+              <div class="settings-icon"><i class="ic" data-icon="sparkles"></i></div>
+              <div style="flex: 1;">التحقق من التحديثات</div>
+              <span id="app-version" class="muted" style="font-size: 13px;"></span>
+            </button>
             <a class="settings-row" href="https://web.soutalahzan.com/privacy-policy" target="_blank" rel="noopener">
               <div class="settings-icon"><i class="ic" data-icon="check"></i></div>
               <div style="flex: 1;">سياسة الخصوصية</div>
@@ -274,18 +276,8 @@
             </a>
           </div>
 
-          <div style="margin-top: 25px; display: flex; flex-direction: column; gap: 12px;">
-            <div id="profile-guest-section" style="display: none;">
-              <button class="primary-btn" onclick="openAuthModal()" style="margin-bottom: 12px;"><i class="ic" data-icon="user"></i> الدخول بالبريد الإلكتروني</button>
-              <button class="google-btn" onclick="signInWithGoogle()">
-                <svg width="20" height="20" aria-hidden="true"><use href="#google-logo" /></svg>
-                المتابعة باستخدام جوجل
-              </button>
-            </div>
-            <div id="profile-logout-section" style="display: none;">
-              <button class="danger-btn" onclick="doLogout()"><i class="ic" data-icon="logout"></i> تسجيل الخروج</button>
-            </div>
-          </div>
+          <button id="profile-logout" class="profile-logout" onclick="doLogout()" style="display: none;"><i class="ic" data-icon="logout"></i> تسجيل الخروج</button>
+          <div id="app-version-line" class="muted profile-version"></div>
         </div>
       </main>
 
