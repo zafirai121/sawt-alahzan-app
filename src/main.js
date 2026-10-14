@@ -83,6 +83,20 @@ const SIZE_STEPS = [96, 160, 320, 480, 640, 800, 1080, 1280, 1600];
 // screen's own density, so none is enlarged into a blur
 const PIXEL_RATIO = Math.min(Math.max(window.devicePixelRatio || 2, 2), 3);
 const RESIZER = 'https://soutalahzan.com/cdn-cgi/image/';
+// Our own covers also have a small copy made beside them (WebP, shorter side
+// 640 px; see the website's functions/api/thumbs.js): anything drawn up to
+// 640 real pixels wide uses it, nothing to resize. One not made yet (a cover
+// uploaded in the last hours) is shown as stored, for this visit.
+const OWN_COVERS = 'https://soutalahzan.com/';
+const SMALL_COVERS = 'https://soutalahzan.com/thumbs/640/';
+const SMALL_PX = 640;
+const noSmall = new Set();
+function smallCover(url) {
+  let href;
+  try { href = new URL(url).href; } catch { return null; }
+  if (!href.startsWith(OWN_COVERS) || href.startsWith(SMALL_COVERS) || href.startsWith(RESIZER) || noSmall.has(href)) return null;
+  return SMALL_COVERS + href.slice(OWN_COVERS.length);
+}
 // Covers Cloudflare would not resize (see storedCover): asked for as stored
 // from then on, and kept on the phone for the month (its allowance of new
 // resizes is monthly), so a later visit never asks for them resized again
@@ -106,6 +120,8 @@ function rememberUnresized(url) {
 }
 function thumb(url, cssWidth) {
   if (!url) return FALLBACK_COVER;
+  const small = cssWidth * PIXEL_RATIO <= SMALL_PX && smallCover(url);
+  if (small) return small;
   if (unresized.has(url)) return url;
   try {
     if (!IMAGE_HOSTS.has(new URL(url).hostname)) return url;
@@ -6100,6 +6116,12 @@ function coverFailed(img) {
   const src = img.getAttribute('src');
   if (!src) return;
   if (src === FALLBACK_COVER) { img.style.visibility = 'hidden'; return; }
+  if (src.startsWith(SMALL_COVERS)) {
+    const cover = OWN_COVERS + src.slice(SMALL_COVERS.length);
+    noSmall.add(cover);
+    img.src = cover;
+    return;
+  }
   const stored = storedCover(src);
   if (stored) {
     rememberUnresized(stored);
