@@ -82,8 +82,27 @@ const SIZE_STEPS = [96, 160, 320, 480, 640, 800, 1080, 1280, 1600];
 // screen's own density, so none is enlarged into a blur
 const PIXEL_RATIO = Math.min(Math.max(window.devicePixelRatio || 2, 2), 3);
 const RESIZER = 'https://soutalahzan.com/cdn-cgi/image/';
-// Covers Cloudflare would not resize (see storedCover): asked for as stored from then on
-const unresized = new Set();
+// Covers Cloudflare would not resize (see storedCover): asked for as stored
+// from then on, and kept on the phone for the month (its allowance of new
+// resizes is monthly), so a later visit never asks for them resized again
+const UNRESIZED_KEY = 'sawt_unresized';
+const thisMonth = () => new Date().toISOString().slice(0, 7);
+const unresized = (() => {
+  try {
+    const kept = JSON.parse(localStorage.getItem(UNRESIZED_KEY) || 'null');
+    if (kept?.month === thisMonth() && Array.isArray(kept.urls)) return new Set(kept.urls);
+  } catch { /* none kept, or no storage */ }
+  return new Set();
+})();
+let unresizedSaving = 0;
+function rememberUnresized(url) {
+  if (unresized.has(url)) return;
+  unresized.add(url);
+  clearTimeout(unresizedSaving);
+  unresizedSaving = setTimeout(() => {
+    try { localStorage.setItem(UNRESIZED_KEY, JSON.stringify({ month: thisMonth(), urls: [...unresized].slice(-3000) })); } catch { /* full, or private */ }
+  }, 1500);
+}
 function thumb(url, cssWidth) {
   if (!url) return FALLBACK_COVER;
   if (unresized.has(url)) return url;
@@ -4955,8 +4974,9 @@ function fallbackShades(t) {
 }
 
 // Reading a cover's pixels needs its server to allow it (CORS). Small copies
-// are tried in turn: the site's own resized one (soutalahzan.com does not
-// allow it yet), then a public image service that does (wsrv.nl).
+// are tried in turn: a public image service that does (wsrv.nl), then the
+// site's own resized one (soutalahzan.com does not allow it yet: asked first,
+// it only failed, a wasted request for every cover)
 function colorSampleUrls(url) {
   let own;
   try {
@@ -4964,7 +4984,7 @@ function colorSampleUrls(url) {
       ? `https://soutalahzan.com/cdn-cgi/image/width=48,quality=70,format=auto,fit=scale-down/${url}`
       : url;
   } catch { return []; } // not a full URL
-  return [own, `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=48&h=48&fit=cover&output=jpg&q=70`];
+  return [`https://wsrv.nl/?url=${encodeURIComponent(url)}&w=48&h=48&fit=cover&output=jpg&q=70`, own];
 }
 
 function readShades(src) {
@@ -5446,19 +5466,36 @@ document.addEventListener('keydown', (e) => {
 
 // ═══ Boot ════════════════════════════════════════════════════════════════════
 // A cover the server would not resize comes as stored; one that can't load at
-// all (missing file, or offline) shows the microphone instead
-document.addEventListener('error', (e) => {
-  const img = e.target;
-  const src = img.tagName === 'IMG' && img.getAttribute('src');
-  if (!src || src === FALLBACK_COVER) return;
+// all (missing file, or offline) shows the microphone (and if even that can't,
+// nothing, never the browser's broken-picture sign)
+function coverFailed(img) {
+  const src = img.getAttribute('src');
+  if (!src) return;
+  if (src === FALLBACK_COVER) { img.style.visibility = 'hidden'; return; }
   const stored = storedCover(src);
   if (stored) {
-    unresized.add(stored);
+    rememberUnresized(stored);
     img.src = stored;
   } else {
     img.src = FALLBACK_COVER;
   }
-}, true);
+}
+document.addEventListener('error', (e) => { if (e.target.tagName === 'IMG') coverFailed(e.target); }, true);
+// A cover that failed before its card was put on the page never reaches the
+// listener above (an error on an element not yet in the page goes nowhere):
+// Safari keeps the server's refusal for a day and answers from it at once,
+// so on a later visit the new covers stayed broken ("?"). Caught as they go in.
+const brokenImg = (img) => img.complete && img.naturalWidth === 0 && !!img.getAttribute('src') && img.style.visibility !== 'hidden';
+new MutationObserver((records) => {
+  for (const r of records) {
+    for (const n of r.addedNodes) {
+      if (n.nodeType !== 1) continue;
+      if (n.tagName === 'IMG') { if (brokenImg(n)) coverFailed(n); continue; }
+      if (!n.firstElementChild) continue;
+      for (const img of n.getElementsByTagName('img')) if (brokenImg(img)) coverFailed(img);
+    }
+  }
+}).observe(document.body, { childList: true, subtree: true });
 
 // A reload keeps the old page's history entries behind this one; marking this
 // one clean lets the back button step over them (see popstate)

@@ -1189,6 +1189,18 @@ button.device-row { cursor: pointer; }
    The app fills the screen: grids take as many columns as fit, large
    pictures are held to a size that suits the screen, and the player and the
    bottom bar keep their places */
+/* Large phones (the Pro Max and Plus sizes): the cards grow with the screen,
+   rather than keeping a small phone's size on a wide one */
+@media (min-width: 400px) and (max-width: 599px) {
+  .recent-grid { gap: 12px; }
+  .recent-card { min-height: 64px; border-radius: 8px; }
+  .recent-card > .art { width: 64px; height: 64px; }
+  .recent-title { font-size: 14px; padding: 0 12px; }
+  .wide-card { max-width: 360px; height: 184px; border-radius: 14px; }
+  .wide-title { font-size: 17px; }
+  .square-card { max-width: 176px; }
+}
+
 @media (pointer: coarse) and (min-width: 600px) {
   .recent-grid { grid-template-columns: repeat(3, 1fr); }
   .genre-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
