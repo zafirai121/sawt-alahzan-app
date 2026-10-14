@@ -3823,7 +3823,6 @@ window.openCreateSheet = () => {
 // under their account. The sent ones are in the library at once.
 const MAX_UPLOADS = 10;
 const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
-const UPLOAD_DEFAULT_COVER = 'https://images.unsplash.com/photo-1542332213-9b5a5a3fad35?w=500';
 let uploads = [];      // { key, file, mime, title, reciter, category, duration, cover, coverUrl, coverFromFile, fromTags, step, progress, error, trackId }
 let uploadKey = 0;
 let uploadReading = 0; // files being read, before they show
@@ -4189,7 +4188,8 @@ async function sendUpload(u) {
       reciter_name: reciter,
       file_url: audioUrl,
       // No cover of its own: the reciter's photo, else the website's default
-      image_url: coverUrl || (photo?.hasPhoto ? photo.image : UPLOAD_DEFAULT_COVER),
+      // No cover of its own: the reciter's photo, else none (shown as the microphone)
+      image_url: coverUrl || (photo?.hasPhoto ? photo.image : ''),
       user_id: user.id,
       duration: u.duration,
       status: 'public',
