@@ -10,7 +10,7 @@ import {
   Download, Trash2, Timer, Disc3, WifiOff, Cast, Smartphone, Bluetooth,
   Share2, MonitorSpeaker, Check, CirclePlus, Link, MessageSquareMore, Ellipsis, ImageDown, MessageCircle, Send,
   ArrowDownUp, LayoutGrid, Pin, CircleMinus, ArrowUp, ArrowDown, Pencil, Copy, CircleX, Album, Blend, Flame, AudioLines, QrCode,
-  Lock, Upload, CloudUpload, Sparkles, ImagePlus,
+  Lock, Upload, CloudUpload, Sparkles, ImagePlus, Volume2, VolumeOff, Pointer, MicVocal, CircleDot,
 } from 'lucide';
 
 // Spotify's "Your Library": two books standing and one leaning on them
@@ -38,6 +38,8 @@ const ICONS = {
   whatsapp: MessageCircle, send: Send,
   sort: ArrowDownUp, grid: LayoutGrid, pin: Pin, 'circle-minus': CircleMinus, 'arrow-up': ArrowUp, 'arrow-down': ArrowDown,
   pencil: Pencil, copy: Copy, 'circle-x': CircleX, album: Album, blend: Blend, flame: Flame, 'audio-lines': AudioLines, qr: QrCode,
+  // The previews' sound on / off and their "swipe up" hint; the options sheet's category and reciter (the phone app's)
+  volume: Volume2, 'volume-off': VolumeOff, pointer: Pointer, 'mic-vocal': MicVocal, 'circle-dot': CircleDot,
 };
 
 const escAttr = (v) => String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;');

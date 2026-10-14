@@ -2,6 +2,7 @@ import { supabase, isPasswordRecovery } from './supabaseClient.js';
 import { icon, setIcon, startIcons } from './icons.js';
 import { dominantHsl, playerShades, mixHex, NEUTRAL_SHADES } from './color.js';
 import occasionBg from './assets/occasion-bg.webp';
+import BUILD from './version.json';
 import { readTags, readDuration, shrinkCover, fixTag, guess as guessUpload, dbCategory, extFor, countWord, checkReciter, reciterSuggestions, reciterProblem } from './uploads.js';
 
 // Sizes that follow a card's width (cqw: the occasion, radio and mix cards):
@@ -793,7 +794,7 @@ function artHtml(art, { small = false, width = 320 } = {}) {
       : `<div class="art mosaic">${distinct.slice(0, 4).map((c) => img(c, width / 2)).join('')}</div>`;
   }
   if (art.likes) return `<div class="art art-likes">${icon('heart', { fill: true })}</div>`;
-  if (art.downloads) return `<div class="art art-downloads">${icon('download-plain')}</div>`;
+  if (art.downloads) return `<div class="art art-downloads">${icon('download')}</div>`;
   if (art.mix) return mixCoverHtml(art.mix, width);
   if (art.category) return `<div class="art art-category" style="background:${art.category.color}">${small ? '' : `<span>${esc(art.category.title)}</span>`}</div>`;
   return '<div class="art"></div>';
@@ -1716,8 +1717,11 @@ function renderOccasionPage(title) {
 
   // Keep it in the library (as a playlist), download it, send it with a word about it
   const text = `${name}\n${about}\n\nقصائد المناسبة على صوت الأحزان:\n${tracks.slice(0, 10).map((t) => `• ${t.title} — ${t.reciterName}`).join('\n')}`;
+  // Previews of its tracks: the tall thumbnail, the shrine's golden dome in it
+  const occThumb = tracks.length ? [previewsThumb(occasionBg, { title: o.title, ids: tracks.map((t) => t.id) }, '#D9B46A')] : [];
+  occThumb[0]?.classList.add('occ-thumb');
   view.querySelector('.pv-actions-slot').replaceWith(actionsRow([
-    keepButton(o.title, tracks, lib.playlists.find((p) => p.name === o.title)), downloadButton(tracks),
+    ...occThumb, keepButton(o.title, tracks, lib.playlists.find((p) => p.name === o.title)), downloadButton(tracks),
     iconButton('share-nodes', 'مشاركة', () => share(`${name} | صوت الأحزان`, text, APP_URL)),
   ], tracks, source));
   renderTrackList(view.querySelector('.pv-list'), tracks, { source, likedMark: true, emptyText: 'لا توجد قصائد لهذه المناسبة بعد' });
@@ -1996,7 +2000,141 @@ let playlistPage = null; // { title, list, playlist?, source? }
 
 // `source`: what the list is, for "recently played" (the likes, a playlist, a reciter...)
 function openListPage(title, list, playlist = null, library = false, source = null) {
+  // A home section's "show all" (and a reciter's lists): as a track's own page
+  if (!playlist && !NOT_SHARED.has(title)) { openSectionPage(title, list, source); return; }
   openPage('playlist-detail-view', () => renderListPage(title, typeof list === 'function' ? list() : list, playlist, source), { library });
+}
+
+// ─── "Show all": a track page's layout ───
+// The first cover as a card with its colour glowing down behind it, the
+// title, whose it is and how long, then the actions (the previews' tall
+// thumbnail, keep it, download, share, ⋮ ... shuffle, play) and the tracks.
+// Scrolled, a bar keeps the title and the play button.
+const sectionQueries = new Map(); // the page's title → what was searched in it
+const coverOf = (list) => list.find((t) => t.coverImage) || list[0] || null;
+
+function openSectionPage(title, list, source = null) {
+  const tracks = typeof list === 'function' ? list : () => list;
+  openPage('page-view', () => renderSectionPage(title, uniqueById(tracks()), source), { library: true });
+}
+
+// Heart: the list kept in their library as a playlist of its name, or let go again
+function saveListButton(title, list) {
+  const kept = lib.playlists.find((p) => p.name === title);
+  const b = document.createElement('button');
+  b.className = `icon-btn pv-icon${kept ? ' on' : ''}`;
+  b.setAttribute('aria-label', kept ? 'في مكتبتك' : 'حفظ في مكتبتك');
+  b.innerHTML = icon('heart', { fill: !!kept });
+  b.onclick = () => toggleSavedList(title, list);
+  return b;
+}
+async function toggleSavedList(title, list) {
+  const kept = lib.playlists.find((p) => p.name === title);
+  if (kept) { if (await deletePlaylist(kept)) toast('أُزيلت من مكتبتك'); }
+  else { await createPlaylist(title, list.map((t) => t.id)); toast('حُفظت القائمة في مكتبتك'); }
+}
+
+// A whole list to the queue, after what is playing
+function addAllToQueue(list) {
+  if (!list.length) return;
+  if (!currentTrack) { playFromList(list, 0); return; }
+  queue.splice(queueIndex + 1, 0, ...list);
+  toast(`أُضيف ${formatCount(list.length)} مقطع إلى قائمة الانتظار`);
+  updateQueueUI();
+}
+
+function renderSectionPage(title, list, source) {
+  const view = $('page-view');
+  const token = newPageToken(view);
+  view.style.removeProperty('--tint');
+  if (!list.length) {
+    view.innerHTML = `<header class="page-header pv-plain"><button class="icon-btn" onclick="history.back()" aria-label="رجوع">${icon('back')}</button><h1 class="ellipsis">${esc(title)}</h1></header>
+      <div class="empty-state">لا توجد مقاطع هنا بعد</div>`;
+    viewScroll['page-view'] = null;
+    return;
+  }
+  const cover = coverOf(list);
+  // One reciter's list shows them (their photo, their page); the others are the app's
+  const names = [...new Set(list.map((t) => t.reciterName))];
+  const reciter = names.length === 1 ? reciterByName.get(names[0]) : null;
+  view.innerHTML = `
+    <div class="td-glow sl-glow"></div>
+    <div class="sl-head">
+      <button class="icon-btn sl-back" onclick="history.back()" aria-label="رجوع">${icon('back')}</button>
+      <img src="${esc(thumb(cover?.coverImage, 340))}" alt="" class="td-cover sl-cover" />
+      <h1 class="td-title sl-title">${esc(title)}</h1>
+      ${reciter
+        ? `<div class="td-artist-row sl-whose" role="button" tabindex="0"><img src="${esc(thumb(reciter.image || cover?.coverImage, 32))}" alt="" /><div class="ellipsis">${esc(reciter.name)}</div></div>`
+        : `<div class="td-artist-row sl-whose sl-app">${sLogo()}<div>صوت الأحزان</div></div>`}
+      <div class="muted td-meta">${formatCount(list.length)} مقطع • ${totalDuration(list)}</div>
+    </div>
+    <div class="pv-actions-slot"></div>
+    ${list.length > 12 ? `<div class="sl-search"><div class="search-input-container">
+      <input type="search" class="search-input dark" placeholder="ابحث في هذه القائمة" autocomplete="off" />
+      <i class="ic search-icon" data-icon="search" style="color: rgba(255,255,255,0.6);"></i></div></div>` : ''}
+    <div class="track-list pv-list sl-list"></div>`;
+  if (reciter) clickable(view.querySelector('.sl-whose'), () => openArtistDetail(reciter.name));
+
+  // Previews, keep, download, share, ⋮ ... shuffle, play (as on a track's page)
+  view.querySelector('.pv-actions-slot').replaceWith(actionsRow([
+    previewsThumb(cover?.coverImage, { title, ids: list.map((t) => t.id) }),
+    saveListButton(title, list), downloadButton(list),
+    iconButton('share-nodes', 'مشاركة', () => share(`${title} | صوت الأحزان`, playlistText(title, list), APP_URL)),
+    iconButton('more', 'خيارات', () => openListOptions(title, list)),
+  ], list, source));
+
+  // The tracks, numbered; a long list can be searched
+  const box = view.querySelector('.sl-list');
+  const paint = () => {
+    const q = normalize((sectionQueries.get(title) || '').trim());
+    const shown = q ? list.filter((t) => searchKey(t).includes(q)) : list;
+    renderTrackList(box, shown, { numbered: true, source, emptyText: 'لا توجد نتائج' });
+  };
+  const input = view.querySelector('.sl-search input');
+  if (input) {
+    input.value = sectionQueries.get(title) || '';
+    input.addEventListener('input', () => { sectionQueries.set(title, input.value); paint(); });
+  }
+  paint();
+
+  // The card's colour, bright, glowing down from the top and moving up with the page
+  const glow = view.querySelector('.sl-glow');
+  const head = view.querySelector('.sl-head');
+  let color = '#4a4a4a';
+  const handler = pageScroller({
+    title, color: () => color, at: () => head.offsetHeight - barHeight() * 1.2,
+    play: () => playAllButton(list, source, 'big-play small'),
+    own: () => view.querySelector('.pv-actions .big-play'),
+  });
+  if (cover) withShades(cover, (sh) => {
+    if (view._token !== token) return;
+    glow.style.setProperty('--glow', sh.vivid);
+    color = mixHex(sh.vivid, '#000000', 0.25);
+    handler.recolor();
+  });
+  viewScroll['page-view'] = handler;
+}
+
+// ⋮ on a "show all" page: keep it, queue it whole, its radio, download, share
+function openListOptions(title, list) {
+  const kept = lib.playlists.some((p) => p.name === title);
+  const sheet = $('action-sheet');
+  sheet.innerHTML = `
+    <div class="sheet-handle"></div>
+    <div class="sheet-head">
+      <img src="${esc(thumb(coverOf(list)?.coverImage, 55))}" alt="" />
+      <div style="flex: 1; overflow: hidden;">
+        <div class="ellipsis" style="font-size: 18px; font-weight: bold; margin-bottom: 4px;">${esc(title)}</div>
+        <div class="muted" style="font-size: 14px;">قائمة • ${formatCount(list.length)} مقطع</div>
+      </div>
+    </div>`;
+  const item = (iconName, text, fn, cls = '') => sheetItem(sheet, iconName, text, () => closeOverlayThen(fn), cls);
+  item(icon('heart', { fill: kept }), kept ? 'إزالة من مكتبتك' : 'حفظ في مكتبتك', () => toggleSavedList(title, list), kept ? 'gold' : '');
+  item('queue', 'إضافة إلى قائمة الانتظار', () => addAllToQueue(list));
+  if (list[0]) item('radio', 'الانتقال إلى الراديو', () => openRadioPage(list[0]));
+  item('download', 'تنزيل القائمة', () => downloadAll(list));
+  item('share-nodes', 'مشاركة', () => share(`${title} | صوت الأحزان`, playlistText(title, list), APP_URL));
+  openSheet('action-modal');
 }
 const likedTracks = () => [...lib.likes].map((id) => trackById.get(id)).filter(Boolean).reverse();
 // Once the whole library is in, likes of deleted tracks no longer count
@@ -2270,7 +2408,8 @@ function renderReciterPage(name) {
   // Listens, then the actions: follow, ⋮ ... share, shuffle, play
   const more = iconButton('more', 'خيارات', () => openReciterOptions(name), 'icon-btn rc-more');
   const shareBtn = iconButton('share-nodes', 'مشاركة', () => share(`${name} | صوت الأحزان`, `استمع إلى قصائد ${name}`, r.dbId ? `${SITE_URL}/reciter?id=${r.dbId}` : APP_URL));
-  view.querySelector('.rc-top').appendChild(actionsRow([followButton(r), more], list, source, [shareBtn]));
+  const rcThumb = list.length ? [previewsThumb(photo, { title: name, reciter: name })] : [];
+  view.querySelector('.rc-top').appendChild(actionsRow([...rcThumb, followButton(r), more], list, source, [shareBtn]));
 
   // Popular: numbered, how often each was heard, a check on the liked ones
   const paintPopular = () => {
@@ -2436,7 +2575,7 @@ function renderRadioPage(seed) {
     ${more.length >= 2 ? '<section class="pv-section"><h2 class="pv-big-title">قد يعجبك أيضاً</h2><div class="pv-grid rd-more"></div></section>' : ''}`;
 
   view.querySelector('.pv-actions-slot').replaceWith(actionsRow([
-    keepButton(title, radio, kept), downloadButton(radio),
+    previewsThumb(seed.coverImage, { title, ids: radio.map((t) => t.id) }, 'var(--pastel)'), keepButton(title, radio, kept), downloadButton(radio),
     iconButton('share-nodes', 'مشاركة', () => share(`${title} | صوت الأحزان`, playlistText(title, radio), APP_URL)),
     iconButton('more', 'خيارات', () => openTrackOptions(seed)),
   ], radio, source));
@@ -2509,6 +2648,7 @@ function renderMixPage(number) {
     ${others.length ? '<section class="pv-section"><h2 class="pv-big-title">ميكسات أخرى من أجلك</h2><div class="pv-grid mx-others"></div></section>' : ''}`;
 
   view.querySelector('.pv-actions-slot').replaceWith(actionsRow([
+    previewsThumb(tracks[0]?.coverImage, { title, ids: tracks.map((t) => t.id) }, mixColor(mix.number)),
     keepButton(title, tracks, lib.playlists.find((p) => p.name === title)), downloadButton(tracks),
     iconButton('share-nodes', 'مشاركة', () => share(`${title} | صوت الأحزان`, `${title} من صوت الأحزان: ${mixReciters(mix)}`, APP_URL)),
   ], tracks, source));
@@ -2520,6 +2660,202 @@ function renderMixPage(number) {
     title, color: () => deep, at: () => top.offsetHeight - barHeight() * 1.6,
     play: () => playAllButton(tracks, source, 'big-play small'),
     own: () => view.querySelector('.big-play'),
+  });
+}
+
+// ═══ Previews (Spotify's) ═══════════════════════════════════════════════════
+// From the tall thumbnail on a reciter's or a list's page: a full-screen feed
+// of its tracks, one per screen, each playing half a minute of itself, over
+// and over; swipe up for the next. The main player waits meanwhile.
+const PREVIEW_S = 30;
+// About a third into the track, where the recitation is under way
+const previewStart = (t) => { const total = durationSec(t.duration); return total > 3 * PREVIEW_S ? total * 0.3 : 0; };
+
+// What a feed holds: a reciter's best known tracks, then similar ones by
+// others to keep discovering; a list's tracks, then suggestions based on them
+function previewTracks(of) {
+  let list;
+  if (of.reciter) {
+    const own = visible(tracksOf(of.reciter)).sort((a, b) => b.listens - a.listens).slice(0, 30);
+    list = [...own, ...(own[0] ? radioOf(own[0], 40).filter((t) => t.reciterName !== of.reciter) : [])];
+  } else {
+    const own = of.ids.map((id) => trackById.get(String(id))).filter(Boolean);
+    list = [...own, ...forList(own, 20)];
+  }
+  // A plain <audio> plays them (a streamed .m3u8 needs the player's own loader)
+  return uniqueById(list).filter((t) => t.audioUrl && !/\.m3u8(\?|$)/i.test(t.audioUrl));
+}
+
+// The tall thumbnail itself: `cover` in a white-edged (or `ring`-coloured) frame
+function previewsThumb(cover, of, ring = '') {
+  const b = document.createElement('button');
+  b.className = 'pv-thumb';
+  b.setAttribute('aria-label', `معاينات ${of.title}`);
+  if (ring) b.style.borderColor = ring;
+  b.innerHTML = `<img src="${esc(thumb(cover, 64))}" alt="" />`;
+  b.onclick = (e) => { e.stopPropagation(); openPreviews(of); };
+  return b;
+}
+
+const paintLikeAdd = (b) => {
+  const liked = lib.likes.has(b.dataset.likeAdd);
+  b.classList.toggle('on', liked);
+  b.setAttribute('aria-label', liked ? 'إزالة من المفضلة' : 'إضافة إلى المفضلة');
+  setIcon(b.querySelector('.ic'), liked ? 'check' : 'circle-plus');
+};
+
+function openPreviews(of) {
+  const tracks = previewTracks(of);
+  const view = document.createElement('div');
+  view.className = 'pvw';
+  view.setAttribute('role', 'dialog');
+  view.setAttribute('aria-modal', 'true');
+  view.setAttribute('aria-label', `معاينات ${of.title}`);
+  view.innerHTML = `
+    <div class="pvw-head">
+      <button class="icon-btn pvw-back" aria-label="رجوع">${icon('back')}</button>
+      <div class="pvw-title ellipsis">${esc(of.title)}</div>
+      <button class="icon-btn pvw-mute" aria-label="كتم الصوت">${icon('volume')}</button>
+    </div>
+    <div class="pvw-feed"></div>`;
+  view.querySelector('.pvw-back').onclick = () => history.back();
+  const feed = view.querySelector('.pvw-feed');
+  if (!tracks.length) {
+    feed.innerHTML = '<div class="empty-state">لا توجد مقاطع هنا بعد</div>';
+    openOverlay(() => document.body.appendChild(view), () => view.remove());
+    return;
+  }
+
+  const player = new Audio();
+  player.preload = 'auto';
+  const wasPlaying = !!currentTrack && !audio.paused;
+  let startedFull = false;
+  let pausedByUser = false;
+  let active = -1;
+  let start = 0;
+  let hint = null;
+
+  const cards = tracks.map((t, i) => {
+    const card = document.createElement('article');
+    card.className = 'pvw-card';
+    const r = reciterByName.get(t.reciterName);
+    const tags = [categoryOf(t)?.title, t.reciterName].filter(Boolean).map((x) => `#${x.replace(/ /g, '_')}`).join('   ');
+    card.innerHTML = `
+      <div class="pvw-stage">
+        <div class="pvw-bars">${'<span></span>'.repeat(30)}</div>
+        <button class="pvw-cover" aria-label="إيقاف مؤقت"><img src="${esc(thumb(t.coverImage, 400))}" alt="" loading="lazy" /></button>
+      </div>
+      <div class="pvw-reciter">
+        <img src="${esc(thumb(reciterPhoto(t.reciterName), 44))}" alt="" loading="lazy" />
+        <div class="pvw-reciter-text">
+          <div class="pvw-reciter-name ellipsis">${esc(t.reciterName)}</div>
+          <div class="muted ellipsis">${formatCount(r?.count || tracksOf(t.reciterName).length)} مقطع</div>
+        </div>
+        <span class="pvw-follow"></span>
+      </div>
+      <div class="pvw-tags"><div class="ellipsis">${esc(tags)}</div></div>
+      <div class="pvw-track" role="button" tabindex="0">
+        <img src="${esc(thumb(t.coverImage, 64))}" alt="" loading="lazy" />
+        <div class="pvw-track-text">
+          <div class="pvw-track-title">${esc(t.title)}</div>
+          <div class="muted ellipsis">${esc(t.reciterName)}</div>
+        </div>
+      </div>
+      <div class="pvw-progress"><div></div></div>`;
+    withShades(t, (sh) => { card.style.background = sh.mini; });
+    // The reciter: follow and share; the tags and ⋮; the track plays whole, (+) likes it
+    if (r) card.querySelector('.pvw-follow').appendChild(followButton(r, { small: true }));
+    card.querySelector('.pvw-reciter').appendChild(iconButton('share-nodes', 'مشاركة', () => openShareSheet(t), 'icon-btn'));
+    card.querySelector('.pvw-tags').appendChild(iconButton('more', 'خيارات', () => openTrackOptions(t), 'icon-btn'));
+    const like = iconButton('circle-plus', 'إضافة إلى المفضلة', (e) => { e.stopPropagation(); toggleLike(t); }, 'icon-btn pvw-like');
+    like.dataset.likeAdd = t.id;
+    paintLikeAdd(like);
+    card.querySelector('.pvw-track').appendChild(like);
+    clickable(card.querySelector('.pvw-track'), () => {
+      // The whole track, in the main player, with the rest of the feed after it
+      startedFull = true;
+      closeOverlayThen(() => playFromList(tracks, i));
+    });
+    card.querySelector('.pvw-cover').onclick = () => {
+      if (player.paused) { pausedByUser = false; player.play().catch(() => {}); } else { pausedByUser = true; player.pause(); }
+    };
+    return card;
+  });
+  feed.append(...cards);
+
+  const paintPlaying = () => cards.forEach((c, i) => {
+    const on = i === active && !player.paused;
+    c.classList.toggle('playing', on);
+    c.querySelector('.pvw-cover').setAttribute('aria-label', on ? 'إيقاف مؤقت' : 'تشغيل');
+  });
+  player.addEventListener('play', paintPlaying);
+  player.addEventListener('pause', paintPlaying);
+  player.addEventListener('loadedmetadata', () => {
+    if (start >= (player.duration || 0)) start = 0;
+    player.currentTime = start;
+  });
+  player.addEventListener('timeupdate', () => {
+    if (player.currentTime >= start + PREVIEW_S) player.currentTime = start;
+    const bar = cards[active]?.querySelector('.pvw-progress > div');
+    if (bar) bar.style.width = `${Math.min(Math.max((player.currentTime - start) / PREVIEW_S, 0), 1) * 100}%`;
+  });
+  // A track that ends before its half minute starts over
+  player.addEventListener('ended', () => { player.currentTime = start; player.play().catch(() => {}); });
+
+  // The card on screen plays its preview
+  const settle = () => {
+    const step = cards[1] ? cards[1].offsetTop - cards[0].offsetTop : feed.clientHeight;
+    const i = Math.min(Math.max(Math.round(feed.scrollTop / (step || 1)), 0), cards.length - 1);
+    if (i === active) return;
+    if (active >= 0) cards[active].querySelector('.pvw-progress > div').style.width = '0';
+    active = i;
+    if (i > 0 && hint) dismissHint();
+    const t = tracks[i];
+    start = previewStart(t);
+    pausedByUser = false;
+    player.src = t.audioUrl;
+    player.play().catch(() => {});
+    paintPlaying();
+  };
+  let settleTimer = 0;
+  feed.addEventListener('scroll', () => { clearTimeout(settleTimer); settleTimer = setTimeout(settle, 120); }, { passive: true });
+
+  const mute = view.querySelector('.pvw-mute');
+  mute.onclick = () => {
+    player.muted = !player.muted;
+    setIcon(mute.querySelector('.ic'), player.muted ? 'volume-off' : 'volume');
+    mute.setAttribute('aria-label', player.muted ? 'تشغيل الصوت' : 'كتم الصوت');
+  };
+  // Silent while the app is in the background
+  const onVisibility = () => {
+    if (document.hidden) player.pause();
+    else if (!pausedByUser) player.play().catch(() => {});
+  };
+
+  // "Swipe up for more": shown the first time, until they swipe or tap
+  const dismissHint = () => { hint?.remove(); hint = null; store.set('sawt_previews_hint', true); };
+  if (!store.get('sawt_previews_hint', false) && cards.length > 1) {
+    hint = document.createElement('div');
+    hint.className = 'pvw-hint';
+    hint.innerHTML = `<div>${icon('pointer')}<p>التمرير لأعلى لعرض المزيد</p></div>`;
+    hint.onclick = dismissHint;
+    view.appendChild(hint);
+  }
+
+  openOverlay(() => {
+    if (wasPlaying) audio.pause();
+    document.body.appendChild(view);
+    document.addEventListener('visibilitychange', onVisibility);
+    settle();
+  }, () => {
+    document.removeEventListener('visibilitychange', onVisibility);
+    clearTimeout(settleTimer);
+    player.pause();
+    player.removeAttribute('src');
+    player.load();
+    view.remove();
+    // The main player carries on (unless a track was chosen to play whole)
+    if (wasPlaying && !startedFull) audio.play().catch(() => {});
   });
 }
 
@@ -2611,7 +2947,7 @@ function renderCollection(spec) {
 
   // Actions: download, share, the playlist's options ... shuffle, play
   const start = [];
-  if (list.length) start.push(downloadButton(list));
+  if (list.length) start.push(previewsThumb(list[0].coverImage, { title, ids: list.map((t) => t.id) }), downloadButton(list));
   start.push(iconButton('share-nodes', 'مشاركة', () => share(`${title} | صوت الأحزان`, playlistText(title, list), APP_URL)));
   if (pl) start.push(iconButton('more', 'خيارات القائمة', () => openPlaylistOptions(pl)));
   view.querySelector('.pv-actions-slot').replaceWith(actionsRow(start, list, source));
@@ -2775,7 +3111,7 @@ function openPlaylistOptions(pl) {
   const item = (iconName, text, fn, cls = '') => sheetItem(sheet, iconName, text, () => closeOverlayThen(fn), cls);
   item('plus', 'إضافة مقاطع', () => openAddTracks(pl));
   item('pencil', 'تغيير الاسم', () => renamePlaylist(pl));
-  item('download-plain', 'تنزيل القائمة', () => downloadAll(tracks));
+  item('download', 'تنزيل القائمة', () => downloadAll(tracks));
   item('share-nodes', 'مشاركة', () => share(`${pl.name} | صوت الأحزان`, playlistText(pl.name, tracks), APP_URL));
   item('trash', 'حذف القائمة', () => confirmDeletePlaylist(pl, () => history.back()), 'danger');
   openSheet('action-modal');
@@ -2890,7 +3226,7 @@ function renderSearchHome() {
     card.style.backgroundColor = cat.color;
     card.innerHTML = `
       <div class="genre-card-title">${esc(cat.title)}<div class="genre-card-count">${formatCount(inCat.length)} مقطع</div></div>
-      ${inCat[0] ? `<img src="${esc(thumb(inCat[0].coverImage, 65))}" class="genre-card-img" alt="" loading="lazy" />` : ''}`;
+      <img src="${esc(inCat[0] ? thumb(inCat[0].coverImage, 65) : FALLBACK_COVER)}" class="genre-card-img" alt="" loading="lazy" />`;
     grid.appendChild(clickable(card, () => openCategoryDetail(cat)));
   });
 }
@@ -3115,7 +3451,7 @@ function renderDownloadsTab() {
     const empty = document.createElement('div');
     empty.className = 'dl-empty animate-in';
     empty.innerHTML = `
-      <div class="dl-empty-ring"><span class="dl-empty-disc">${icon('download-plain')}</span></div>
+      <div class="dl-empty-ring"><span class="dl-empty-disc">${icon('download')}</span></div>
       <h2>لا توجد تنزيلات بعد</h2>
       <p class="muted">نزّل القصائد التي تحبها لتسمعها في أي مكان، حتى في الطريق أو بدون إنترنت.</p>
       <button class="pill-btn">تصفح القصائد</button>`;
@@ -3127,7 +3463,7 @@ function renderDownloadsTab() {
     card.className = 'dl-card animate-in';
     card.innerHTML = `
       <div class="dl-card-head">
-        <span class="dl-disc">${icon('download-plain')}</span>
+        <span class="dl-disc">${icon('download')}</span>
         <div style="min-width: 0;"><div class="dl-card-title">مكتبتك بلا إنترنت</div>
         <div class="muted dl-card-sub">${formatCount(newest.length)} مقطع • ${totalDuration(newest)}</div></div>
       </div>
@@ -4097,7 +4433,8 @@ function openTrackOptions(track, { playlist = null } = {}) {
   box.innerHTML = '';
   const then = (fn) => () => closeOverlayThen(fn);
   // A page opens where the player was: the player closes first
-  const toPage = (fn) => () => closeOverlayThen(() => ($('full-player-view').classList.contains('open') ? closeOverlayThen(fn) : fn()));
+  // A page opens under the full player or the previews: they close first
+  const toPage = (fn) => () => closeOverlayThen(() => ($('full-player-view').classList.contains('open') || document.querySelector('.pvw') ? closeOverlayThen(fn) : fn()));
   const liked = lib.likes.has(track.id);
   const downloaded = lib.downloads.has(track.id);
   const cat = categoryOf(track);
@@ -4114,12 +4451,12 @@ function openTrackOptions(track, { playlist = null } = {}) {
       toast('أُزيل من القائمة');
     }));
   }
-  sheetItem(box, lib.hidden.has(track.id) ? 'eye' : 'eye-off', lib.hidden.has(track.id) ? 'إظهار هذا المقطع' : 'إخفاء هذا المقطع', then(() => toggleHidden(track)));
+  sheetItem(box, 'close', lib.hidden.has(track.id) ? 'إظهار هذا المقطع' : 'إخفاء هذا المقطع', then(() => toggleHidden(track)));
   sheetItem(box, 'list-plus', 'إضافة إلى قائمة الانتظار', then(() => playNextInQueue(track)));
   if (currentTrack) sheetItem(box, 'queue', 'الذهاب إلى قائمة الانتظار', then(() => openQueue()));
   sheetItem(box, downloaded ? 'check' : 'download', downloaded ? 'حذف التنزيل' : 'تنزيل للاستماع بدون إنترنت', then(() => toggleDownload(track)), downloaded ? 'gold' : '');
-  if (cat) sheetItem(box, 'album', `الانتقال إلى التصنيف: ${cat.title}`, toPage(() => openCategoryDetail(cat)));
-  if (track.reciterName !== UNKNOWN_RECITER) sheetItem(box, 'mic', 'الانتقال إلى الرادود', toPage(() => openArtistDetail(track.reciterName)));
+  if (cat) sheetItem(box, 'circle-dot', `الانتقال إلى التصنيف: ${cat.title}`, toPage(() => openCategoryDetail(cat)));
+  if (track.reciterName !== UNKNOWN_RECITER) sheetItem(box, 'mic-vocal', 'الانتقال إلى الرادود', toPage(() => openArtistDetail(track.reciterName)));
   sheetItem(box, 'circle-x', lib.excluded.has(track.id) ? 'إعادة المقطع إلى "لمحة عن ذوقك"' : 'استبعاد المقطع من "لمحة عن ذوقك"', then(() => toggleExcluded(track)));
   sheetItem(box, 'timer', 'مؤقت النوم', then(() => openSleepTimerSheet()), '', $('sleep-timer-label').textContent);
   sheetItem(box, 'radio', 'الانتقال إلى راديو المقطع', toPage(() => openRadioPage(track)));
@@ -4913,6 +5250,7 @@ function updateQueueUI() {
 
 function refreshLikeButtons() {
   paintFollowButtons();
+  document.querySelectorAll('[data-like-add]').forEach(paintLikeAdd);
   document.querySelectorAll('#mp-like-btn, #fp-like-btn, #td-like-btn').forEach((btn) => {
     const liked = !!btn.dataset.trackId && lib.likes.has(btn.dataset.trackId);
     btn.classList.toggle('liked', liked);
@@ -5193,18 +5531,13 @@ function updateProfileUI() {
   const signedIn = !!currentUser && !currentUser.is_anonymous;
   const name = signedIn ? displayName() || 'مستخدم' : 'ضيف';
   $('profile-display-name').textContent = name;
-  $('profile-email').textContent = signedIn ? currentUser.email || '—' : 'غير مسجل';
-  $('profile-status-badge').innerHTML = signedIn
-    ? `${icon('check')} حساب مسجّل`
-    : 'سجّل الدخول لحفظ مكتبتك على كل أجهزتك';
-  $('profile-guest-section').style.display = signedIn ? 'none' : 'block';
-  $('profile-logout-section').style.display = signedIn ? 'block' : 'none';
-  $('profile-edit-name').style.display = signedIn ? 'flex' : 'none';
+  $('profile-email').textContent = signedIn ? currentUser.email || '' : '';
+  $('profile-signed-in').style.display = signedIn ? 'block' : 'none';
+  $('profile-guest').style.display = signedIn ? 'none' : 'block';
+  $('profile-logout').style.display = signedIn ? 'flex' : 'none';
   $('profile-my-uploads').style.display = signedIn ? 'flex' : 'none';
   const mine = signedIn ? myUploads(currentUser.id).length : 0;
   $('my-uploads-count').textContent = mine ? formatCount(mine) : '';
-  $('profile-email-row').style.display = signedIn ? 'flex' : 'none';
-  $('profile-camera-btn').style.display = signedIn ? 'flex' : 'none';
   $('profile-avatar-img').src = signedIn ? avatarUrl() : `${import.meta.env.BASE_URL}app-icon-192.png`;
   document.querySelectorAll('.avatar-btn').forEach((b) => {
     b.innerHTML = signedIn ? `<img src="${esc(avatarUrl())}" alt="" />` : icon('user');
@@ -5212,61 +5545,12 @@ function updateProfileUI() {
   $('stat-listened').textContent = formatCount(lib.history.length);
   $('stat-likes').textContent = formatCount(likesCount());
   $('stat-playlists').textContent = formatCount(lib.playlists.length);
-  $('hidden-count').textContent = lib.hidden.size ? formatCount(lib.hidden.size) : '';
-  $('excluded-count').textContent = lib.excluded.size ? formatCount(lib.excluded.size) : '';
+  $('hidden-count').textContent = formatCount(lib.hidden.size);
+  $('excluded-count').textContent = formatCount(lib.excluded.size);
+  if (!updateChecking) $('app-version').textContent = BUILD.versionName;
+  $('app-version-line').textContent = `صوت الأحزان • الإصدار ${BUILD.versionName}`;
   paintSleepTimer();
 }
-
-window.editDisplayName = () => openPrompt({
-  title: 'تعديل الاسم', value: displayName(), placeholder: 'اسمك',
-  onSubmit: async (name) => {
-    const { error } = await supabase.from('profiles').update({ display_name: name.slice(0, 100) }).eq('id', currentUser.id);
-    if (error) { toast('تعذر حفظ الاسم'); return; }
-    await supabase.auth.updateUser({ data: { full_name: name } });
-    profile = { ...(profile || {}), display_name: name };
-    updateProfileUI();
-    toast('تم حفظ الاسم');
-  },
-});
-
-window.openAvatarUpload = () => {
-  if (!currentUser) { openAuthModal(); return; }
-  $('avatar-file-input').click();
-};
-
-// The photo goes to the site's storage (Cloudflare R2) through its upload endpoint
-window.handleAvatarUpload = async (event) => {
-  const file = event.target.files[0];
-  event.target.value = '';
-  if (!file || !currentUser) return;
-  if (file.size > 10 * 1024 * 1024) { toast('الصورة أكبر من 10 ميغابايت'); return; }
-  const img = $('profile-avatar-img');
-  img.style.opacity = '0.4';
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    const ext = (file.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
-    const res = await fetch(`${SITE_URL}/api/upload?kind=image&ext=${ext}`, {
-      method: 'POST',
-      headers: { 'Content-Type': file.type, Authorization: `Bearer ${session.access_token}` },
-      body: file,
-    });
-    if (!res.ok) throw new Error(`upload ${res.status}`);
-    const { url } = await res.json();
-    const { error } = await supabase.from('profiles').update({ avatar_url: url }).eq('id', currentUser.id);
-    if (error) throw error;
-    // Also on the account itself: kept even where the profile row doesn't exist.
-    // A separate key, since Google sign-in rewrites avatar_url with its own photo
-    await supabase.auth.updateUser({ data: { custom_avatar_url: url } });
-    profile = { ...(profile || {}), avatar_url: url };
-    updateProfileUI();
-    toast('تم تحديث الصورة');
-  } catch (err) {
-    console.error('Avatar upload error:', err);
-    toast('تعذر رفع الصورة');
-  } finally {
-    img.style.opacity = '1';
-  }
-};
 
 window.openAuthModal = () => {
   resetAuthForm();
@@ -5423,6 +5707,90 @@ window.toggleAuthPasswordVisibility = () => {
 // The logo on the card: the S in the brand's gold
 $('auth-logo').innerHTML = `<svg viewBox="0 0 215.4 253" aria-hidden="true"><defs><linearGradient id="auth-gold-s" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F6E073"/><stop offset="0.28" stop-color="#C28F1A"/><stop offset="0.52" stop-color="#F9E37A"/><stop offset="0.76" stop-color="#B78C1A"/><stop offset="1" stop-color="#F0D96C"/></linearGradient></defs><path fill="url(#auth-gold-s)" d="${S_PATH}"/></svg>`;
 
+// ═══ Updates (as the phone app's) ════════════════════════════════════════════
+// Each release publishes version.json beside the page (its number and what is
+// new). An app left open (or kept installed and come back to) reads it a little
+// after it shows, at most a minute apart: a newer release is offered with what
+// is new in it; "update now" loads it, "later" puts that one off for six hours.
+const UPDATE_RECHECK = 60 * 1000;
+const UPDATE_LATER = 6 * 60 * 60 * 1000;
+let updateChecking = false; // the profile's own check, under way
+let lastUpdateCheck = 0;
+
+async function fetchNewest() {
+  const res = await fetch(`${import.meta.env.BASE_URL}version.json?t=${Math.floor(Date.now() / 60000)}`, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`version.json ${res.status}`);
+  const release = await res.json();
+  lastUpdateCheck = Date.now();
+  return release;
+}
+const putOffUpdate = (r) => {
+  const later = store.get('sawt_update_later', null);
+  return later?.code === r.versionCode && Date.now() - later.at < UPDATE_LATER;
+};
+
+function autoCheckUpdate() {
+  if (document.hidden || document.querySelector('.upd') || Date.now() - lastUpdateCheck < UPDATE_RECHECK) return;
+  lastUpdateCheck = Date.now();
+  setTimeout(() => {
+    fetchNewest()
+      .then((r) => { if (r.versionCode > BUILD.versionCode && !putOffUpdate(r) && !document.querySelector('.upd')) showUpdatePrompt(r); })
+      .catch(() => {}); // offline: nothing to say
+  }, 2500);
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) autoCheckUpdate(); });
+
+// "التحقق من التحديثات" in the profile
+window.checkForUpdate = async () => {
+  if (updateChecking) return;
+  updateChecking = true;
+  const label = $('app-version');
+  label.innerHTML = icon('spinner');
+  try {
+    const r = await fetchNewest();
+    if (r.versionCode > BUILD.versionCode) showUpdatePrompt(r);
+    else toast(`أنت تستخدم أحدث إصدار (${BUILD.versionName})`);
+  } catch {
+    toast('تعذّر التحقق من التحديثات، تأكد من اتصالك');
+  }
+  updateChecking = false;
+  label.textContent = BUILD.versionName;
+};
+
+// "A new update is ready", over everything: what is new, then "update now" or "later"
+function showUpdatePrompt(release) {
+  if (document.querySelector('.upd')) return;
+  const notes = String(release.notes || '').split('\n').map((l) => l.trim().replace(/^[•\-*]\s*/, '')).filter(Boolean).slice(0, 8);
+  const view = document.createElement('div');
+  view.className = 'upd';
+  view.setAttribute('role', 'dialog');
+  view.setAttribute('aria-modal', 'true');
+  view.setAttribute('aria-label', 'يتوفر تحديث جديد');
+  view.innerHTML = `
+    <div class="upd-card">
+      <div class="upd-logo"><img src="${import.meta.env.BASE_URL}app-icon-192.png" alt="" /></div>
+      <h2>يتوفر تحديث جديد</h2>
+      <p class="muted">الإصدار ${esc(release.versionName)} من صوت الأحزان جاهز للتثبيت</p>
+      ${notes.length ? `<div class="upd-notes"><div class="upd-notes-title">الجديد في هذا الإصدار</div>
+        ${notes.map((n) => `<div class="upd-note"><span></span><div>${esc(n)}</div></div>`).join('')}</div>` : ''}
+      <button class="upd-now">${icon('download')} تحديث الآن</button>
+      <button class="upd-later">لاحقاً</button>
+    </div>`;
+  let updating = false;
+  view.querySelector('.upd-now').onclick = () => {
+    updating = true;
+    const b = view.querySelector('.upd-now');
+    b.disabled = true;
+    b.innerHTML = `${icon('spinner')} جارٍ التحديث…`;
+    location.reload();
+  };
+  view.querySelector('.upd-later').onclick = () => history.back();
+  openOverlay(() => document.body.appendChild(view), () => {
+    view.remove();
+    if (!updating) store.set('sawt_update_later', { code: release.versionCode, at: Date.now() });
+  });
+}
+
 // ═══ Links into the app ══════════════════════════════════════════════════════
 // ?track=<id> | ?reciter=<id> | ?q=<search> (the website forwards phones here)
 function handleDeepLink() {
@@ -5503,6 +5871,7 @@ startIcons();
 paintAutoplay();
 initAuth();
 loadData();
+autoCheckUpdate();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
