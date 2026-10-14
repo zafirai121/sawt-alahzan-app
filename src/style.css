@@ -481,18 +481,20 @@ header { display: flex; justify-content: space-between; align-items: center; mar
 .search-open .ic { font-size: 24px; color: #121212; }
 .search-open:active { transform: scale(0.98); }
 
-/* Reciter: the photo moves up slower than the page and darkens as it goes */
-.rc-hero { position: relative; height: 46vh; min-height: 280px; overflow: hidden; background: var(--tint, #242424); }
+/* Reciter: the photo moves up slower than the page and darkens as it goes; it
+   fades into the page's dark under the name, with no band of colour there
+   (the page's colour shows only in the bar on top once the photo has gone) */
+.rc-hero { position: relative; height: 46vh; min-height: 280px; overflow: hidden; background: #242424; }
 .rc-photo { position: absolute; inset: 0; will-change: transform; }
 .rc-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.rc-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0) 55%, var(--tint, #121212) 100%); }
-.rc-darken { position: absolute; inset: 0; background: var(--tint, #121212); opacity: 0; }
+.rc-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0) 45%, rgba(18,18,18,0.55) 78%, #121212 100%); }
+.rc-darken { position: absolute; inset: 0; background: #121212; opacity: 0; }
 .rc-name {
   position: absolute; right: 18px; left: 18px; bottom: 14px; font-size: 42px; font-weight: 900; line-height: 1.12;
   text-shadow: 0 4px 14px rgba(0,0,0,0.45);
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.rc-top { background: linear-gradient(180deg, var(--tint, #121212), #121212); padding-top: 10px; margin-bottom: 8px; }
+.rc-top { padding-top: 10px; margin-bottom: 8px; }
 .rc-listens { padding: 0 16px; font-size: 14px; color: rgba(255,255,255,0.7); }
 .rc-top .pv-actions { padding-top: 12px; }
 .rc-more { font-size: 22px; color: var(--text-secondary); }
