@@ -1,7 +1,7 @@
 {
- "versionCode": 85,
- "versionName": "1.0.85",
- "url": "https://zafirai121.github.io/sawt-alahzan-app/android/sawt-alahzan-1.0.85.apk",
- "notes": "المقطع الذي يُرفع بدون غلاف يظهر بأيقونة الميكروفون بدل صورة عشوائية",
+ "versionCode": 87,
+ "versionName": "1.0.87",
+ "url": "https://zafirai121.github.io/sawt-alahzan-app/android/sawt-alahzan-1.0.87.apk",
+ "notes": "صور الأغلفة تظهر أسرع: نسخة صغيرة واضحة لكل غلاف في البطاقات والقوائم",
  "size": 3193959
 }
