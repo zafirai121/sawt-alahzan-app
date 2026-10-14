@@ -132,7 +132,8 @@ const formatTime = (s) => {
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = String(s % 60).padStart(2, '0');
   return h ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
 };
-const formatCount = (n) => (n || 0).toLocaleString('ar');
+// Western digits with a comma (5,000), as the phone app's, whatever the browser's language
+const formatCount = (n) => (n || 0).toLocaleString('en-US');
 
 // Same order every time for a given seed (a "daily" mix that doesn't reshuffle on every tap)
 function seededShuffle(list, seed) {
