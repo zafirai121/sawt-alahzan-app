@@ -4580,6 +4580,7 @@ function openTrackOptions(track, { playlist = null } = {}) {
   sheetItem(box, 'radio', 'الانتقال إلى راديو المقطع', toPage(() => openRadioPage(track)));
   sheetItem(box, 'playlist', 'عرض لائحة الشكر للمقطع', then(() => loadDetails(track).then(() => openCredits(track, reciterForTrack(track)))));
   sheetItem(box, 'audio-lines', 'عرض رمز المقطع', then(() => openCodeSheet(track)));
+  sheetItem(box, 'flag', 'الإبلاغ عن المقطع', then(() => openReport(track)));
   openSheet('track-options-modal');
 }
 
@@ -5653,6 +5654,7 @@ function updateProfileUI() {
   $('profile-signed-in').style.display = signedIn ? 'block' : 'none';
   $('profile-guest').style.display = signedIn ? 'none' : 'block';
   $('profile-logout').style.display = signedIn ? 'flex' : 'none';
+  $('profile-delete-account').style.display = signedIn ? 'block' : 'none';
   $('profile-my-uploads').style.display = signedIn ? 'flex' : 'none';
   const mine = signedIn ? myUploads(currentUser.id).length : 0;
   $('my-uploads-count').textContent = mine ? formatCount(mine) : '';
@@ -5815,6 +5817,147 @@ window.doLogout = async () => {
   goHome();
   openAuthModal();
 };
+
+// Deleting the account for good (the site's /api/delete-account: its likes,
+// playlists, follows and profile go with it, its uploads stay without its
+// name), then this device is a guest's again. Asked to confirm first; an
+// error stays on the card.
+window.confirmDeleteAccount = () => {
+  const modal = $('delete-account-modal');
+  const ok = $('delete-account-ok');
+  const error = $('delete-account-error');
+  let busy = false;
+  error.style.display = 'none';
+  ok.textContent = 'حذف الحساب';
+  $('delete-account-cancel').onclick = () => { if (!busy) history.back(); };
+  ok.onclick = async () => {
+    if (busy) return;
+    busy = true;
+    ok.textContent = 'جارٍ الحذف…';
+    error.style.display = 'none';
+    const failed = await deleteAccount();
+    busy = false;
+    ok.textContent = 'حذف الحساب';
+    if (!failed) { closeOverlayThen(() => goHome()); return; }
+    error.textContent = failed;
+    error.style.display = '';
+  };
+  openOverlay(() => { modal.style.display = 'flex'; }, () => { modal.style.display = 'none'; });
+};
+
+// Null once the account is gone, else what went wrong (as the phone app's)
+async function deleteAccount() {
+  const expired = 'انتهت الجلسة، سجّل الدخول مجدداً ثم احذف الحساب';
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) return expired;
+  let status;
+  try {
+    const res = await fetch(`${SITE_URL}/api/delete-account`, { method: 'POST', headers: { authorization: `Bearer ${session.access_token}` } });
+    status = res.status;
+  } catch { return 'تعذر الاتصال، تحقق من الإنترنت'; }
+  if (status === 401) return expired;
+  if (status < 200 || status > 299) return `تعذّر حذف الحساب (${status})، حاول لاحقاً أو راسلنا على support@soutalahzan.com`;
+  audio.pause();
+  // The account is gone on the server: only this device's session is left to forget
+  const { error } = await supabase.auth.signOut({ scope: 'local' }).catch((e) => ({ error: e }));
+  if (error) {
+    Object.keys(localStorage).filter((k) => /^sb-.*-auth-token$/.test(k)).forEach((k) => localStorage.removeItem(k));
+    location.reload();
+    return null;
+  }
+  toast('حُذف حسابك وكل بياناته');
+  return null;
+}
+
+// Reporting a track: why (offensive, someone's rights, wrong details, not
+// playing...), a word about it, and for a guest an e-mail to answer them; it
+// reaches the site's support messages, which only its owner reads.
+const REPORT_REASONS = [
+  'محتوى مسيء أو غير لائق',
+  'انتهاك حقوق الملكية',
+  'معلومات خاطئة (العنوان أو الرادود أو التصنيف)',
+  'المقطع لا يعمل أو صوته سيئ',
+  'سبب آخر',
+];
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function openReport(track) {
+  const modal = $('report-modal');
+  const me = signedInUser();
+  const note = $('report-note');
+  const email = $('report-email');
+  const error = $('report-error');
+  const send = $('report-send');
+  let reason = null;
+  let busy = false;
+  $('report-img').src = thumb(track.coverImage, 55);
+  $('report-track-title').textContent = track.title;
+  $('report-track-artist').textContent = track.reciterName;
+  note.value = '';
+  email.value = '';
+  email.classList.remove('alert');
+  email.style.display = me ? 'none' : '';
+  error.style.display = 'none';
+  send.textContent = 'إرسال البلاغ';
+  const emailOk = () => !!me || EMAIL_RE.test(email.value.trim());
+  const paint = () => {
+    error.style.display = 'none';
+    send.classList.toggle('ready', !!reason && emailOk());
+    email.classList.toggle('alert', !me && !!email.value.trim() && !emailOk());
+  };
+  const box = $('report-reasons');
+  box.innerHTML = '';
+  REPORT_REASONS.forEach((r) => {
+    const row = document.createElement('button');
+    row.className = 'report-reason';
+    row.setAttribute('role', 'radio');
+    row.setAttribute('aria-checked', 'false');
+    row.innerHTML = `<span class="dot"></span><span>${esc(r)}</span>`;
+    row.onclick = () => {
+      reason = r;
+      box.querySelectorAll('.report-reason').forEach((b) => b.setAttribute('aria-checked', String(b === row)));
+      paint();
+    };
+    box.appendChild(row);
+  });
+  email.oninput = paint;
+  paint();
+  const fail = (text) => { error.textContent = text; error.style.display = ''; };
+  $('report-cancel').onclick = () => { if (!busy) history.back(); };
+  send.onclick = async () => {
+    if (busy) return;
+    if (!reason) { fail('اختر سبب البلاغ'); return; }
+    if (!emailOk()) { fail('اكتب بريداً صحيحاً لنتواصل معك'); email.focus(); return; }
+    busy = true;
+    error.style.display = 'none';
+    send.textContent = 'جارٍ الإرسال…';
+    const lines = [
+      `المقطع: ${track.title} — ${track.reciterName}`,
+      `رقم المقطع: ${track.id}`,
+      `الرابط: ${SITE_URL}/track?id=${track.id}`,
+      `السبب: ${reason}`,
+    ];
+    if (note.value.trim()) lines.push(`الملاحظة: ${note.value.trim()}`);
+    lines.push(`أُرسل من تطبيق الويب ${BUILD.versionName}${me ? ` (الحساب: ${me.id})` : ''}`);
+    const body = {
+      kind: 'support',
+      name: (me ? displayName() || 'مستخدم التطبيق' : 'زائر التطبيق').slice(0, 200),
+      email: ((me && me.email) || email.value.trim() || 'support@soutalahzan.com').slice(0, 200),
+      subject: `بلاغ عن مقطع: ${reason}`.slice(0, 300),
+      message: lines.join('\n').slice(0, 5000),
+    };
+    let sent = false;
+    try {
+      const res = await fetch(`${SITE_URL}/api/contact`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+      sent = res.ok;
+    } catch { /* offline */ }
+    busy = false;
+    send.textContent = 'إرسال البلاغ';
+    if (!sent) { fail('تعذّر إرسال البلاغ، تحقق من الإنترنت وحاول مجدداً'); return; }
+    closeOverlayThen(() => toast('وصلنا بلاغك، شكراً لك. سنراجعه في أقرب وقت'));
+  };
+  openOverlay(() => { modal.style.display = 'flex'; }, () => { modal.style.display = 'none'; });
+}
 
 window.toggleAuthPasswordVisibility = () => {
   const show = $('auth-password').type === 'password';
