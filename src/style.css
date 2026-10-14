@@ -59,10 +59,16 @@ img#track-options-img, img#td-artist-img, img#fp-about-img, img#category-detail-
 #app { display: flex; height: 100%; flex-direction: column; position: relative; }
 
 /* A list opened from a section: its first cover's colour glowing down from the top, bright */
+/* The cover colours, registered as colours so a page fades from the quiet
+   grey shown first into its cover's colour instead of jumping */
+@property --glow { syntax: '<color>'; inherits: true; initial-value: #4a4a4a; }
+@property --tint { syntax: '<color>'; inherits: true; initial-value: #121212; }
 .top-gradient {
-  display: none; position: absolute; top: 0; left: 0; right: 0; height: 460px; z-index: -1; pointer-events: none; --glow: #7A5232;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--glow) 95%, transparent) 0%, color-mix(in srgb, var(--glow) 66%, transparent) 30%,
-    color-mix(in srgb, var(--glow) 24%, transparent) 65%, transparent 100%);
+  display: none; position: absolute; top: 0; left: 0; right: 0; height: 520px; z-index: -1; pointer-events: none; --glow: #4a4a4a;
+  /* As Spotify's: the colour full at the top, still strong a third of the way down, then into the dark */
+  background: linear-gradient(180deg, var(--glow) 0%, color-mix(in srgb, var(--glow) 80%, transparent) 28%,
+    color-mix(in srgb, var(--glow) 42%, transparent) 58%, color-mix(in srgb, var(--glow) 12%, transparent) 82%, transparent 100%);
+  transition: --glow 0.6s ease;
   transition: background 0.4s ease;
 }
 
@@ -367,7 +373,9 @@ header { display: flex; justify-content: space-between; align-items: center; mar
 .hero-shade { position: absolute; inset: 0; background: linear-gradient(0deg, #121212 0%, rgba(18,18,18,0.75) 35%, rgba(18,18,18,0) 100%); }
 /* The category's picture fades into its cover's colour, the actions on that colour */
 #category-view .hero-shade { background: linear-gradient(0deg, var(--tint, #121212) 0%, color-mix(in srgb, var(--tint, #121212) 70%, transparent) 30%, transparent 100%); }
-#category-view .hero-content { background: linear-gradient(180deg, var(--tint, #121212) 0, #121212 220px); }
+#category-view .hero-content { background: linear-gradient(180deg, var(--tint, #121212) 0, color-mix(in srgb, var(--tint, #121212) 45%, #121212) 150px, #121212 320px); }
+/* The pages tinted with their cover's colour fade into it */
+#category-view, #page-view { transition: --tint 0.6s ease; }
 .hero-text { position: absolute; bottom: 16px; right: 20px; left: 20px; }
 .hero-text h1 { font-size: 38px; font-weight: 900; line-height: 1.15; text-shadow: 0 4px 10px rgba(0,0,0,0.5); }
 .hero-stats { color: rgba(255,255,255,0.75); font-size: 14px; margin-top: 6px; }
@@ -562,9 +570,10 @@ header { display: flex; justify-content: space-between; align-items: center; mar
 /* Track page */
 .overlay-view { position: relative; margin: -10px -12px 0; min-height: 100%; }
 .td-glow {
-  position: absolute; top: 0; left: 0; right: 0; height: 640px; z-index: 0; pointer-events: none; --glow: #7A5232;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--glow) 62%, transparent) 0%, color-mix(in srgb, var(--glow) 36%, transparent) 30%,
-    color-mix(in srgb, var(--glow) 12%, transparent) 65%, transparent 100%);
+  position: absolute; top: 0; left: 0; right: 0; height: 680px; z-index: 0; pointer-events: none; --glow: #4a4a4a;
+  background: linear-gradient(180deg, var(--glow) 0%, color-mix(in srgb, var(--glow) 78%, transparent) 30%,
+    color-mix(in srgb, var(--glow) 40%, transparent) 60%, color-mix(in srgb, var(--glow) 12%, transparent) 84%, transparent 100%);
+  transition: --glow 0.6s ease;
 }
 .td-poet { font-size: 15px; margin-bottom: 4px; }
 .td-body { position: relative; z-index: 1; padding: 64px 18px 0; }

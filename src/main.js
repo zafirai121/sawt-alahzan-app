@@ -1,6 +1,6 @@
 import { supabase, isPasswordRecovery } from './supabaseClient.js';
 import { icon, setIcon, startIcons } from './icons.js';
-import { dominantHsl, playerShades, mixHex } from './color.js';
+import { dominantHsl, playerShades, mixHex, NEUTRAL_SHADES } from './color.js';
 import occasionBg from './assets/occasion-bg.webp';
 import { readTags, readDuration, shrinkCover, fixTag, guess as guessUpload, dbCategory, extFor, countWord, checkReciter, reciterSuggestions, reciterProblem } from './uploads.js';
 
@@ -2349,7 +2349,7 @@ function renderReciterPage(name) {
   });
   withShades({ coverImage: photo, reciterName: name }, (sh) => {
     if (view._token !== token) return;
-    tint = mixHex('#121212', sh.vivid, 0.5);
+    tint = mixHex('#121212', sh.vivid, 0.84);
     pastel = sh.pastel;
     view.style.setProperty('--tint', tint);
     view.querySelector('.this-is-band')?.style.setProperty('background', pastel);
@@ -4956,7 +4956,7 @@ let nowShades = null;
 let shadesFor = null;          // the track the colour is being worked out for
 
 // Worked out once per cover and kept on the device
-const COLOR_STORE = 'sawt_cover_colors_v2'; // v2: with the pages' bright and light shades
+const COLOR_STORE = 'sawt_cover_colors_v3'; // v3: the pages' colour rich and clear (vividHsl)
 const coverShades = new Map(Object.entries(store.get(COLOR_STORE, {})));
 function rememberShades(url, shades) {
   coverShades.set(url, shades);
@@ -4964,14 +4964,10 @@ function rememberShades(url, shades) {
   store.set(COLOR_STORE, Object.fromEntries(coverShades));
 }
 
-// When no copy of the cover can be read: a calm colour of its own for each
-// reciter, so the player is never plain
-const FALLBACK_HUES = [0.02, 0.08, 0.3, 0.45, 0.55, 0.62, 0.75, 0.9];
-function fallbackShades(t) {
-  let h = 0;
-  for (const ch of t.reciterName) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  return playerShades([FALLBACK_HUES[h % FALLBACK_HUES.length], 0.35, 0.28]);
-}
+// Before the cover's colour is known, or when no copy of it can be read: a
+// quiet dark grey (a colour made up from the reciter's name showed first, and
+// stayed when the cover was slow: a page tinted with a colour not its own)
+const fallbackShades = () => NEUTRAL_SHADES;
 
 // Reading a cover's pixels needs its server to allow it (CORS). Small copies
 // are tried in turn: a public image service that does (wsrv.nl), then the

@@ -67,20 +67,40 @@ export function dominantHsl(source) {
   return rgbToHsl(sr / n, sg / n, sb / n); // black-and-white artwork: its grey
 }
 
+// The pages' and the full player's colour, as Spotify's: the cover's hue,
+// rich and clear (not toned down into brown and olive), each hue at the
+// lightness that looks as bright as the others and keeps white text readable.
+// Yellow darkened turns olive: it is taken a little towards amber, so a gold
+// cover gives gold, not khaki. A cover with hardly any colour gives a grey.
+export function vividHsl([h, s]) {
+  if (s < 0.08) return [h, 0.04, 0.3];
+  let S = Math.min(Math.max(s * 1.3, 0.32), 0.8);
+  let L = 0.41;
+  if (h >= 0.105 && h < 0.175) { h = 0.105 + (h - 0.105) * 0.35; S = Math.max(S, 0.66); L = 0.37; } // yellow → gold
+  else if (h >= 0.04 && h < 0.105) L = 0.38;  // orange, brown
+  else if (h >= 0.175 && h < 0.45) L = 0.31;  // greens
+  else if (h >= 0.45 && h < 0.56) L = 0.33;   // teal, cyan
+  return [h, S, L];
+}
+
 // The shades the player uses: the top of the screen, the mini player, the lyrics card
 // (the same ones as the phone app)
 export function playerShades([h, s, l]) {
   const sat = Math.min(s, 0.5);
+  const [vh, vs, vl] = vividHsl([h, s, l]);
   return {
     top: hslToHex(h, sat, Math.min(Math.max(l, 0.24), 0.3)),
-    mini: hslToHex(h, Math.min(sat, 0.4), 0.19),
-    card: hslToHex(h, Math.min(sat + 0.08, 0.55), 0.36),
+    mini: hslToHex(vh, Math.min(vs, 0.45), 0.2),
+    card: hslToHex(vh, Math.min(vs, 0.6), 0.34),
     // A radio's page: the cover's hue, light (Spotify's pastel radio colours)
-    pastel: hslToHex(h, Math.min(sat + 0.2, 0.6), 0.62),
-    // The pages' and the full player's colour: bright, as Spotify's, still dark enough for white text
-    vivid: hslToHex(h, Math.min(sat + 0.15, 0.62), 0.42),
+    pastel: hslToHex(vh, s < 0.08 ? 0.03 : Math.min(sat + 0.2, 0.6), 0.62),
+    vivid: hslToHex(vh, vs, vl),
   };
 }
+
+// The colour shown before the cover's is known (or when it can't be read): a
+// quiet dark grey, which the cover's colour then fades in over
+export const NEUTRAL_SHADES = playerShades([0, 0, 0.3]);
 
 // a mixed into b by t (0 → a, 1 → b), both "#rrggbb"
 export function mixHex(a, b, t) {
