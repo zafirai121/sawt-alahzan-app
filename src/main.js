@@ -3960,6 +3960,12 @@ const uploadMissing = (u) => (!u.title.trim() && !u.reciter.trim() ? 'أضف ا�
   : !u.title.trim() ? 'أضف عنوان المقطع' : !u.reciter.trim() ? 'أضف اسم الرادود'
     : u.file.size > MAX_UPLOAD_BYTES ? 'الملف أكبر من 100 ميغابايت' : null);
 const signedInUser = () => (currentUser && !currentUser.is_anonymous ? currentUser : null);
+// Theirs to change: they uploaded it; the site's admin (app_metadata.role, set on the server only) may change any
+let isAdmin = false;
+const mayEdit = (track) => {
+  const me = signedInUser();
+  return !!me && (isAdmin || me.app_metadata?.role === 'admin' || (trackById.get(track.id) || track).uploaderId === me.id);
+};
 
 // What each typed reciter is to the library (see checkReciter), kept while its reciters stay the same
 let reciterChecks = new Map();
@@ -4406,7 +4412,7 @@ function renderEditTrack(id) {
       ${save ? '<button class="ed-pill ed-save-top">حفظ</button>' : ''}
     </header>`;
   const blocked = !t ? 'هذا المقطع غير متوفر' : !me ? 'سجّل الدخول لتعديل مقاطعك'
-    : t.uploaderId !== me.id ? 'لا يمكنك تعديل هذا المقطع، فهو ليس من رفعك' : null;
+    : !mayEdit(t) ? 'لا يمكنك تعديل هذا المقطع، فهو ليس من رفعك' : null;
   if (blocked) {
     view.innerHTML = `${head(false)}<div class="empty-state">${esc(blocked)}</div>${t && !me ? '<div class="pv-center"><button class="pill-btn ed-signin">تسجيل الدخول</button></div>' : ''}`;
     view.querySelector('.ed-signin')?.addEventListener('click', () => openAuthModal());
@@ -4415,7 +4421,7 @@ function renderEditTrack(id) {
   const startCat = categoryOf(t)?.id || null;
   if (editDraft?.id !== id) {
     const lyrics = t.detailed ? t.lyrics || '' : null;
-    editDraft = { id, title: t.title, reciter: t.reciterName, newReciter: null, category: startCat, lyrics, savedLyrics: lyrics, cover: null, coverUrl: null, saving: false, error: null, lyricsFailed: false };
+    editDraft = { id, title: t.title, reciter: t.reciterName, newReciter: null, category: startCat, album: t.album || '', lyrics, savedLyrics: lyrics, cover: null, coverUrl: null, saving: false, error: null, lyricsFailed: false };
   }
   const d = editDraft;
   view.innerHTML = `${head(true)}
@@ -4426,6 +4432,8 @@ function renderEditTrack(id) {
       <label class="ed-label">الرادود</label>
       <input class="up-input ed-reciter" maxlength="200" placeholder="اسم الرادود" />
       <div class="up-suggest ed-suggest"></div>
+      <label class="ed-label">الألبوم</label>
+      <input class="up-input ed-album" maxlength="300" placeholder="اسم الألبوم أو الإصدار (اختياري)" />
       <label class="ed-label">التصنيف</label>
       <div class="up-cats ed-cats horizontal-scroller"></div>
       <label class="ed-label">الكلمات</label>
@@ -4456,6 +4464,9 @@ function renderEditTrack(id) {
   titleIn.value = d.title;
   reciterIn.value = d.reciter;
   titleIn.oninput = () => { d.title = titleIn.value; paint(); };
+  const albumIn = q('.ed-album');
+  albumIn.value = d.album;
+  albumIn.oninput = () => { d.album = albumIn.value; paint(); };
   reciterIn.oninput = () => { d.reciter = reciterIn.value; paint(); };
   lyricsIn.oninput = () => { d.lyrics = lyricsIn.value; paint(); };
   const cats = q('.ed-cats');
@@ -4492,9 +4503,10 @@ function renderEditTrack(id) {
     // A reciter changed must be the library's own when it has them (no second page for one reciter)
     const reciterIssue = reciterChanged ? reciterProblem(reciterCheck(d.reciter), d.reciter, d.newReciter) : null;
     const lyricsChanged = d.lyrics !== null && d.savedLyrics !== null && d.lyrics.trim() !== d.savedLyrics.trim();
-    const changed = d.title.trim() !== t.title || reciterChanged || d.category !== startCat || lyricsChanged || !!d.cover;
+    const albumChanged = d.album.trim() !== (t.album || '');
+    const changed = d.title.trim() !== t.title || reciterChanged || d.category !== startCat || albumChanged || lyricsChanged || !!d.cover;
     const problem = !d.title.trim() ? 'أضف عنوان المقطع' : !name ? 'أضف اسم الرادود' : reciterIssue;
-    return { name, reciterChanged, reciterIssue, lyricsChanged, changed, problem, can: changed && !problem && !d.saving };
+    return { name, reciterChanged, reciterIssue, albumChanged, lyricsChanged, changed, problem, can: changed && !problem && !d.saving };
   };
   function paint() {
     if (view._token !== token) return;
@@ -4530,6 +4542,7 @@ function renderEditTrack(id) {
         title: d.title,
         reciter: d.reciter,
         category: d.category !== startCat ? d.category : null,
+        album: s.albumChanged ? d.album : null,
         lyrics: s.lyricsChanged ? d.lyrics : null,
         cover: d.cover,
       });
@@ -4555,13 +4568,14 @@ function renderEditTrack(id) {
 }
 
 // POST /api/update-track: only what changed (null: left as it was); the saved row back
-async function saveTrackEdit(t, { title, reciter, category, lyrics, cover }) {
+async function saveTrackEdit(t, { title, reciter, category, album = null, lyrics, cover }) {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error('انتهت الجلسة، سجّل الدخول مجدداً');
   const fields = {};
   if (title.trim() !== t.title) fields.title = title.trim();
   if (reciter.trim() !== t.reciterName) fields.reciter_name = reciter.trim();
   if (category) fields.category = dbCategory(category);
+  if (album !== null) fields.album = album.trim() || null; // emptied: cleared
   if (lyrics !== null) fields.lyrics = lyrics.trim() || null; // emptied: cleared
   if (cover) {
     fields.image_url = await storeUpload('image', 'jpg', cover, 'image/jpeg', session.access_token, () => {});
@@ -4716,8 +4730,7 @@ function openTrackOptions(track, { playlist = null } = {}) {
   const cat = categoryOf(track);
 
   sheetItem(box, 'share-nodes', 'مشاركة', then(() => openShareSheet(track)));
-  const me = signedInUser();
-  if (me && (trackById.get(track.id) || track).uploaderId === me.id) sheetItem(box, 'pencil', 'تعديل المقطع', toPage(() => openEditTrack(track.id)));
+  if (mayEdit(track)) sheetItem(box, 'pencil', 'تعديل المقطع', toPage(() => openEditTrack(track.id)));
   sheetItem(box, `<span class="liked-square">${icon('heart', { fill: true })}</span>`, liked ? 'إزالة من "المقاطع المفضلة"' : 'إضافة إلى "المقاطع المفضلة"', then(() => toggleLike(track)));
   sheetItem(box, 'circle-plus', 'إضافة إلى قائمة تشغيل', then(() => openPlaylistPicker(track)));
   if (playlist) {
@@ -5822,9 +5835,15 @@ const avatarUrl = () => profile?.avatar_url || currentUser?.user_metadata?.custo
 
 async function loadProfile() {
   profile = null;
+  isAdmin = false;
   if (!currentUser || currentUser.is_anonymous) return;
   const { data } = await supabase.from('profiles').select('display_name,avatar_url').eq('id', currentUser.id).maybeSingle();
   profile = data || null;
+  // The admin role as the account has it now (it may be given after they signed in)
+  const uid = currentUser.id;
+  supabase.auth.getUser().then(({ data: fresh }) => {
+    if (currentUser?.id === uid) isAdmin = fresh?.user?.app_metadata?.role === 'admin';
+  }).catch(() => {});
 }
 
 async function initAuth() {
