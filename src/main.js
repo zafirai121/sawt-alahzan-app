@@ -1720,14 +1720,15 @@ function realAlbums(reciter) {
 }
 
 // Albums: the reciters' real albums (three tracks at least), then a reciter's work of
-// one kind (six tracks at least); the reciters they love first, then the most
+// one kind (six tracks at least) of the tracks in no real album; the reciters they love first, then the most
 // listened; one per reciter before a second of anyone's
 function albumsFor(preferred) {
   if (collectionsCache.key !== collectionsKey()) Object.assign(collectionsCache, { key: collectionsKey(), lists: null, albums: null });
   if (!collectionsCache.albums) {
     const groups = new Map();
     for (const t of visible(allTracks)) {
-      const c = t.reciterName !== UNKNOWN_RECITER && categoryOf(t);
+      // (a track in a real album is in that one only)
+      const c = !t.album && t.reciterName !== UNKNOWN_RECITER && categoryOf(t);
       if (!c) continue;
       const k = `${t.reciterName}\u0000${c.id}`;
       if (!groups.has(k)) groups.set(k, { reciter: t.reciterName, category: c, tracks: [] });
@@ -1735,9 +1736,9 @@ function albumsFor(preferred) {
     }
     const real = [...new Set(visible(allTracks).filter((t) => t.album).map((t) => t.reciterName))]
       .flatMap((n) => realAlbums(n)).filter((a) => a.tracks.length >= 3);
-    collectionsCache.albums = [...real, ...[...groups.values()].filter((g) => g.tracks.length >= 6).map((g) => {
+    collectionsCache.albums = [...real, ...[...groups.values()].filter((g) => g.tracks.length >= 6).flatMap((g) => {
       g.tracks.sort((a, b) => b.listens - a.listens);
-      return { ...g, title: `${g.category.title} – ${g.reciter}`, listens: g.tracks.reduce((sum, t) => sum + t.listens, 0) };
+      return byLength(g).map((part) => ({ ...part, title: `${part.label} – ${g.reciter}`, listens: part.tracks.reduce((sum, t) => sum + t.listens, 0) }));
     })];
   }
   const rank = new Map(preferred.map((n, i) => [n, i]));
@@ -1746,6 +1747,17 @@ function albumsFor(preferred) {
   const seen = new Set();
   const firsts = ordered.filter((a) => !seen.has(a.reciter) && seen.add(a.reciter));
   return [...firsts, ...ordered.filter((a) => !firsts.includes(a))].slice(0, ROW);
+}
+
+// A reciter's work of one kind; when it is big (forty tracks or more), in two:
+// the majalis (a quarter of an hour or longer) and the rest, each six at least
+const seconds = (d) => String(d || '').split(':').reduce((a, x) => a * 60 + (Number(x) || 0), 0);
+function byLength(g) {
+  const long = g.tracks.filter((t) => seconds(t.duration) >= 15 * 60);
+  const short = g.tracks.filter((t) => seconds(t.duration) < 15 * 60);
+  if (g.tracks.length < 40 || long.length < 6 || short.length < 6) return [{ ...g, label: g.category.title }];
+  const majalis = ['hussainiya', 'naei'].includes(g.category.id) ? 'مجالس حسينية' : `${g.category.title} – مجالس`;
+  return [{ ...g, tracks: long, label: majalis }, { ...g, tracks: short, label: g.category.title }];
 }
 
 // "مع باسم الكربلائي، علي الدلفي والمزيد"
@@ -1780,7 +1792,7 @@ function albumCard(album) {
     <div class="album-art"><span class="album-disc" style="--label:${album.category.color}"></span>
       <img src="${esc(thumb(first.coverImage, 170))}" alt="" class="album-sleeve" loading="lazy" /></div>
     <div class="square-title">${esc(album.real ? album.name : album.reciter)}</div>
-    <div class="square-subtitle album-meta">ألبوم • ${esc(album.real ? album.reciter : album.category.title)} • ${formatCount(album.tracks.length)}</div>`;
+    <div class="square-subtitle album-meta">ألبوم • ${esc(album.real ? album.reciter : (album.label || album.category.title))} • ${formatCount(album.tracks.length)}</div>`;
   return clickable(card, () => openAlbum(album));
 }
 
