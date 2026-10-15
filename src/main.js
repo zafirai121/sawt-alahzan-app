@@ -6051,6 +6051,33 @@ function autoCheckUpdate() {
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) autoCheckUpdate(); });
 
+// The anonymous count of the app's users (as the phone app's Counter): the
+// first time, a random id made in this browser (nothing about the listener),
+// sent with the version once a day when the app is opened. The database counts
+// the browsers it has seen and those it was opened in today, this week and
+// this month (app_ping); the owner reads the numbers on stats/. Not counted:
+// the preview copy and a page served from this computer.
+function countOpening() {
+  if (document.hidden || countOpening.busy || location.hostname === 'localhost' || import.meta.env.BASE_URL.includes('/preview/')) return;
+  const day = new Date().toLocaleDateString('en-CA'); // 2026-10-15, by this device's clock
+  if (store.get('sawt_counted_day', null) === day) return;
+  let id = store.get('sawt_device_id', null);
+  if (!id) {
+    id = crypto.randomUUID ? crypto.randomUUID()
+      : '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, (c) => (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16));
+    store.set('sawt_device_id', id);
+  }
+  const ua = navigator.userAgent;
+  const platform = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) ? 'web-iphone'
+    : /Android/.test(ua) ? 'web-android' : 'web-desktop';
+  countOpening.busy = true;
+  supabase.rpc('app_ping', { p_id: id, p_platform: platform, p_version: BUILD.versionName }).then(
+    ({ error }) => { countOpening.busy = false; if (!error) store.set('sawt_counted_day', day); },
+    () => { countOpening.busy = false; }, // offline: the next opening tries again
+  );
+}
+document.addEventListener('visibilitychange', countOpening);
+
 // "التحقق من التحديثات" in the profile
 window.checkForUpdate = async () => {
   if (updateChecking) return;
@@ -6189,6 +6216,7 @@ paintAutoplay();
 initAuth();
 loadData();
 autoCheckUpdate();
+countOpening();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
