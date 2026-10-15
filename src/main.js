@@ -335,6 +335,7 @@ async function loadData() {
   buildReciters(recRes.data || []);
   backfillDownloadMeta();
   dataVersion++;
+  if (fullyLoaded) announceFollowedNew();
   const atTop = document.querySelector('.main-container').scrollTop < 40;
   if (navStack.some((e) => e.type === 'page') || currentTab !== 'home' || atTop) refreshOpenViews();
 }
@@ -411,6 +412,14 @@ function tracksOf(name) {
 }
 const reciterOf = (track) => reciterByName.get(track.reciterName);
 const categoryOf = (track) => CATEGORIES.find((c) => c.values.includes(track.category));
+
+// The categories to browse: those with a few tracks at least, so none opens
+// (nearly) empty; all of them until the library is in
+function browsableCategories() {
+  if (!allTracks.length) return CATEGORIES;
+  const least = fullyLoaded ? 3 : 1;
+  return CATEGORIES.filter((c) => allTracks.reduce((n, t) => n + (c.values.includes(t.category) ? 1 : 0), 0) >= least);
+}
 
 // ═══ Library state (likes, downloads, playlists, follows, history) ═══════════
 let currentUser = null;
@@ -1906,6 +1915,21 @@ function fridaySection() {
 }
 
 // ─── From their taste ───
+// What the reciters they follow added since their last visit, said when the
+// app opens (the phone app tells it in a notification); nothing the first time
+function announceFollowedNew() {
+  const newest = allTracks.reduce((m, t) => Math.max(m, Number(t.id) || 0), 0);
+  const after = store.get('sawt_seen_after', null);
+  store.set('sawt_seen_after', Math.max(newest, after || 0));
+  if (after == null || !lib.follows.size) return;
+  const fresh = visible(allTracks.filter((t) => Number(t.id) > after && lib.follows.has(t.reciterName)));
+  if (!fresh.length) return;
+  const reciters = [...new Set(fresh.map((t) => t.reciterName))];
+  const n = fresh.length;
+  const count = n === 1 ? 'مقطع جديد' : n === 2 ? 'مقطعان جديدان' : n <= 10 ? `${n} مقاطع جديدة` : `${n} مقطعًا جديدًا`;
+  toast(reciters.length === 1 ? `${count} من ${reciters[0]}` : `${count} ممن تتابعهم`);
+}
+
 // The newest tracks of the reciters they follow
 function followedSection() {
   if (!lib.follows.size) return null;
@@ -2056,7 +2080,7 @@ function wideCard(t) {
 let homeFilter = null;
 function renderHomeBar() {
   const bar = $('home-bar');
-  const withTracks = CATEGORIES.filter((c) => allTracks.some((t) => c.values.includes(t.category)));
+  const withTracks = allTracks.length ? browsableCategories() : [];
   if (homeFilter && !withTracks.some((c) => c.id === homeFilter)) homeFilter = null;
   const chip = (id, label) => {
     const b = document.createElement('button');
@@ -3263,11 +3287,12 @@ function sheetItem(sheet, iconName, text, onClick, cls = '', trailing = '') {
   return b;
 }
 
-// A choice from a few (a sort), as a sheet with the current one checked
+// A choice from a few (a sort), as a sheet with the current one checked;
+// [[value, label]] keeps its order where an object's number-like keys would not
 function openChoices(title, choices, current, onPick) {
   const sheet = $('action-sheet');
   sheet.innerHTML = `<div class="sheet-handle"></div><h2 class="modal-title" style="border: none;">${esc(title)}</h2>`;
-  Object.entries(choices).forEach(([value, label]) => {
+  (Array.isArray(choices) ? choices : Object.entries(choices)).forEach(([value, label]) => {
     const b = sheetItem(sheet, value === current ? 'tick' : '<span class="ic"></span>', label, () => closeOverlayThen(() => onPick(value)));
     if (value === current) b.classList.add('chosen');
   });
@@ -3356,7 +3381,7 @@ function similarTo(track, n, { others = false } = {}) {
 function renderSearchHome() {
   const grid = $('genre-grid');
   grid.innerHTML = '';
-  CATEGORIES.forEach((cat) => {
+  browsableCategories().forEach((cat) => {
     const inCat = allTracks.filter((t) => cat.values.includes(t.category));
     const card = document.createElement('div');
     card.className = 'genre-card';
@@ -3395,7 +3420,7 @@ function find(query) {
     .sort((x, y) => y.a - x.a || y.b - x.b || y.t.listens - x.t.listens).map((x) => x.t);
   const found = reciters.filter((r) => r.count > 0 && has(normalize(r.name))).sort((a, b) => rank(b.name) - rank(a.name) || b.count - a.count);
   const playlists = lib.playlists.filter((p) => normalize(p.name).includes(q));
-  const categories = CATEGORIES.filter((c) => normalize(c.title).includes(q));
+  const categories = browsableCategories().filter((c) => normalize(c.title).includes(q));
   const suggestions = [...new Set([...found.map((r) => r.name), ...tracks.slice(0, 40).map((t) => t.title)])]
     .sort((a, b) => rank(b) - rank(a)).slice(0, 5);
   return { tracks, reciters: found, playlists, categories, suggestions, empty: !tracks.length && !found.length && !playlists.length && !categories.length };
@@ -4627,6 +4652,7 @@ function openTrackOptions(track, { playlist = null } = {}) {
   if (track.reciterName !== UNKNOWN_RECITER) sheetItem(box, 'mic-vocal', 'الانتقال إلى الرادود', toPage(() => openArtistDetail(track.reciterName)));
   sheetItem(box, 'circle-x', lib.excluded.has(track.id) ? 'إعادة المقطع إلى "لمحة عن ذوقك"' : 'استبعاد المقطع من "لمحة عن ذوقك"', then(() => toggleExcluded(track)));
   sheetItem(box, 'timer', 'مؤقت النوم', then(() => openSleepTimerSheet()), '', $('sleep-timer-label').textContent);
+  sheetItem(box, 'clock', 'سرعة التشغيل', then(() => openSpeedSheet()), '', speedLabel(speed));
   sheetItem(box, 'radio', 'الانتقال إلى راديو المقطع', toPage(() => openRadioPage(track)));
   sheetItem(box, 'playlist', 'عرض لائحة الشكر للمقطع', then(() => loadDetails(track).then(() => openCredits(track, reciterForTrack(track)))));
   sheetItem(box, 'audio-lines', 'عرض رمز المقطع', then(() => openCodeSheet(track)));
@@ -4943,6 +4969,50 @@ let hls = null;
 let wantsToPlay = false;   // false for a track restored paused at startup
 let failedInARow = 0;
 
+// How fast it plays (1 = as recorded), kept for every track; a source's load
+// sets playbackRate to defaultPlaybackRate, so both
+const SPEEDS = [0.75, 1, 1.25, 1.5, 2];
+let speed = SPEEDS.includes(store.get('sawt_speed', 1)) ? store.get('sawt_speed', 1) : 1;
+audio.defaultPlaybackRate = speed;
+audio.playbackRate = speed;
+// "1.25×" read left to right inside Arabic text (else "×1.25")
+const speedLabel = (s) => `\u2066${s}×\u2069`;
+
+function setSpeed(value) {
+  speed = value;
+  store.set('sawt_speed', value);
+  audio.defaultPlaybackRate = value;
+  audio.playbackRate = value;
+  paintSpeed();
+}
+
+function paintSpeed() {
+  const b = $('fp-speed-btn');
+  if (!b) return;
+  b.textContent = speedLabel(speed);
+  b.classList.toggle('active', speed !== 1);
+  b.setAttribute('aria-label', `سرعة التشغيل ${speedLabel(speed)}`);
+}
+
+window.openSpeedSheet = () => openChoices('سرعة التشغيل',
+  SPEEDS.map((s) => [String(s), s === 1 ? 'عادية' : speedLabel(s)]), String(speed), (v) => setSpeed(Number(v)));
+
+// Where each long track (a majlis, a lecture: ten minutes or more) was left,
+// to carry on from there: the 200 left most recently, as [id, seconds]
+const LONG_TRACK = 600;
+const RESUME_FROM = 30;
+const END_MARGIN = 60;
+let resumeAt = new Map(store.get('sawt_resume', []));
+
+function setResume(id, t) {
+  id = String(id);
+  if (t == null && !resumeAt.has(id)) return;
+  resumeAt.delete(id);
+  if (t != null) resumeAt.set(id, t);
+  while (resumeAt.size > 200) resumeAt.delete(resumeAt.keys().next().value);
+  store.set('sawt_resume', [...resumeAt]);
+}
+
 let loadToken = 0;
 async function loadSource(url) {
   const token = ++loadToken;
@@ -4962,6 +5032,12 @@ async function loadSource(url) {
 
 async function playTrack(track, { autoplay = true, startAt = 0 } = {}) {
   if (!track.audioUrl) { toast('هذا المقطع لا يحتوي على ملف صوتي'); return; }
+  // A long track left part way carries on there
+  const resume = resumeAt.get(String(track.id));
+  if (!startAt && resume) {
+    startAt = resume;
+    toast(`نكمل من حيث توقفت (${formatTime(resume)})`);
+  }
   currentTrack = track;
   countedListen = null;
   wantsToPlay = autoplay;
@@ -5102,6 +5178,7 @@ window.startRadio = () => {
 // Repeat-one replays here rather than with audio.loop, which never fires
 // 'ended' and so kept the "end of current track" sleep timer from stopping
 audio.addEventListener('ended', () => {
+  if (currentTrack) setResume(currentTrack.id, null); // heard to the end
   if (sleepAtEnd) { setSleepTimer('off'); return; }
   if (repeatMode === 'one') { audio.currentTime = 0; audio.play().catch(() => {}); return; }
   playNext(true);
@@ -5143,7 +5220,13 @@ audio.addEventListener('loadedmetadata', updateProgressUI);
 function saveLastPosition() {
   if (!currentTrack) return;
   lastSaved = Date.now();
-  store.set('sawt_last', { id: currentTrack.id, t: Math.floor(audio.currentTime || 0) });
+  const t = Math.floor(audio.currentTime || 0);
+  store.set('sawt_last', { id: currentTrack.id, t });
+  // A long track is carried on from here next time; heard to (nearly) the end, from the start.
+  // Its length as the file says, else as the library has it ("1:02:03")
+  const d = isFinite(audio.duration) && audio.duration > 0 ? audio.duration
+    : String(currentTrack.duration || '').split(':').reduce((a, x) => a * 60 + (Number(x) || 0), 0);
+  if (d >= LONG_TRACK) setResume(currentTrack.id, t >= RESUME_FROM && t < d - END_MARGIN ? t : null);
 }
 
 // Reopening the app shows the last track, paused where it was left
@@ -5646,6 +5729,7 @@ document.querySelectorAll('[data-sleep]').forEach((b) => {
   b.onclick = () => closeOverlayThen(() => setSleepTimer(b.dataset.sleep));
 });
 $('fp-sleep-badge').onclick = () => openSleepTimerSheet();
+paintSpeed();
 
 // ═══ Account ═════════════════════════════════════════════════════════════════
 let authMode = 'login';
