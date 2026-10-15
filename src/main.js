@@ -21,7 +21,7 @@ const AUDIO_CACHE = 'sawt-alahzan-audio-cache-v1';
 const PAGE_SIZE = 1000; // Supabase returns at most 1000 rows per request
 // Lyrics are left out of the library download (they can be long, and are only
 // needed for the track being viewed or played), see loadDetails()
-const TRACK_COLUMNS = 'id,title,file_name,reciter_name,reciter_id,image_url,file_url,category,duration,listen_count,user_id';
+const TRACK_COLUMNS = 'id,title,file_name,reciter_name,reciter_id,image_url,file_url,category,duration,listen_count,user_id,album';
 const NO_LYRICS = 'الكلمات غير متوفرة لهذا المقطع';
 
 // Same groups as the website's category pages (the database mixes Arabic and
@@ -226,6 +226,7 @@ function mapTrack(row) {
     duration: formatDuration(row.duration),
     listens: row.listen_count || 0,
     uploaderId: row.user_id || null, // the account that uploaded it (they may edit it)
+    album: typeof row.album === 'string' ? row.album.trim() : '', // the release it is from, when known
     searchKey: undefined, // see searchKey()
   };
   // undefined = not fetched yet; '' = the track has none
@@ -1689,8 +1690,38 @@ function madePlaylists() {
   return (collectionsCache.lists = lists);
 }
 
-// Albums: a reciter's work of one kind (six tracks at least); the reciters they
-// love first, then the most listened; one per reciter before a second of anyone's
+// A reciter's real albums (the release their tracks are from), the fullest first:
+// [{ name, title, reciter, category, tracks, listens, real }]
+const realAlbumsCache = { key: '', byReciter: null };
+function realAlbums(reciter) {
+  if (realAlbumsCache.key !== collectionsKey()) {
+    const groups = new Map();
+    for (const t of visible(allTracks)) {
+      if (!t.album || t.reciterName === UNKNOWN_RECITER) continue;
+      const k = `${t.reciterName}\u0000${t.album}`;
+      if (!groups.has(k)) groups.set(k, { name: t.album, title: t.album, reciter: t.reciterName, tracks: [], real: true });
+      groups.get(k).tracks.push(t);
+    }
+    const byReciter = new Map();
+    for (const g of groups.values()) {
+      g.tracks.sort((a, b) => b.listens - a.listens);
+      g.listens = g.tracks.reduce((sum, t) => sum + t.listens, 0);
+      // the record's label: the kind of work most of it is
+      const counts = new Map();
+      for (const t of g.tracks) { const c = categoryOf(t); if (c) counts.set(c, (counts.get(c) || 0) + 1); }
+      g.category = [...counts].sort((a, b) => b[1] - a[1])[0]?.[0] || CATEGORIES[0];
+      if (!byReciter.has(g.reciter)) byReciter.set(g.reciter, []);
+      byReciter.get(g.reciter).push(g);
+    }
+    for (const list of byReciter.values()) list.sort((a, b) => (b.tracks.length - a.tracks.length) || (b.listens - a.listens));
+    Object.assign(realAlbumsCache, { key: collectionsKey(), byReciter });
+  }
+  return realAlbumsCache.byReciter.get(reciter) || [];
+}
+
+// Albums: the reciters' real albums (three tracks at least), then a reciter's work of
+// one kind (six tracks at least); the reciters they love first, then the most
+// listened; one per reciter before a second of anyone's
 function albumsFor(preferred) {
   if (collectionsCache.key !== collectionsKey()) Object.assign(collectionsCache, { key: collectionsKey(), lists: null, albums: null });
   if (!collectionsCache.albums) {
@@ -1702,13 +1733,16 @@ function albumsFor(preferred) {
       if (!groups.has(k)) groups.set(k, { reciter: t.reciterName, category: c, tracks: [] });
       groups.get(k).tracks.push(t);
     }
-    collectionsCache.albums = [...groups.values()].filter((g) => g.tracks.length >= 6).map((g) => {
+    const real = [...new Set(visible(allTracks).filter((t) => t.album).map((t) => t.reciterName))]
+      .flatMap((n) => realAlbums(n)).filter((a) => a.tracks.length >= 3);
+    collectionsCache.albums = [...real, ...[...groups.values()].filter((g) => g.tracks.length >= 6).map((g) => {
       g.tracks.sort((a, b) => b.listens - a.listens);
       return { ...g, title: `${g.category.title} – ${g.reciter}`, listens: g.tracks.reduce((sum, t) => sum + t.listens, 0) };
-    });
+    })];
   }
   const rank = new Map(preferred.map((n, i) => [n, i]));
-  const ordered = [...collectionsCache.albums].sort((a, b) => ((rank.get(a.reciter) ?? 1e9) - (rank.get(b.reciter) ?? 1e9)) || b.listens - a.listens);
+  const ordered = [...collectionsCache.albums].sort((a, b) => ((rank.get(a.reciter) ?? 1e9) - (rank.get(b.reciter) ?? 1e9))
+    || (Number(!!b.real) - Number(!!a.real)) || b.listens - a.listens);
   const seen = new Set();
   const firsts = ordered.filter((a) => !seen.has(a.reciter) && seen.add(a.reciter));
   return [...firsts, ...ordered.filter((a) => !firsts.includes(a))].slice(0, ROW);
@@ -1736,7 +1770,8 @@ function playlistCard(list) {
 }
 
 // An album's card: its best known cover, a record in the category's colour half
-// out of the sleeve behind it; the reciter and what kind of work under it
+// out of the sleeve behind it; under it the album's name and its reciter (a real
+// album), or the reciter and what kind of work
 function albumCard(album) {
   const first = album.tracks.find((t) => t.coverImage) || album.tracks[0];
   const card = document.createElement('div');
@@ -1744,9 +1779,14 @@ function albumCard(album) {
   card.innerHTML = `
     <div class="album-art"><span class="album-disc" style="--label:${album.category.color}"></span>
       <img src="${esc(thumb(first.coverImage, 170))}" alt="" class="album-sleeve" loading="lazy" /></div>
-    <div class="square-title">${esc(album.reciter)}</div>
-    <div class="square-subtitle album-meta">ألبوم • ${esc(album.category.title)} • ${formatCount(album.tracks.length)}</div>`;
-  return clickable(card, () => openListPage(album.title, album.tracks));
+    <div class="square-title">${esc(album.real ? album.name : album.reciter)}</div>
+    <div class="square-subtitle album-meta">ألبوم • ${esc(album.real ? album.reciter : album.category.title)} • ${formatCount(album.tracks.length)}</div>`;
+  return clickable(card, () => openAlbum(album));
+}
+
+// An album's page: its tracks, under its name (a real album's with its reciter's)
+function openAlbum(album) {
+  openListPage(album.real ? `${album.name} – ${album.reciter}` : album.title, album.tracks);
 }
 
 // Tracks for a time (`words` in their titles, from `categoryIds` or none), the
@@ -2523,6 +2563,8 @@ function renderReciterPage(name) {
   const photo = r.image || list[0]?.coverImage || '';
   const listens = `${compactCount(list.reduce((sum, t) => sum + t.listens, 0))} استماع`;
   const releases = newest.slice(0, 4);
+  // Their albums with two tracks at least, the fullest first
+  const albums = realAlbums(name).filter((a) => a.tracks.length >= 2);
   const radioSeed = list[0];
   // Fans also like: the reciters of the same kind of work, those with a photo first
   const fans = radioSeed ? [...new Set(similarTo(radioSeed, 300, { others: true }).map((t) => t.reciterName))]
@@ -2547,6 +2589,7 @@ function renderReciterPage(name) {
       <div class="rc-release-list"></div>
       <div class="pv-center"><button class="pill-btn rc-recordings">الانتقال إلى التسجيلات</button></div>
     </section>` : ''}
+    ${albums.length ? '<section class="pv-section rc-albums"><h2 class="sub-title">الألبومات</h2></section>' : ''}
     ${radioSeed ? `<section class="pv-section"><h2 class="sub-title">تضم ${esc(name)}</h2><div class="pv-pair rc-featuring"></div></section>` : ''}
     <section class="pv-section">
       <h2 class="sub-title">معلومات تعريفية</h2>
@@ -2607,6 +2650,8 @@ function renderReciterPage(name) {
     view.querySelector('.rc-releases-all').onclick = all;
     view.querySelector('.rc-recordings').onclick = () => openListPage(`تسجيلات ${name}`, newest, null, false, source);
   }
+
+  if (albums.length) view.querySelector('.rc-albums').appendChild(scroller(albums, albumCard));
 
   // Featuring them: "this is" (their best in one list) and their radio
   let pastel = fallbackShades({ reciterName: name }).pastel;
@@ -3312,7 +3357,10 @@ function renderTrackDetail(track) {
   $('td-artist-img').src = thumb(r?.image || track.coverImage, 32);
   $('td-artist-row').onclick = () => openArtistDetail(track.reciterName);
   const cat = categoryOf(track);
-  $('td-meta').innerHTML = [cat && esc(cat.title), track.duration && `<span dir="ltr">${track.duration}</span>`, `${formatCount(track.listens)} استماع`].filter(Boolean).join(' • ');
+  const album = track.album && realAlbums(track.reciterName).find((a) => a.name === track.album);
+  $('td-meta').innerHTML = [album && `<button class="td-album">ألبوم ${esc(album.name)}</button>`, cat && esc(cat.title),
+    track.duration && `<span dir="ltr">${track.duration}</span>`, `${formatCount(track.listens)} استماع`].filter(Boolean).join(' • ');
+  if (album) $('td-meta').querySelector('.td-album').onclick = () => openAlbum(album);
 
   // The lyrics and who wrote them, once the track's details are in
   const paintDetails = () => {

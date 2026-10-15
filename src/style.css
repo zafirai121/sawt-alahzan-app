@@ -597,6 +597,8 @@ header { display: flex; justify-content: space-between; align-items: center; mar
 .td-artist-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; cursor: pointer; font-size: 17px; font-weight: 600; }
 .td-artist-row img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: var(--dark-surface); }
 .td-meta { font-size: 13px; margin-bottom: 22px; }
+.td-album { all: unset; cursor: pointer; color: #fff; font-weight: 700; }
+.td-album:hover, .td-album:focus-visible { text-decoration: underline; }
 .lyrics-text { white-space: pre-line; font-size: 18px; line-height: 2; font-weight: 600; }
 
 /* Search */
