@@ -1151,41 +1151,41 @@ button.device-row { cursor: pointer; }
 .auth-sheet.open { transform: translateY(0); opacity: 1; }
 /* The gold head with its leaves, "أهلاً!" at its foot */
 .auth-head {
-  /* The card starts at a little over a third of the screen (250px at least), as the phone app's */
-  position: relative; flex-shrink: 0; height: calc(max(36vh, 250px) + 40px); overflow: hidden;
+  /* The card starts a quarter of the way down (150–240px), as the phone app's: the whole form fits on the screen */
+  position: relative; flex-shrink: 0; height: calc(clamp(150px, 26vh, 240px) + 40px); overflow: hidden;
   background: linear-gradient(135deg, #F6E073 0%, #C28F1A 28%, #F9E37A 52%, #B78C1A 76%, #F0D96C 100%);
-  display: flex; align-items: flex-end; padding: 0 28px 70px;
+  display: flex; align-items: flex-end; padding: 0 24px 62px;
 }
 .auth-head::before, .auth-head::after { content: ''; position: absolute; border-radius: 50%; background: rgba(255,255,255,0.22); }
 .auth-head::before { width: 230px; height: 110px; left: -40px; top: -12px; transform: rotate(-24deg); }
 .auth-head::after { width: 170px; height: 80px; left: -66px; top: 64px; transform: rotate(-36deg); background: rgba(255,255,255,0.16); box-shadow: 230px -24px 0 -62px rgba(255,255,255,0.28); }
 /* clear of the logo tile at the card's other edge, on the narrowest phones too */
-.auth-hello { display: flex; flex-direction: column; color: #1b1b1b; position: relative; z-index: 1; padding-inline-end: 112px; }
-.auth-hello b { font-size: 44px; font-weight: 900; line-height: 1.15; }
-.auth-hello span { font-size: 16px; font-weight: 700; margin-top: 2px; color: rgba(18,18,18,0.75); }
+.auth-hello { display: flex; flex-direction: column; color: #1b1b1b; position: relative; z-index: 1; padding-inline-end: 96px; }
+.auth-hello b { font-size: 34px; font-weight: 900; line-height: 1.15; }
+.auth-hello span { font-size: 14px; font-weight: 700; margin-top: 2px; color: rgba(18,18,18,0.75); }
 .auth-card {
   position: relative; flex: 1; margin-top: -40px; background: #121212; border-radius: 36px 36px 0 0;
-  padding: 34px 28px calc(28px + var(--safe-bottom)); display: flex; flex-direction: column;
+  padding: 24px 24px calc(16px + var(--safe-bottom)); display: flex; flex-direction: column;
 }
 /* The logo: a dark tile with a gold edge over the card's top, the S in gold */
 .auth-logo {
-  position: absolute; top: -66px; left: 24px; width: 96px; height: 96px; border-radius: 28px; border: 2.5px solid transparent;
+  position: absolute; top: -54px; left: 24px; width: 74px; height: 74px; border-radius: 22px; border: 2px solid transparent;
   background: linear-gradient(#161B1F, #161B1F) padding-box, linear-gradient(135deg, #F6E073, #C28F1A, #F9E37A, #B78C1A, #F0D96C) border-box;
   box-shadow: 0 10px 24px rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center;
 }
-.auth-logo svg { width: 50px; height: auto; }
-.auth-back { align-self: flex-start; display: flex; align-items: center; gap: 8px; background: none; border: none; color: var(--accent); font-size: 14px; font-weight: 700; padding: 6px 0; margin-bottom: 8px; cursor: pointer; }
+.auth-logo svg { width: 38px; height: auto; }
+.auth-back { align-self: flex-start; display: flex; align-items: center; gap: 8px; background: none; border: none; color: var(--accent); font-size: 13px; font-weight: 700; padding: 4px 0; margin-bottom: 6px; cursor: pointer; }
 .auth-title {
-  font-size: 30px; font-weight: 900; margin: 18px 0 24px; line-height: 1.2;
+  font-size: 24px; font-weight: 900; margin: 6px 0 16px; line-height: 1.2;
   background: linear-gradient(180deg, #F6E073, #C9A23A); -webkit-background-clip: text; background-clip: text; color: transparent;
 }
-.auth-sheet.signup .auth-title { margin-top: 4px; }
+.auth-sheet.signup .auth-title { margin-top: 2px; }
 .auth-sheet.signup .auth-logo, .auth-sheet.signup .auth-hello { display: none; }
-.auth-sheet.signup .auth-head { height: calc(max(20vh, 140px) + 40px); }
+.auth-sheet.signup .auth-head { height: calc(clamp(96px, 14vh, 140px) + 40px); }
 /* A field as the design's: a pill, an icon at its start, the hint inside */
 .auth-field {
-  display: flex; align-items: center; gap: 12px; height: 56px; padding: 0 18px; margin-bottom: 14px; border-radius: 999px;
-  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.08); color: var(--text-secondary); font-size: 18px; cursor: text;
+  display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 16px; margin-bottom: 10px; border-radius: 999px;
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.08); color: var(--text-secondary); font-size: 17px; cursor: text;
   transition: border-color 0.15s ease, color 0.15s ease;
 }
 .auth-field:focus-within { border-color: rgba(222,190,79,0.7); color: var(--accent); }
@@ -1193,27 +1193,28 @@ button.device-row { cursor: pointer; }
 .auth-field input::placeholder { color: rgba(179,179,179,0.85); }
 .auth-field input[type="email"], .auth-field input[type="password"] { direction: ltr; text-align: right; }
 .auth-field input[type="email"]:placeholder-shown, .auth-field input[type="password"]:placeholder-shown { direction: rtl; }
-.auth-eye { background: none; border: none; color: var(--text-secondary); font-size: 18px; padding: 10px; margin-inline-end: -12px; display: flex; cursor: pointer; }
-.auth-forgot { align-self: flex-start; margin: -2px 2px 14px; font-size: 14px; }
+.auth-eye { background: none; border: none; color: var(--text-secondary); font-size: 17px; padding: 8px; margin-inline-end: -10px; display: flex; cursor: pointer; }
+.auth-forgot { align-self: flex-start; margin: -4px 2px 8px; font-size: 13px; }
 .auth-gold {
-  height: 56px; border: none; border-radius: 999px; cursor: pointer; margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 10px;
+  height: 48px; border: none; border-radius: 999px; cursor: pointer; margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: 10px;
   background: linear-gradient(135deg, #F6E073 0%, #C28F1A 28%, #F9E37A 52%, #B78C1A 76%, #F0D96C 100%);
-  color: #121212; font-size: 17px; font-weight: 800;
+  color: #121212; font-size: 16px; font-weight: 800;
 }
 .auth-gold:disabled { opacity: 0.7; }
 .auth-gold:active { transform: scale(0.97); }
-.auth-or { margin: 26px 0 18px; }
-.auth-social-row { display: flex; justify-content: center; gap: 20px; }
+.auth-or { margin: 18px 0 12px; }
+.auth-social-row { display: flex; justify-content: center; gap: 14px; }
 .auth-social-btn {
-  width: 80px; height: 62px; border-radius: 18px; border: none; background: #fff; cursor: pointer;
+  width: 60px; height: 46px; border-radius: 14px; border: none; background: #fff; cursor: pointer;
   box-shadow: 0 6px 14px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center;
 }
+.auth-social-btn svg { width: 22px; height: 22px; }
 .auth-social-btn:active { transform: scale(0.94); }
-.auth-switch { text-align: center; color: var(--text-secondary); font-size: 14px; margin-top: 24px; }
-.auth-note { color: var(--text-secondary); font-size: 13.5px; line-height: 1.7; text-align: center; margin-top: 18px; }
-.auth-skip { background: none; border: none; color: rgba(255,255,255,0.75); font-size: 14px; font-weight: 700; padding: 12px; margin-top: 8px; cursor: pointer; align-self: center; }
+.auth-switch { text-align: center; color: var(--text-secondary); font-size: 13.5px; margin-top: 14px; }
+.auth-note { color: var(--text-secondary); font-size: 13px; line-height: 1.7; text-align: center; margin-top: 14px; }
+.auth-skip { background: none; border: none; color: rgba(255,255,255,0.75); font-size: 13px; font-weight: 700; padding: 8px 12px; margin-top: 2px; cursor: pointer; align-self: center; }
 /* What happened: an error in red, good news in gold */
-.auth-msg { padding: 12px 14px; border-radius: 14px; margin-bottom: 16px; font-size: 13.5px; line-height: 1.5; }
+.auth-msg { padding: 10px 14px; border-radius: 14px; margin-bottom: 12px; font-size: 13.5px; line-height: 1.5; }
 .auth-msg.error { background: rgba(255,138,128,0.12); color: #FF8A80; }
 .auth-msg.ok { background: rgba(222,190,79,0.12); color: var(--accent); }
 .or-line { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; color: rgba(255,255,255,0.35); font-size: 13px; }
