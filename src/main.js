@@ -2221,8 +2221,10 @@ function openListPage(title, list, playlist = null, library = false, source = nu
 // ─── "Show all": a track page's layout ───
 // The first cover as a card with its colour glowing down behind it, the
 // title, whose it is and how long, then the actions (the previews' tall
-// thumbnail, keep it, download, share, ⋮ ... shuffle, play) and the tracks.
-// Scrolled, a bar keeps the title and the play button.
+// thumbnail, keep it, download, share, ⋮ ... shuffle, play) and the tracks;
+// one reciter's list ends with their popular works and the reciters their
+// listeners like. Scrolled, a bar keeps the title, and the play button once
+// the actions' one has gone up under it (one at a time).
 const sectionQueries = new Map(); // the page's title → what was searched in it
 const coverOf = (list) => list.find((t) => t.coverImage) || list[0] || null;
 
@@ -2285,7 +2287,8 @@ function renderSectionPage(title, list, source) {
     ${list.length > 12 ? `<div class="sl-search"><div class="search-input-container">
       <input type="search" class="search-input dark" placeholder="ابحث في هذه القائمة" autocomplete="off" />
       <i class="ic search-icon" data-icon="search" style="color: rgba(255,255,255,0.6);"></i></div></div>` : ''}
-    <div class="track-list pv-list sl-list"></div>`;
+    <div class="track-list pv-list sl-list"></div>
+    <div class="sl-more"></div>`;
   if (reciter) clickable(view.querySelector('.sl-whose'), () => openArtistDetail(reciter.name));
 
   // Previews, keep, download, share, ⋮ ... shuffle, play (as on a track's page)
@@ -2309,6 +2312,26 @@ function renderSectionPage(title, list, source) {
     input.addEventListener('input', () => { sectionQueries.set(title, input.value); paint(); });
   }
   paint();
+
+  // Under one reciter's list: their most listened not in it, and the reciters of the same kind of work
+  if (reciter) {
+    const ids = new Set(list.map((t) => t.id));
+    const trending = visible(tracksOf(reciter.name)).filter((t) => !ids.has(t.id)).sort((a, b) => b.listens - a.listens).slice(0, 10);
+    const top = list.reduce((best, t) => (!best || t.listens > best.listens ? t : best), null);
+    const fans = top ? [...new Set(similarTo(top, 300, { others: true }).map((t) => t.reciterName))]
+      .filter((n) => n !== UNKNOWN_RECITER && n !== reciter.name).map((n) => reciterByName.get(n)).filter(Boolean)
+      .sort((a, b) => b.hasPhoto - a.hasPhoto).slice(0, 10) : [];
+    const more = view.querySelector('.sl-more');
+    const add = (heading, row) => {
+      const box = document.createElement('section');
+      box.className = 'pv-section rc-fans';
+      box.innerHTML = `<h2 class="sub-title">${esc(heading)}</h2>`;
+      box.appendChild(row);
+      more.appendChild(box);
+    };
+    if (trending.length) add(`الأعمال الرائجة لـ ${reciter.name}`, scroller(trending, (t) => squareCard(t, () => openTrackDetail(t))));
+    if (fans.length) add('المعجبون يحبون أيضاً', scroller(fans, reciterCard));
+  }
 
   // The card's colour, bright, glowing down from the top and moving up with the page
   const glow = view.querySelector('.sl-glow');

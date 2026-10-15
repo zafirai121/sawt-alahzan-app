@@ -1530,6 +1530,8 @@ body.has-player .up-bar { bottom: calc(var(--nav-height) + var(--safe-bottom) + 
 .sl-head + .pv-actions { padding: 20px 18px 18px; }
 .sl-search { padding: 0 18px 10px; }
 .sl-list { padding: 4px 18px 0; }
+.sl-more { position: relative; z-index: 1; padding-top: 30px; }
+.sl-more:empty { display: none; }
 @media (max-width: 359px) {
   .sl-head { padding-inline: 16px; }
   .sl-head + .pv-actions { padding-inline: 16px; gap: 0; }
