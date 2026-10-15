@@ -1400,7 +1400,7 @@ function renderHome() {
     // Playlists the app makes (a theme each), and albums (a reciter's work of one kind)
     playlists: () => {
       const lists = madePlaylists();
-      return lists.length >= 3 ? section('قوائم التشغيل', scroller(lists, playlistCard)) : null;
+      return lists.length >= 3 ? section('قوائم التشغيل', scroller(playlistFaces(lists), playlistCard)) : null;
     },
     albums: () => {
       const shown = albumsFor([...new Set([...lib.follows, ...topKeys(w, 10)])]);
@@ -1767,17 +1767,57 @@ function withReciters(tracks) {
   return names.length <= 2 ? `مع ${names.join(' و')}` : `مع ${names.slice(0, 2).join('، ')} والمزيد`;
 }
 
-// A playlist's card: its first cover, the cover's colour rising from the bottom
-// with the playlist's name on it, the app's mark in the corner; who is in it under it
+// ─── The playlists' cards: green and gold, a reciter of theirs standing in them ───
+// The card's layers are pictures (public/cards: the ground with its top ribbon,
+// calligraphy and dome; the bottom ribbon in front), the same as the phone app's;
+// between them the reciter, cut out of his photo (the site makes these: /api/cutouts)
+const CARDS = `${import.meta.env.BASE_URL}cards/`;
+let cutouts = store.get('sawt_cutouts', {}); // reciter's name → their photo without its background
+function loadCutouts() {
+  fetch(`${SITE_URL}/api/cutouts`).then((r) => (r.ok ? r.json() : null)).then((byName) => {
+    if (!byName || typeof byName !== 'object' || JSON.stringify(byName) === JSON.stringify(cutouts)) return;
+    cutouts = byName;
+    store.set('sawt_cutouts', byName);
+    // The playlists' row, if it is on the screen, with them
+    const row = document.querySelector('[data-home="playlists"] .horizontal-scroller');
+    if (row) row.replaceWith(scroller(playlistFaces(madePlaylists()), playlistCard));
+  }).catch(() => {});
+}
+
+// Each playlist's face: the reciter heard most in it with a cut-out photo (else
+// with a photo), another than the cards' before it where it can
+function playlistFaces(lists) {
+  const used = new Set();
+  return lists.map((list) => {
+    const counts = new Map();
+    for (const t of list.tracks) if (t.reciterName !== UNKNOWN_RECITER) counts.set(t.reciterName, (counts.get(t.reciterName) || 0) + 1);
+    const ranked = [...counts].sort((a, b) => b[1] - a[1]).map(([n]) => n);
+    const pick = (ok) => ranked.find((n) => ok(n) && !used.has(n)) || ranked.find(ok);
+    const cut = pick((n) => cutouts[n]);
+    const photo = !cut && pick((n) => reciterByName.get(n)?.hasPhoto);
+    const face = cut || photo;
+    if (face) used.add(face);
+    return { ...list, cutout: cut ? cutouts[cut] : null, photo: photo ? reciterByName.get(photo).image : null };
+  });
+}
+
+// A playlist's card: the ground, the reciter (cut out, or his photo fading into it, or
+// the first cover), the bottom ribbon over them, the gold mark and the name; who is in it under it
 function playlistCard(list) {
-  const first = list.tracks.find((t) => t.coverImage) || list.tracks[0];
   const card = document.createElement('div');
   card.className = 'square-card';
+  const face = list.cutout
+    ? `<img class="pl-cut" src="${esc(list.cutout)}" alt="" loading="lazy" />`
+    : `<img class="pl-photo" src="${esc(thumb(list.photo || (list.tracks.find((t) => t.coverImage) || list.tracks[0]).coverImage, 340))}" alt="" loading="lazy" />`;
   card.innerHTML = `
-    <div class="art pl-cover"><img src="${esc(thumb(first.coverImage, 190))}" alt="" loading="lazy" /><span class="pl-shade"></span>
-      ${sLogo('mix-logo')}<span class="pl-title">${esc(list.title)}</span></div>
+    <div class="pl-card">
+      <img class="pl-layer" src="${CARDS}playlist_back.webp" alt="" />
+      ${face}
+      <img class="pl-layer" src="${CARDS}playlist_front.webp" alt="" />
+      <img class="pl-mark" src="${CARDS}logo_gold_s.png" alt="" />
+      <span class="pl-title">${esc(list.title)}</span>
+    </div>
     <div class="square-subtitle">${esc(withReciters(list.tracks))}</div>`;
-  withShades(first, (sh) => card.querySelector('.pl-cover').style.setProperty('--pl', sh.vivid));
   return clickable(card, () => openListPage(list.title, list.tracks));
 }
 
@@ -6401,6 +6441,7 @@ startIcons();
 paintAutoplay();
 initAuth();
 loadData();
+dataReady.then(loadCutouts);
 autoCheckUpdate();
 countOpening();
 

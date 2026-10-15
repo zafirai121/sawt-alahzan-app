@@ -1583,17 +1583,29 @@ body.has-player .up-bar { bottom: calc(var(--nav-height) + var(--safe-bottom) + 
 }
 
 /* ─── The home screen's playlists and albums ─── */
-/* A playlist: its first cover, the cover's colour rising from the bottom with the name on it */
-.pl-cover { container-type: inline-size; border-radius: 8px; }
-.square-card > .pl-cover { box-shadow: 0 8px 20px rgba(0,0,0,0.45); }
-.pl-shade {
-  position: absolute; inset: 0; pointer-events: none; transition: background 0.6s ease;
-  background: linear-gradient(180deg, transparent 30%, color-mix(in srgb, var(--pl, #333) 78%, transparent) 62%, var(--pl, #333) 100%);
+/* A playlist: green and gold (the layers: public/cards), a reciter of theirs standing in it, the gold mark and the name */
+.pl-card {
+  position: relative; width: 100%; aspect-ratio: 1; margin-bottom: 10px; overflow: hidden; border-radius: 8px;
+  container-type: inline-size; background: #0b3d21; box-shadow: 0 8px 20px rgba(0,0,0,0.45);
 }
-.pl-cover .mix-logo { width: 13cqw; height: 13cqw; }
+.pl-card > img { position: absolute; display: block; }
+.pl-card > img[loading] { background: none; } /* no placeholder: the reciter stands on the ground */
+.pl-layer { inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.pl-cut {
+  left: 50%; bottom: 0; transform: translateX(-52%); width: 92%; height: 90%; object-fit: contain; object-position: 50% 100%;
+  -webkit-mask-image: linear-gradient(to bottom, #000 70%, rgba(0,0,0,0.6) 86%, transparent 100%);
+          mask-image: linear-gradient(to bottom, #000 70%, rgba(0,0,0,0.6) 86%, transparent 100%);
+  filter: drop-shadow(0 0 3cqw rgba(0,20,8,0.6));
+}
+.pl-photo {
+  left: 8%; top: 5%; width: 84%; height: 84%; object-fit: cover;
+  -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 58%, rgba(0,0,0,0.55) 78%, transparent 100%);
+          mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 58%, rgba(0,0,0,0.55) 78%, transparent 100%);
+}
+.pl-mark { top: 4.5cqw; left: 4.5cqw; width: 14cqw; height: 14cqw; object-fit: contain; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.55)); }
 .pl-title {
-  position: absolute; inset-inline: 7cqw; bottom: 7cqw; color: #fff; font-size: 11.5cqw; font-weight: 900; line-height: 1.2;
-  text-shadow: 0 1px 6px rgba(0,0,0,0.35); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  position: absolute; inset-inline: 7cqw; bottom: 6.5cqw; color: #fff; font-size: 11.5cqw; font-weight: 900; line-height: 1.2;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.85), 0 0 2px rgba(0,0,0,0.6); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 /* An album: the sleeve at the start, a record in the category's colour peeking out at the end */
 .album-art { position: relative; width: 100%; aspect-ratio: 1.3; margin-bottom: 10px; }
