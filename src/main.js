@@ -1785,18 +1785,20 @@ function loadCutouts() {
 }
 
 // Each playlist's face: the reciter heard most in it with a cut-out photo (else
-// with a photo), another than the cards' before it where it can
+// with a photo), another than the cards' before it where it can, and never the
+// one of the card just before
 function playlistFaces(lists) {
   const used = new Set();
+  let last = null;
   return lists.map((list) => {
     const counts = new Map();
     for (const t of list.tracks) if (t.reciterName !== UNKNOWN_RECITER) counts.set(t.reciterName, (counts.get(t.reciterName) || 0) + 1);
     const ranked = [...counts].sort((a, b) => b[1] - a[1]).map(([n]) => n);
-    const pick = (ok) => ranked.find((n) => ok(n) && !used.has(n)) || ranked.find(ok);
+    const pick = (ok) => ranked.find((n) => ok(n) && !used.has(n)) || ranked.find((n) => ok(n) && n !== last);
     const cut = pick((n) => cutouts[n]);
     const photo = !cut && pick((n) => reciterByName.get(n)?.hasPhoto);
-    const face = cut || photo;
-    if (face) used.add(face);
+    last = cut || photo || null;
+    if (last) used.add(last);
     return { ...list, cutout: cut ? cutouts[cut] : null, photo: photo ? reciterByName.get(photo).image : null };
   });
 }
