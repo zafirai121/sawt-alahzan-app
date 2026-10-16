@@ -1591,7 +1591,7 @@ function paintFeedbackNumbers(card) {
   if (likes) likes.textContent = n?.likes ? formatCount(n.likes) : 'أعجبني';
   const score = card.querySelector('.fb-score');
   if (!score) return;
-  if (!(n?.ratings >= 3)) { score.innerHTML = '<span class="fb-first">كن من أوائل من يقيّم التطبيق</span>'; return; }
+  if (!(n?.ratings >= 3)) { score.innerHTML = '<span class="fb-first">كن من أوائل المقيّمين</span>'; return; }
   score.innerHTML = `<b class="fb-avg">${n.average.toFixed(1)}</b>
     <div class="fb-avg-side"><span class="fb-mini" style="--p:${(n.average / 5) * 100}%">${starsSvg('fb-mini-base')}${starsSvg('fb-mini-fill')}</span>
     <span class="fb-count">${counted(n.ratings, RATINGS)}</span></div>`;

@@ -1673,10 +1673,10 @@ body.has-player .up-bar { bottom: calc(var(--nav-height) + var(--safe-bottom) + 
 .fb-mini-fill { position: absolute; inset-block: 0; inset-inline-start: 0; width: var(--p); overflow: hidden; color: #E9C04E; }
 .fb-mini svg { flex-shrink: 0; stroke-width: 0; }
 .fb-sub { margin: 16px 0 0; font-size: 14px; line-height: 1.6; color: rgba(255, 255, 255, 0.72); text-wrap: balance; }
-.fb-stars { display: flex; justify-content: center; gap: clamp(6px, 3vw, 14px); margin-top: 18px; }
+.fb-stars { display: flex; justify-content: center; gap: clamp(4px, 2.5vw, 10px); margin-top: 18px; }
 .fb-star {
-  width: 48px; height: 48px; display: grid; place-items: center; border: none; background: none; padding: 0; cursor: pointer;
-  font-size: 40px; color: rgba(255, 255, 255, 0.16); transition: transform 0.15s ease;
+  width: clamp(38px, 12.5vw, 48px); height: clamp(38px, 12.5vw, 48px); display: grid; place-items: center; border: none; background: none; padding: 0; cursor: pointer;
+  font-size: clamp(32px, 10.4vw, 40px); color: rgba(255, 255, 255, 0.16); transition: transform 0.15s ease;
   -webkit-tap-highlight-color: transparent;
 }
 .fb-star svg { stroke: rgba(255, 255, 255, 0.28); stroke-width: 1.2; transition: fill 0.2s, stroke 0.2s; }
