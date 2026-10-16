@@ -8,15 +8,18 @@
     "build": "vite build",
     "preview": "vite preview",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist",
+    "test": "node --test tests/uploads.test.mjs"
   },
   "devDependencies": {
     "gh-pages": "^6.3.0",
-    "vite": "^5.4.21"
+    "vite": "^8.3.2"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",
+    "container-query-polyfill": "^1.0.2",
     "hls.js": "^1.6.16",
-    "lucide": "^1.49.0"
+    "lucide": "^1.49.0",
+    "qrcode-generator": "^2.0.4"
   }
 }
