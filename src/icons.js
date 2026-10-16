@@ -10,7 +10,7 @@ import {
   Download, Trash2, Timer, Disc3, WifiOff, Cast, Smartphone, Bluetooth,
   Share2, MonitorSpeaker, Check, CirclePlus, Link, MessageSquareMore, Ellipsis, ImageDown, MessageCircle, Send,
   ArrowDownUp, LayoutGrid, Pin, CircleMinus, ArrowUp, ArrowDown, Pencil, Copy, CircleX, Album, Blend, Flame, AudioLines, QrCode,
-  Lock, Upload, CloudUpload, Sparkles, ImagePlus, Volume2, VolumeOff, Pointer, MicVocal, CircleDot, Flag,
+  Lock, Upload, CloudUpload, Sparkles, ImagePlus, Volume2, VolumeOff, Pointer, MicVocal, CircleDot, Flag, Star,
 } from 'lucide';
 
 // Spotify's "Your Library": two books standing and one leaning on them
@@ -42,6 +42,8 @@ const ICONS = {
   volume: Volume2, 'volume-off': VolumeOff, pointer: Pointer, 'mic-vocal': MicVocal, 'circle-dot': CircleDot,
   // Reporting a track
   flag: Flag,
+  // The feedback card's stars
+  star: Star,
 };
 
 const escAttr = (v) => String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;');

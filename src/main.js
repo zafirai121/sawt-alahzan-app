@@ -1,5 +1,5 @@
 import { supabase, isPasswordRecovery } from './supabaseClient.js';
-import { icon, setIcon, startIcons } from './icons.js';
+import { icon, iconSvg, setIcon, startIcons } from './icons.js';
 import { dominantHsl, playerShades, mixHex, NEUTRAL_SHADES } from './color.js';
 import occasionBg from './assets/occasion-bg.webp';
 import BUILD from './version.json';
@@ -1426,17 +1426,230 @@ function renderHome() {
       const daily = seededShuffle(visible(pool), todaySeed()).slice(0, 15);
       return daily.length >= 3 ? section('توصياتنا لك اليوم', scroller(daily, (t) => squareCard(t))) : null;
     },
+
+    // Last: what they think of the app
+    feedback: feedbackSection,
   };
 
   // What is theirs first for a listener who has played, liked or followed;
   // for a new one, what is new and most listened first
   const order = returning
-    ? ['quick', 'newest', 'occasion', 'friday', 'mixes', 'playlists', 'recents', 'followed', 'radios', 'albums', 'return', 'likes', 'similar', 'popular', 'short', 'more', 'reciters', 'daily']
-    : ['quick', 'newest', 'occasion', 'friday', 'playlists', 'reciters', 'popular', 'albums', 'radios', 'short', 'daily', 'more'];
+    ? ['quick', 'newest', 'occasion', 'friday', 'mixes', 'playlists', 'recents', 'followed', 'radios', 'albums', 'return', 'likes', 'similar', 'popular', 'short', 'more', 'reciters', 'daily', 'feedback']
+    : ['quick', 'newest', 'occasion', 'friday', 'playlists', 'reciters', 'popular', 'albums', 'radios', 'short', 'daily', 'more', 'feedback'];
   order.forEach((key) => {
     const el = sections[key]();
     if (el) { el.dataset.home = key; container.appendChild(el); }
   });
+}
+
+// ═══ The home screen's last card: what the listeners think of the app ═══
+// Stars (1–5), what they liked (or what should be better), a word, and a like
+// of the app. The site keeps them (/api/feedback: one record per browser, a
+// later one replacing it) and gives everyone the numbers; its admin reads
+// them all (openFeedbackPage). The phone app has the same card.
+const FEEDBACK_TAGS = [
+  ['sound', 'جودة الصوت'], ['library', 'كثرة المقاطع'], ['easy', 'سهولة الاستخدام'],
+  ['design', 'التصميم'], ['speed', 'السرعة'], ['offline', 'الاستماع دون إنترنت'],
+];
+const STAR_WORDS = ['', 'سيئ', 'مقبول', 'جيد', 'جيد جداً', 'ممتاز'];
+// What this browser sent last, and everyone's numbers
+let feedback = store.get('sawt_feedback', { stars: 0, liked: false, tags: [], comment: '', sent: false });
+let feedbackNumbers = store.get('sawt_feedback_numbers', null);
+let feedbackNumbersAt = 0;
+
+// "3 تقييمات", "11 تقييماً"…: the noun as Arabic counts it
+const counted = (n, [one, two, few, many]) => (n === 1 ? one : n === 2 ? two : n % 100 >= 3 && n % 100 <= 10 ? `${formatCount(n)} ${few}` : `${formatCount(n)} ${many}`);
+const RATINGS = ['تقييم واحد', 'تقييمان', 'تقييمات', 'تقييماً'];
+const LIKES = ['إعجاب واحد', 'إعجابان', 'إعجابات', 'إعجاباً'];
+const starsSvg = (cls) => `<span class="${cls}">${iconSvg('star', { fill: true, strokeWidth: 1.5 }).repeat(5)}</span>`;
+
+function feedbackSection() {
+  const card = document.createElement('div');
+  card.className = 'section fb-card animate-in';
+  card.draft = { stars: feedback.stars, tags: [...feedback.tags], comment: feedback.comment, editing: false };
+  paintFeedback(card);
+  // Everyone's numbers, at most every five minutes
+  if (Date.now() - feedbackNumbersAt > 5 * 60_000) {
+    feedbackNumbersAt = Date.now();
+    fetch(`${SITE_URL}/api/feedback`).then((r) => (r.ok ? r.json() : null)).then((n) => {
+      if (typeof n?.ratings !== 'number') return;
+      feedbackNumbers = n;
+      store.set('sawt_feedback_numbers', n);
+      document.querySelectorAll('.fb-card').forEach(paintFeedbackNumbers);
+    }).catch(() => {});
+  }
+  return card;
+}
+
+function paintFeedback(card) {
+  const d = card.draft;
+  const thanks = feedback.sent && !d.editing;
+  const open = d.stars > 0 && !thanks;
+  const good = d.stars >= 4;
+  card.innerHTML = `
+    <svg class="fb-defs" aria-hidden="true"><defs><linearGradient id="fb-gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FBE88A"/><stop offset="0.5" stop-color="#E2B63C"/><stop offset="1" stop-color="#B8881A"/></linearGradient></defs></svg>
+    <img class="fb-watermark" src="${CARDS}logo_gold_s.png" alt="" />
+    <div class="fb-head">
+      <span class="fb-mark"><img src="${CARDS}logo_gold_s.png" alt="" /></span>
+      <div class="fb-heading"><span class="fb-eyebrow">رأيك يهمّنا</span><h2 class="fb-title">كيف تجد صوت الأحزان؟</h2></div>
+    </div>
+    <div class="fb-stats">
+      <div class="fb-score"></div>
+      <button class="fb-like${feedback.liked ? ' on' : ''}" aria-pressed="${feedback.liked}" aria-label="أعجبني التطبيق">${icon('heart', { fill: feedback.liked })}<span class="fb-like-n">أعجبني</span></button>
+    </div>
+    ${thanks ? '' : '<p class="fb-sub">قيّم تجربتك وشاركنا ما أعجبك وما تتمنى إضافته</p>'}
+    <div class="fb-stars" role="radiogroup" aria-label="تقييمك">${[1, 2, 3, 4, 5].map((n) =>
+      `<button class="fb-star${n <= d.stars ? ' on' : ''}" role="radio" aria-checked="${n === d.stars}" aria-label="${n} من 5" data-n="${n}">${iconSvg('star', { fill: true, strokeWidth: 1.5 })}</button>`).join('')}</div>
+    <div class="fb-word">${d.stars ? STAR_WORDS[d.stars] : 'اختر عدد النجوم'}</div>
+    ${open ? `<div class="fb-more">
+      <div class="fb-q">${good ? 'ما الذي أعجبك؟' : 'ما الذي نحسّنه؟'}</div>
+      <div class="fb-tags">${FEEDBACK_TAGS.map(([id, label]) =>
+        `<button class="fb-tag${d.tags.includes(id) ? ' on' : ''}" data-tag="${id}" aria-pressed="${d.tags.includes(id)}">${label}</button>`).join('')}</div>
+      <textarea class="fb-text" maxlength="1000" rows="3" placeholder="${good ? 'اكتب رأيك هنا… (اختياري)' : 'أخبرنا بما يزعجك أو بما تريد أن نضيفه… (اختياري)'}">${esc(d.comment)}</textarea>
+      <button class="fb-send">${icon('send')}<span>${feedback.sent ? 'تحديث التقييم' : 'إرسال التقييم'}</span></button>
+    </div>` : ''}
+    ${thanks ? `<div class="fb-thanks"><span class="fb-check">${icon('tick')}</span>
+      <div class="fb-thanks-text"><b>شكراً لك، وصل تقييمك</b><span>رأيك يساعدنا على تطوير التطبيق</span></div>
+      <button class="fb-edit">تعديل</button></div>` : ''}
+    ${isAdmin ? `<button class="fb-admin">${icon('message')}<span>آراء المستخدمين</span>${icon('chevron-left')}</button>` : ''}`;
+  paintFeedbackNumbers(card);
+
+  card.querySelectorAll('.fb-star').forEach((b) => {
+    b.onclick = () => {
+      d.comment = card.querySelector('.fb-text')?.value ?? d.comment;
+      d.stars = Number(b.dataset.n);
+      if (feedback.sent) d.editing = true;
+      paintFeedback(card);
+      card.querySelector(`.fb-star[data-n="${d.stars}"]`).classList.add('pop');
+    };
+  });
+  card.querySelectorAll('.fb-tag').forEach((b) => {
+    b.onclick = () => {
+      const on = !d.tags.includes(b.dataset.tag);
+      d.tags = on ? [...d.tags, b.dataset.tag] : d.tags.filter((t) => t !== b.dataset.tag);
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', on);
+    };
+  });
+  const text = card.querySelector('.fb-text');
+  if (text) text.oninput = () => { d.comment = text.value; };
+  const send = card.querySelector('.fb-send');
+  if (send) {
+    send.onclick = async () => {
+      send.disabled = true;
+      send.innerHTML = `${icon('spinner')}<span>جارٍ الإرسال…</span>`;
+      const sent = { stars: d.stars, liked: feedback.liked, tags: d.tags, comment: d.comment.trim(), sent: true };
+      if (await sendFeedback(sent)) {
+        d.editing = false;
+        paintFeedback(card);
+        card.querySelector('.fb-thanks')?.classList.add('pop');
+      } else {
+        toast('تعذّر الإرسال، تحقق من الاتصال وحاول مجدداً');
+        send.disabled = false;
+        send.innerHTML = `${icon('send')}<span>${feedback.sent ? 'تحديث التقييم' : 'إرسال التقييم'}</span>`;
+      }
+    };
+  }
+  const edit = card.querySelector('.fb-edit');
+  if (edit) edit.onclick = () => { d.editing = true; paintFeedback(card); };
+  const like = card.querySelector('.fb-like');
+  like.onclick = async () => {
+    const liked = !feedback.liked;
+    like.classList.toggle('on', liked);
+    like.classList.add('pop');
+    setIcon(like.querySelector('.ic'), 'heart', { fill: liked });
+    const ok = await sendFeedback({ ...(feedback.sent ? feedback : { stars: 0, tags: [], comment: '', sent: false }), liked });
+    if (!ok) { toast('تعذّر الإرسال، حاول مجدداً'); like.classList.toggle('on', feedback.liked); setIcon(like.querySelector('.ic'), 'heart', { fill: feedback.liked }); }
+  };
+  const admin = card.querySelector('.fb-admin');
+  if (admin) admin.onclick = () => openFeedbackPage();
+}
+
+// Sends this browser's whole record; true once the site has it
+async function sendFeedback(next) {
+  try {
+    const res = await fetch(`${SITE_URL}/api/feedback`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ device: deviceId(), stars: next.stars, liked: next.liked, tags: next.tags, comment: next.comment, platform: webPlatform(), version: BUILD.versionName }),
+    });
+    if (!res.ok) return false;
+    const n = await res.json().catch(() => null);
+    feedback = next;
+    store.set('sawt_feedback', feedback);
+    if (typeof n?.ratings === 'number') { feedbackNumbers = n; store.set('sawt_feedback_numbers', n); }
+    document.querySelectorAll('.fb-card').forEach(paintFeedbackNumbers);
+    return true;
+  } catch { return false; }
+}
+
+// The average and how many rated (from three ratings on), and the likes
+function paintFeedbackNumbers(card) {
+  const n = feedbackNumbers;
+  const likes = card.querySelector('.fb-like-n');
+  if (likes) likes.textContent = n?.likes ? formatCount(n.likes) : 'أعجبني';
+  const score = card.querySelector('.fb-score');
+  if (!score) return;
+  if (!(n?.ratings >= 3)) { score.innerHTML = '<span class="fb-first">كن من أوائل من يقيّم التطبيق</span>'; return; }
+  score.innerHTML = `<b class="fb-avg">${n.average.toFixed(1)}</b>
+    <div class="fb-avg-side"><span class="fb-mini" style="--p:${(n.average / 5) * 100}%">${starsSvg('fb-mini-base')}${starsSvg('fb-mini-fill')}</span>
+    <span class="fb-count">${counted(n.ratings, RATINGS)}</span></div>`;
+}
+
+// The owner's page: everyone's numbers, and each listener's stars, picks and words
+window.openFeedbackPage = openFeedbackPage;
+function openFeedbackPage() {
+  openPage('page-view', renderFeedbackPage);
+}
+
+async function renderFeedbackPage() {
+  const view = $('page-view');
+  const token = newPageToken(view);
+  view.style.removeProperty('--tint');
+  viewScroll['page-view'] = null;
+  view.innerHTML = `
+    <header class="page-header pv-plain up-head">
+      <button class="icon-btn" onclick="history.back()" aria-label="رجوع">${icon('back')}</button>
+      <h1 class="search-header" style="flex: 1;">آراء المستخدمين</h1>
+    </header>
+    <div class="fbp-body"><div class="loading">${icon('spinner')}</div></div>`;
+  const body = view.querySelector('.fbp-body');
+  let data = null;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch(`${SITE_URL}/api/feedback`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${session?.access_token || ''}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'list' }),
+    });
+    data = res.ok ? await res.json() : null;
+  } catch { data = null; }
+  if (view._token !== token) return;
+  if (!data) { body.innerHTML = '<p class="fbp-empty">تعذّر تحميل الآراء. تأكد أنك مسجّل بحساب صاحب التطبيق.</p>'; return; }
+  const { summary: n, records } = data;
+  const tagName = Object.fromEntries(FEEDBACK_TAGS);
+  const most = Math.max(1, ...n.stars);
+  const when = (iso) => new Date(iso).toLocaleDateString('ar-IQ-u-nu-latn', { year: 'numeric', month: 'long', day: 'numeric' });
+  const where = (r) => ({ android: 'أندرويد', 'android-play': 'أندرويد (Google Play)', 'web-iphone': 'ويب · آيفون', 'web-android': 'ويب · أندرويد', 'web-desktop': 'ويب · حاسوب' })[r.platform] || r.platform || '';
+  body.innerHTML = `
+    <div class="fbp-summary">
+      <div class="fbp-big"><b class="fb-avg">${n.ratings ? n.average.toFixed(1) : '—'}</b>
+        <span class="fb-mini" style="--p:${(n.average / 5) * 100}%">${starsSvg('fb-mini-base')}${starsSvg('fb-mini-fill')}</span>
+        <span class="fb-count">${n.ratings ? counted(n.ratings, RATINGS) : 'لا تقييمات بعد'}</span>${n.likes ? `<span class="fb-count">${counted(n.likes, LIKES)}</span>` : ''}</div>
+      <div class="fbp-bars">${[5, 4, 3, 2, 1].map((k) => `<div class="fbp-bar"><span>${k}</span><i><em style="width:${(n.stars[k - 1] / most) * 100}%"></em></i><span>${formatCount(n.stars[k - 1])}</span></div>`).join('')}</div>
+    </div>
+    ${records.length ? records.map((r) => `
+      <article class="fbp-item">
+        <div class="fbp-top">
+          ${r.stars ? `<span class="fb-mini" style="--p:${r.stars * 20}%">${starsSvg('fb-mini-base')}${starsSvg('fb-mini-fill')}</span>` : '<span class="fbp-nostars">بلا تقييم</span>'}
+          ${r.liked ? `<span class="fbp-liked">${icon('heart', { fill: true })}</span>` : ''}
+          <span class="fbp-date">${esc(when(r.updated))}</span>
+        </div>
+        ${r.tags?.length ? `<div class="fbp-tags"><span>${r.stars && r.stars <= 3 ? 'يحتاج تحسيناً:' : 'أعجبه:'}</span>${r.tags.map((t) => `<em>${esc(tagName[t] || t)}</em>`).join('')}</div>` : ''}
+        ${r.comment ? `<p class="fbp-comment">${esc(r.comment)}</p>` : ''}
+        <div class="fbp-meta">${esc(where(r))}${r.version ? ` · ${esc(r.version)}` : ''}</div>
+      </article>`).join('') : '<p class="fbp-empty">لا توجد آراء بعد.</p>'}`;
 }
 
 // ═══ The home screen's newer sections (the phone app's have the same rules) ═══
@@ -6285,21 +6498,28 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) auto
 // the browsers it has seen and those it was opened in today, this week and
 // this month (app_ping); the owner reads the numbers on stats/. Not counted:
 // the preview copy and a page served from this computer.
-function countOpening() {
-  if (document.hidden || countOpening.busy || location.hostname === 'localhost' || import.meta.env.BASE_URL.includes('/preview/')) return;
-  const day = new Date().toLocaleDateString('en-CA'); // 2026-10-15, by this device's clock
-  if (store.get('sawt_counted_day', null) === day) return;
+// This browser's random id (nothing about the listener), made the first time
+function deviceId() {
   let id = store.get('sawt_device_id', null);
   if (!id) {
     id = crypto.randomUUID ? crypto.randomUUID()
       : '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, (c) => (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16));
     store.set('sawt_device_id', id);
   }
+  return id;
+}
+function webPlatform() {
   const ua = navigator.userAgent;
-  const platform = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) ? 'web-iphone'
+  return /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) ? 'web-iphone'
     : /Android/.test(ua) ? 'web-android' : 'web-desktop';
+}
+
+function countOpening() {
+  if (document.hidden || countOpening.busy || location.hostname === 'localhost' || import.meta.env.BASE_URL.includes('/preview/')) return;
+  const day = new Date().toLocaleDateString('en-CA'); // 2026-10-15, by this device's clock
+  if (store.get('sawt_counted_day', null) === day) return;
   countOpening.busy = true;
-  supabase.rpc('app_ping', { p_id: id, p_platform: platform, p_version: BUILD.versionName }).then(
+  supabase.rpc('app_ping', { p_id: deviceId(), p_platform: webPlatform(), p_version: BUILD.versionName }).then(
     ({ error }) => { countOpening.busy = false; if (!error) store.set('sawt_counted_day', day); },
     () => { countOpening.busy = false; }, // offline: the next opening tries again
   );
