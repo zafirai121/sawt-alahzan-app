@@ -426,17 +426,41 @@ function browsableCategories() {
 let currentUser = null;
 let profile = null; // { display_name, avatar_url }
 
+// Whose listening this browser keeps: each account its own (history, plays,
+// recently played, searches, downloads, where tracks were left...: the keys
+// with "@<user id>"), a listener not signed in the keys as they always were.
+// It starts with the session the browser kept, so a signed-in listener never
+// sees the guest's for a moment; switchOwner follows the account after.
+function storedUserId() {
+  try {
+    const key = Object.keys(localStorage).find((k) => /^sb-.*-auth-token$/.test(k));
+    const session = key && JSON.parse(localStorage.getItem(key));
+    if (!session?.access_token) return null;
+    return session.user?.id || JSON.parse(atob(session.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).sub || null;
+  } catch { return null; }
+}
+let owner = storedUserId();
+const own = (key, id = owner) => (id ? `${key}@${id}` : key);
+// An account's own copy of the reciters it follows that have no database id
+const localFollowsKey = (id = owner) => `sawt_artists_${id}`;
+
+// A guest's likes, playlists and follows are kept here; an account's come from
+// its tables (syncFromCloud), with only the name-only follows kept here
+const ownLikes = () => new Set((owner ? [] : store.get('sawt_likes', [])).map(String));
+const ownPlaylists = () => (owner ? [] : store.get('sawt_playlists', [])).map((p) => ({ id: String(p.id), name: p.name, tracks: (p.tracks || []).map(String) }));
+const ownFollows = () => new Set(owner ? store.get(localFollowsKey(), []) : store.get('sawt_artists', []));
+
 const lib = {
-  likes: new Set(store.get('sawt_likes', []).map(String)),
-  downloads: new Set(store.get('sawt_downloads', []).map(String)),
-  playlists: store.get('sawt_playlists', []).map((p) => ({ id: String(p.id), name: p.name, tracks: (p.tracks || []).map(String) })),
-  follows: new Set(store.get('sawt_artists', [])),
-  history: store.get('sawt_history', []), // [{ id, t }] newest first
-  plays: store.get('sawt_plays', {}),      // id → how many times it was played
-  hidden: new Set(store.get('sawt_hidden', [])),     // never suggested, skipped when reached
-  excluded: new Set(store.get('sawt_excluded', [])), // left out of their taste
+  likes: ownLikes(),
+  downloads: new Set(store.get(own('sawt_downloads'), []).map(String)),
+  playlists: ownPlaylists(),
+  follows: ownFollows(),
+  history: store.get(own('sawt_history'), []), // [{ id, t }] newest first
+  plays: store.get(own('sawt_plays'), {}),      // id → how many times it was played
+  hidden: new Set(store.get(own('sawt_hidden'), [])),     // never suggested, skipped when reached
+  excluded: new Set(store.get(own('sawt_excluded'), [])), // left out of their taste
   saveLocal() {
-    if (!currentUser) {
+    if (!owner) {
       store.set('sawt_likes', [...this.likes]);
       store.set('sawt_playlists', this.playlists);
       store.set('sawt_artists', [...this.follows]);
@@ -444,15 +468,13 @@ const lib = {
       // Reciters known only by name (no database id) can't be followed in the account
       store.set(localFollowsKey(), [...this.follows].filter((n) => !reciterByName.get(n)?.dbId));
     }
-    store.set('sawt_downloads', [...this.downloads]);
-    store.set('sawt_history', this.history);
-    store.set('sawt_plays', this.plays);
-    store.set('sawt_hidden', [...this.hidden]);
-    store.set('sawt_excluded', [...this.excluded]);
+    store.set(own('sawt_downloads'), [...this.downloads]);
+    store.set(own('sawt_history'), this.history);
+    store.set(own('sawt_plays'), this.plays);
+    store.set(own('sawt_hidden'), [...this.hidden]);
+    store.set(own('sawt_excluded'), [...this.excluded]);
   },
 };
-
-const localFollowsKey = () => `sawt_artists_${currentUser.id}`;
 
 // The phone app stores track ids as "cloud_<id>"; both apps share these tables
 const cloudId = (id) => `cloud_${id}`;
@@ -488,7 +510,7 @@ async function syncFromCloud() {
         if (error) throw error;
       }
       const nameOnly = guestFollows.filter((n) => !reciterByName.get(n)?.dbId);
-      store.set(localFollowsKey(), [...new Set([...store.get(localFollowsKey(), []), ...nameOnly])]);
+      store.set(localFollowsKey(uid), [...new Set([...store.get(localFollowsKey(uid), []), ...nameOnly])]);
       store.set('sawt_artists', []);
     }
   } catch (e) { console.warn('Could not move guest data:', e); }
@@ -498,11 +520,13 @@ async function syncFromCloud() {
     supabase.from('user_playlists').select('id,title,tracks').eq('user_id', uid).order('created_at'),
     supabase.from('follows').select('followed_reciter_id').eq('follower_id', uid),
   ]);
+  // Signed out or into another account meanwhile: these lists are not the screen's any more
+  if (owner !== uid) return;
   if (!fav.error) lib.likes = new Set((fav.data || []).map((r) => fromCloudId(r.poem_id)));
   if (!pls.error) lib.playlists = (pls.data || []).map((r) => ({ id: r.id, name: r.title, tracks: (r.tracks || []).map(fromCloudId) }));
   if (!fol.error) {
     const ids = new Set((fol.data || []).map((r) => String(r.followed_reciter_id)));
-    lib.follows = new Set([...reciters.filter((r) => r.dbId && ids.has(r.dbId)).map((r) => r.name), ...store.get(localFollowsKey(), [])]);
+    lib.follows = new Set([...reciters.filter((r) => r.dbId && ids.has(r.dbId)).map((r) => r.name), ...store.get(localFollowsKey(uid), [])]);
   }
   libVersion++;
   refreshLikeButtons();
@@ -615,17 +639,33 @@ function downloadedTrack(id) {
 }
 const downloadedTracks = () => [...lib.downloads].map(downloadedTrack).filter(Boolean);
 
+// Still downloaded by an account on this device (or by its guest): the file stays for them
+const listedAnywhere = (id) => Object.keys(localStorage).some((k) => /^sawt_downloads(@|$)/.test(k)
+  && store.get(k, []).map(String).includes(id));
+
+// The download's audio and covers removed from this device
+async function dropDownload(track) {
+  delete downloadMeta[track.id];
+  store.set(DOWNLOAD_META, downloadMeta);
+  try {
+    const cache = await caches.open(AUDIO_CACHE);
+    await Promise.all([track.audioUrl, ...coverUrls(track)].map((u) => cache.delete(u)));
+  } catch { /* ignore */ }
+}
+
+// A deleted account's own things on this device forgotten, with the downloads no one else here keeps
+function forgetOwner(uid) {
+  const downloads = store.get(`sawt_downloads@${uid}`, []).map(String);
+  Object.keys(localStorage).filter((k) => k.endsWith(`@${uid}`) || k === localFollowsKey(uid)).forEach((k) => localStorage.removeItem(k));
+  downloads.filter((id) => !listedAnywhere(id)).map(downloadedTrack).filter(Boolean).forEach(dropDownload);
+}
+
 async function toggleDownload(track) {
   if (lib.downloads.has(track.id)) {
     lib.downloads.delete(track.id);
-    delete downloadMeta[track.id];
     lib.saveLocal();
-    store.set(DOWNLOAD_META, downloadMeta);
     libraryChanged();
-    try {
-      const cache = await caches.open(AUDIO_CACHE);
-      await Promise.all([track.audioUrl, ...coverUrls(track)].map((u) => cache.delete(u)));
-    } catch { /* ignore */ }
+    if (!listedAnywhere(track.id)) await dropDownload(track);
     toast('حُذف التنزيل');
     return false;
   }
@@ -723,7 +763,7 @@ const historyTracks = () => lib.history.map((h) => trackById.get(h.id)).filter(B
 // As in the phone app. "Recently played" (Spotify's) holds not only tracks but
 // what they were played from (a reciter, a playlist, the likes, a radio, a
 // daily mix...); each opens its own page instead of playing at once.
-let recentPlayed = store.get('sawt_recent_played', []); // [{ kind, id }] newest first
+let recentPlayed = store.get(own('sawt_recent_played'), []); // [{ kind, id }] newest first
 let queueSource = null;   // what the queue was played from
 let playingFrom = '';     // its name, under "now playing"
 const sameSource = (a, b) => !!a && !!b && a.kind === b.kind && String(a.id) === String(b.id);
@@ -738,7 +778,7 @@ function rememberPlayedFrom(source, trackId = null) {
   const kept = RECENT_KINDS.has(source.kind) ? queueSource : trackId != null ? { kind: 'track', id: String(trackId) } : null;
   if (!kept) return;
   recentPlayed = [kept, ...recentPlayed.filter((r) => !sameSource(r, kept))].slice(0, 40);
-  store.set('sawt_recent_played', recentPlayed);
+  store.set(own('sawt_recent_played'), recentPlayed);
 }
 
 function topTrackOf(name) {
@@ -955,7 +995,7 @@ function buildMixes(day, max = 6, size = 50) {
   return mixes;
 }
 
-let savedMixes = store.get('sawt_mixes', null); // { day, mixes }: today's, once made from the whole library
+let savedMixes = store.get(own('sawt_mixes'), null); // { day, mixes }: today's, once made from the whole library
 let mixMemo = null;
 function dailyMixes() {
   const day = todaySeed();
@@ -966,7 +1006,7 @@ function dailyMixes() {
     const mixes = buildMixes(day);
     if (mixes.length && fullyLoaded) {
       savedMixes = { day, mixes };
-      store.set('sawt_mixes', savedMixes);
+      store.set(own('sawt_mixes'), savedMixes);
     }
     mixMemo = { key, mixes };
   }
@@ -1453,7 +1493,8 @@ const FEEDBACK_TAGS = [
 ];
 const STAR_WORDS = ['', 'سيئ', 'مقبول', 'جيد', 'جيد جداً', 'ممتاز'];
 // What this browser sent last, and everyone's numbers
-let feedback = store.get('sawt_feedback', { stars: 0, liked: false, tags: [], comment: '', sent: false });
+const FEEDBACK_NONE = { stars: 0, liked: false, tags: [], comment: '', sent: false };
+let feedback = store.get(own('sawt_feedback'), FEEDBACK_NONE);
 let feedbackNumbers = store.get('sawt_feedback_numbers', null);
 let feedbackNumbersAt = 0;
 
@@ -1568,16 +1609,18 @@ function paintFeedback(card) {
 
 // Sends this browser's whole record; true once the site has it
 async function sendFeedback(next) {
+  // Whose it is when sent (the account may change while it goes)
+  const who = owner;
   try {
     const res = await fetch(`${SITE_URL}/api/feedback`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ device: deviceId(), stars: next.stars, liked: next.liked, tags: next.tags, comment: next.comment, platform: webPlatform(), version: BUILD.versionName }),
+      body: JSON.stringify({ device: feedbackDevice(), stars: next.stars, liked: next.liked, tags: next.tags, comment: next.comment, platform: webPlatform(), version: BUILD.versionName }),
     });
     if (!res.ok) return false;
     const n = await res.json().catch(() => null);
-    feedback = next;
-    store.set('sawt_feedback', feedback);
+    store.set(own('sawt_feedback', who), next);
+    if (owner === who) feedback = next;
     if (typeof n?.ratings === 'number') { feedbackNumbers = n; store.set('sawt_feedback_numbers', n); }
     document.querySelectorAll('.fb-card').forEach(paintFeedbackNumbers);
     return true;
@@ -2226,8 +2269,8 @@ function fridaySection() {
 // app opens (the phone app tells it in a notification); nothing the first time
 function announceFollowedNew() {
   const newest = allTracks.reduce((m, t) => Math.max(m, Number(t.id) || 0), 0);
-  const after = store.get('sawt_seen_after', null);
-  store.set('sawt_seen_after', Math.max(newest, after || 0));
+  const after = store.get(own('sawt_seen_after'), null);
+  store.set(own('sawt_seen_after'), Math.max(newest, after || 0));
   if (after == null || !lib.follows.size) return;
   const fresh = visible(allTracks.filter((t) => Number(t.id) > after && lib.follows.has(t.reciterName)));
   if (!fresh.length) return;
@@ -3735,15 +3778,15 @@ function renderSearchHome() {
 // words to search for and the best matches; then the results, with filters ───
 const SEARCH_FILTERS = { all: 'الكل', tracks: 'المقاطع', reciters: 'الرواديد', playlists: 'قوائم التشغيل', categories: 'التصنيفات' };
 const searchUi = { query: '', shownFor: null, filter: 'all' };
-let recentSearches = store.get('sawt_recent_searches', []); // [{ kind, id, title, subtitle, image }]
+let recentSearches = store.get(own('sawt_recent_searches'), []); // [{ kind, id, title, subtitle, image }]
 
 function addRecentSearch(r) {
   recentSearches = [r, ...recentSearches.filter((x) => x.kind !== r.kind || x.id !== r.id)].slice(0, 20);
-  store.set('sawt_recent_searches', recentSearches);
+  store.set(own('sawt_recent_searches'), recentSearches);
 }
 function removeRecentSearch(r) {
   recentSearches = recentSearches.filter((x) => x.kind !== r.kind || x.id !== r.id);
-  store.set('sawt_recent_searches', recentSearches);
+  store.set(own('sawt_recent_searches'), recentSearches);
 }
 
 // What a search finds, the best first: a name that starts with the words, then
@@ -3875,7 +3918,7 @@ function renderSearchPage() {
       const clearAll = document.createElement('div');
       clearAll.className = 'pv-center';
       clearAll.innerHTML = '<button class="pill-btn">مسح عمليات البحث الأخيرة</button>';
-      clearAll.firstElementChild.onclick = () => { recentSearches = []; store.set('sawt_recent_searches', []); paint(); };
+      clearAll.firstElementChild.onclick = () => { recentSearches = []; store.set(own('sawt_recent_searches'), []); paint(); };
       body.replaceChildren(head, ...rows, clearAll);
       return;
     }
@@ -5353,7 +5396,7 @@ window.openSpeedSheet = () => openChoices('سرعة التشغيل',
 const LONG_TRACK = 600;
 const RESUME_FROM = 30;
 const END_MARGIN = 60;
-let resumeAt = new Map(store.get('sawt_resume', []));
+let resumeAt = new Map(store.get(own('sawt_resume'), []));
 
 function setResume(id, t) {
   id = String(id);
@@ -5361,7 +5404,7 @@ function setResume(id, t) {
   resumeAt.delete(id);
   if (t != null) resumeAt.set(id, t);
   while (resumeAt.size > 200) resumeAt.delete(resumeAt.keys().next().value);
-  store.set('sawt_resume', [...resumeAt]);
+  store.set(own('sawt_resume'), [...resumeAt]);
 }
 
 let loadToken = 0;
@@ -5572,7 +5615,7 @@ function saveLastPosition() {
   if (!currentTrack) return;
   lastSaved = Date.now();
   const t = Math.floor(audio.currentTime || 0);
-  store.set('sawt_last', { id: currentTrack.id, t });
+  store.set(own('sawt_last'), { id: currentTrack.id, t });
   // A long track is carried on from here next time; heard to (nearly) the end, from the start.
   // Its length as the file says, else as the library has it ("1:02:03")
   const d = isFinite(audio.duration) && audio.duration > 0 ? audio.duration
@@ -5580,9 +5623,32 @@ function saveLastPosition() {
   if (d >= LONG_TRACK) setResume(currentTrack.id, t >= RESUME_FROM && t < d - END_MARGIN ? t : null);
 }
 
+// Nothing playing and nothing queued, the mini player gone (another account's listening was)
+function clearPlayer() {
+  wantsToPlay = false;
+  audio.pause();
+  loadToken++;
+  if (hls) { hls.destroy(); hls = null; }
+  audio.removeAttribute('src');
+  audio.load();
+  currentTrack = null;
+  queue = [];
+  queueIndex = 0;
+  queueOriginal = null;
+  queueSource = null;
+  playingFrom = '';
+  countedListen = null;
+  const mini = $('mini-player');
+  mini.classList.remove('active');
+  mini.style.display = 'none';
+  document.body.classList.remove('has-player');
+  if ('mediaSession' in navigator) navigator.mediaSession.metadata = null;
+  paintPlayButtons();
+}
+
 // Reopening the app shows the last track, paused where it was left
 function restoreLastTrack() {
-  const last = store.get('sawt_last', null);
+  const last = store.get(own('sawt_last'), null);
   const track = last && trackById.get(String(last.id));
   if (!track || currentTrack) return;
   queue = [track];
@@ -6104,6 +6170,8 @@ async function loadProfile() {
 async function initAuth() {
   const { data: { session } } = await supabase.auth.getSession();
   currentUser = session?.user ?? null;
+  // The kept session may have ended meanwhile: the guest's then
+  if (switchOwner(currentUser?.id)) ownerChanged();
   await loadProfile();
   updateProfileUI();
   if (currentUser) syncFromCloud();
@@ -6116,18 +6184,11 @@ async function initAuth() {
       if (event === 'USER_UPDATED') updateProfileUI(); // name or photo changed
       return;
     }
+    // Signed in, out, or into another account: its own library and listening, nothing of the one before
+    if (switchOwner(currentUser?.id)) ownerChanged();
     await loadProfile();
     updateProfileUI();
     if (currentUser) syncFromCloud();
-    else {
-      // Signed out: back to this device's guest data
-      lib.likes = new Set(store.get('sawt_likes', []).map(String));
-      lib.playlists = store.get('sawt_playlists', []);
-      lib.follows = new Set(store.get('sawt_artists', []));
-      libVersion++;
-      refreshLikeButtons();
-      refreshOpenViews();
-    }
   });
 
   // Offer sign-in once, on the first visit (checked when it would show: the
@@ -6135,6 +6196,41 @@ async function initAuth() {
   setTimeout(() => {
     if (!currentUser && !isPasswordRecovery && !store.get('sawt_auth_skipped', false) && $('auth-modal').style.display !== 'flex') openAuthModal();
   }, 1200);
+}
+
+// The account changed: this browser's listening becomes the new owner's own.
+// What the one before was playing stops and goes, and its lists, history,
+// searches and the rest are read again from the new owner's keys. False when
+// it is the same owner.
+function switchOwner(id) {
+  id = id || null;
+  if (id === owner) return false;
+  owner = id;
+  clearPlayer();
+  lib.likes = ownLikes();
+  lib.playlists = ownPlaylists();
+  lib.follows = ownFollows();
+  lib.downloads = new Set(store.get(own('sawt_downloads'), []).map(String));
+  lib.history = store.get(own('sawt_history'), []);
+  lib.plays = store.get(own('sawt_plays'), {});
+  lib.hidden = new Set(store.get(own('sawt_hidden'), []));
+  lib.excluded = new Set(store.get(own('sawt_excluded'), []));
+  recentPlayed = store.get(own('sawt_recent_played'), []);
+  savedMixes = store.get(own('sawt_mixes'), null);
+  mixMemo = null;
+  recentSearches = store.get(own('sawt_recent_searches'), []);
+  resumeAt = new Map(store.get(own('sawt_resume'), []));
+  feedback = store.get(own('sawt_feedback'), FEEDBACK_NONE);
+  libVersion++;
+  return true;
+}
+
+// The screens drawn again for the new owner, with its own last track (paused) in the player
+function ownerChanged() {
+  refreshLikeButtons();
+  if (!allTracks.length) return;
+  restoreLastTrack();
+  refreshOpenViews();
 }
 
 function updateProfileUI() {
@@ -6219,7 +6315,8 @@ function setAuthLoading(loading) {
 
 window.signInWithGoogle = async () => {
   $('auth-message').style.display = 'none';
-  const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: APP_URL } });
+  // Google's account chooser every time: without it Google signs the browser's last account in again
+  const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: APP_URL, queryParams: { prompt: 'select_account' } } });
   if (error) { showAuthMessage('فشل تسجيل الدخول بواسطة جوجل'); console.error(error); }
 };
 window.signInWithFacebook = async () => {
@@ -6349,13 +6446,13 @@ async function deleteAccount() {
   if (status === 401) return expired;
   if (status < 200 || status > 299) return `تعذّر حذف الحساب (${status})، حاول لاحقاً أو راسلنا على support@soutalahzan.com`;
   audio.pause();
-  // The account is gone on the server: only this device's session is left to forget
+  // The account is gone on the server: only this device's session and what it kept here are left to forget
+  const uid = session.user?.id;
   const { error } = await supabase.auth.signOut({ scope: 'local' }).catch((e) => ({ error: e }));
-  if (error) {
-    Object.keys(localStorage).filter((k) => /^sb-.*-auth-token$/.test(k)).forEach((k) => localStorage.removeItem(k));
-    location.reload();
-    return null;
-  }
+  if (error) Object.keys(localStorage).filter((k) => /^sb-.*-auth-token$/.test(k)).forEach((k) => localStorage.removeItem(k));
+  if (switchOwner(null)) ownerChanged();
+  if (uid) forgetOwner(uid);
+  if (error) { location.reload(); return null; }
   toast('حُذف حسابك وكل بياناته');
   return null;
 }
@@ -6498,13 +6595,27 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) auto
 // the browsers it has seen and those it was opened in today, this week and
 // this month (app_ping); the owner reads the numbers on stats/. Not counted:
 // the preview copy and a page served from this computer.
+const randomId = () => (crypto.randomUUID ? crypto.randomUUID()
+  : '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, (c) => (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16)));
+
 // This browser's random id (nothing about the listener), made the first time
 function deviceId() {
   let id = store.get('sawt_device_id', null);
   if (!id) {
-    id = crypto.randomUUID ? crypto.randomUUID()
-      : '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, (c) => (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16));
+    id = randomId();
     store.set('sawt_device_id', id);
+  }
+  return id;
+}
+
+// Who rates the app from here: the guest as this browser, each account with a
+// random id of its own on it (its rating and words are its own)
+function feedbackDevice() {
+  if (!owner) return deviceId();
+  let id = store.get(own('sawt_feedback_device'), null);
+  if (!id) {
+    id = randomId();
+    store.set(own('sawt_feedback_device'), id);
   }
   return id;
 }
