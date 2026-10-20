@@ -191,7 +191,7 @@ function initialAvatar(name) {
   const letter = esc((name || '?').trim().charAt(0) || '?');
   return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#d97736"/>` +
-    `<text x="50" y="66" font-size="48" font-family="Tajawal, Arial" font-weight="700" fill="#121212" text-anchor="middle">${letter}</text></svg>`);
+    `<text x="50" y="66" font-size="48" font-family="Rubik, Arial" font-weight="700" fill="#121212" text-anchor="middle">${letter}</text></svg>`);
 }
 
 // ═══ Data ════════════════════════════════════════════════════════════════════
@@ -5357,7 +5357,7 @@ function drawShareCard() {
   ctx.direction = 'rtl';
   ctx.textAlign = 'right';
   ctx.textBaseline = 'top';
-  ctx.font = `800 ${titleSize}px Tajawal, sans-serif`;
+  ctx.font = `800 ${titleSize}px Rubik, sans-serif`;
   const titleLines = wrapLines(ctx, t.title, inner, 2);
   const ch = pad + inner + W * 0.045 + titleLines.length * titleSize * 1.25 + W * 0.012 + nameSize * 1.3 + W * 0.05 + logo + pad;
   const y = (H - ch) / 2;
@@ -5381,10 +5381,10 @@ function drawShareCard() {
 
   const right = x + cw - pad;
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = `800 ${titleSize}px Tajawal, sans-serif`;
+  ctx.font = `800 ${titleSize}px Rubik, sans-serif`;
   titleLines.forEach((line) => { ctx.fillText(line, right, cy); cy += titleSize * 1.25; });
   cy += W * 0.012;
-  ctx.font = `500 ${nameSize}px Tajawal, sans-serif`;
+  ctx.font = `500 ${nameSize}px Rubik, sans-serif`;
   ctx.fillStyle = 'rgba(255,255,255,0.7)';
   ctx.fillText(wrapLines(ctx, t.reciterName, inner, 1)[0] || '', right, cy);
   cy += nameSize * 1.3 + W * 0.05;
@@ -5403,7 +5403,7 @@ function drawShareCard() {
   ctx.fill(new Path2D(S_PATH));
   ctx.restore();
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = `700 ${W * 0.045}px Tajawal, sans-serif`;
+  ctx.font = `700 ${W * 0.045}px Rubik, sans-serif`;
   ctx.textBaseline = 'middle';
   ctx.fillText('صوت الأحزان', right - logo - W * 0.02, cy + logo / 2);
   ctx.restore();
