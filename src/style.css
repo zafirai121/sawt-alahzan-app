@@ -1743,3 +1743,74 @@ body.has-player .up-bar { bottom: calc(var(--nav-height) + var(--safe-bottom) + 
 .fbp-comment { margin: 0; font-size: 15px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
 .fbp-meta { font-size: 12px; color: rgba(255, 255, 255, 0.45); }
 .fbp-empty { text-align: center; color: rgba(255, 255, 255, 0.6); padding: 40px 0; }
+
+/* ═══ A new account's first step: the reciters they love (Spotify's "choose 3 or more") ═══ */
+.rp {
+  position: fixed; inset: 0; z-index: 10050; background: var(--dark-bg); display: flex; flex-direction: column;
+  opacity: 0; transform: translateY(24px); transition: opacity 0.28s ease, transform 0.32s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+.rp.open { opacity: 1; transform: none; }
+.rp-scroll {
+  flex: 1; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  padding: calc(env(safe-area-inset-top, 0px) + 44px) 20px calc(var(--safe-bottom) + 130px);
+}
+.rp-scroll > * { max-width: 860px; margin-inline: auto; }
+.rp-title { font-size: clamp(28px, 8.6vw, 40px); font-weight: 900; line-height: 1.35; letter-spacing: -0.3px; margin: 0 auto 26px; }
+/* The search stays on top as the reciters scroll under it */
+.rp-search-bar { position: sticky; top: 0; z-index: 2; background: var(--dark-bg); padding: 10px 0 18px; }
+.rp-search {
+  display: flex; align-items: center; gap: 12px; height: 50px; padding: 0 16px; border-radius: 8px;
+  background: #fff; color: #121212; cursor: text;
+}
+.rp-search > .ic { font-size: 24px; flex-shrink: 0; }
+.rp-search input {
+  flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent;
+  font: inherit; font-size: 17px; font-weight: 700; color: #121212;
+}
+.rp-search input::placeholder { color: #121212; opacity: 0.8; }
+.rp-search input::-webkit-search-cancel-button { display: none; }
+.rp-clear { border: 0; background: rgba(0, 0, 0, 0.08); color: #121212; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; flex-shrink: 0; }
+.rp-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 26px 16px; padding-top: 14px; }
+@media (min-width: 600px) { .rp-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 30px 22px; } }
+.rp-item { display: flex; flex-direction: column; align-items: center; gap: 12px; cursor: pointer; -webkit-tap-highlight-color: transparent; outline: none; }
+.rp-photo { position: relative; width: 100%; aspect-ratio: 1; border-radius: 50%; transition: transform 0.18s ease; }
+.rp-photo img {
+  width: 100%; height: 100%; display: block; border-radius: 50%; object-fit: cover; background: var(--dark-surface);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); transition: box-shadow 0.2s ease, filter 0.2s ease;
+}
+.rp-item:active .rp-photo { transform: scale(0.94); }
+.rp-item:focus-visible .rp-photo img { box-shadow: 0 0 0 3px var(--dark-bg), 0 0 0 5px var(--accent); }
+/* Chosen: a gold ring, and the gold tick popping in at the corner */
+.rp-item.on .rp-photo img { box-shadow: 0 0 0 3px var(--dark-bg), 0 0 0 6px var(--accent), 0 8px 22px rgba(0, 0, 0, 0.5); filter: brightness(0.82); }
+.rp-check {
+  position: absolute; bottom: 1%; inset-inline-start: 1%; width: 32%; aspect-ratio: 1; border-radius: 50%;
+  background: var(--gold); color: #121212; display: flex; align-items: center; justify-content: center;
+  font-size: clamp(16px, 5vw, 26px); box-shadow: 0 3px 10px rgba(0, 0, 0, 0.55);
+  transform: scale(0); transition: transform 0.28s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+.rp-check .ic svg { stroke-width: 3.2; }
+.rp-item.on .rp-check { transform: scale(1); }
+.rp-name {
+  font-size: 15px; font-weight: 800; line-height: 1.35; text-align: center; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+/* The reciters like a chosen one, coming in after it */
+.rp-item.new { animation: rp-in 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+@keyframes rp-in { from { opacity: 0; transform: scale(0.55); } to { opacity: 1; transform: none; } }
+.rp-empty { text-align: center; color: var(--text-secondary); padding: 40px 0; font-size: 15px; }
+/* "تم", from the third one chosen */
+.rp-done-wrap {
+  position: absolute; inset-inline: 0; bottom: 0; display: flex; justify-content: center; pointer-events: none;
+  padding: 56px 0 calc(var(--safe-bottom) + 26px);
+  background: linear-gradient(to bottom, transparent, rgba(18, 18, 18, 0.94) 55%);
+  transform: translateY(110%); transition: transform 0.34s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+.rp-done-wrap.show { transform: none; }
+.rp-done {
+  pointer-events: auto; min-width: 132px; height: 52px; padding: 0 38px; border: 0; border-radius: 30px;
+  background: var(--gold); color: #121212; font: inherit; font-size: 18px; font-weight: 900; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  transition: transform 0.15s ease;
+}
+.rp-done:active { transform: scale(0.95); }
+.rp-done .ic { font-size: 22px; }

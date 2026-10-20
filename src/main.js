@@ -531,6 +531,157 @@ async function syncFromCloud() {
   libVersion++;
   refreshLikeButtons();
   refreshOpenViews();
+  if (!fol.error && shouldPickReciters()) openReciterPicker();
+}
+
+// ═══ A new account's first step (Spotify's "choose 3 or more artists you like") ═══
+// Right after a new account first signs in, before the home screen: the reciters
+// heard most, round photos three to a row, and a search over all of them. Picking
+// one brings the reciters of the same kind of work in right after it; "تم" (from
+// three on) follows them all in the account.
+const PICK_AT_LEAST = 3;
+const NEW_ACCOUNT_DAYS = 3;
+const picker = { uid: null, order: [], chosen: new Set(), query: '', items: new Map() };
+
+// A new account (made in the last three days) that follows no one and hasn't been through it
+function shouldPickReciters() {
+  if (!currentUser || lib.follows.size || store.get(own('sawt_reciters_picked'), false)) return false;
+  const made = Date.parse(currentUser.created_at || '');
+  return Number.isFinite(made) && Date.now() - made < NEW_ACCOUNT_DAYS * 864e5;
+}
+
+// The reciters that can be followed (they have an id in the table), the most listened first
+function pickableReciters() {
+  const listens = new Map();
+  allTracks.forEach((t) => listens.set(t.reciterName, (listens.get(t.reciterName) || 0) + t.listens));
+  return reciters.filter((r) => r.dbId && r.count > 0 && r.name !== UNKNOWN_RECITER)
+    .map((r) => ({ r, n: listens.get(r.name) || 0 })).sort((a, b) => b.n - a.n).map((x) => x.r);
+}
+
+// Three reciters of the same kind of work as [name] (its most listened track's), with a photo
+function pickRelated(name) {
+  const seed = tracksOf(name).reduce((best, t) => (!best || t.listens > best.listens ? t : best), null);
+  if (!seed) return [];
+  return [...new Set(similarTo(seed, 300, { others: true }).map((t) => t.reciterName))]
+    .map((n) => reciterByName.get(n)).filter((r) => r?.dbId && r.hasPhoto && r.name !== name).slice(0, 3);
+}
+
+function pickerItem(r, fresh = false) {
+  const el = document.createElement('div');
+  el.className = `rp-item${picker.chosen.has(r.name) ? ' on' : ''}${fresh ? ' new' : ''}`;
+  el.innerHTML = `
+    <div class="rp-photo"><img src="${esc(thumb(r.image, 120))}" alt="" loading="lazy" /><span class="rp-check">${icon('tick')}</span></div>
+    <div class="rp-name">${esc(r.name)}</div>`;
+  el.setAttribute('aria-pressed', String(picker.chosen.has(r.name)));
+  return clickable(el, () => togglePick(r, el));
+}
+
+function paintPicker() {
+  const grid = $('rp-grid');
+  picker.items.clear();
+  const q = normalize(picker.query.trim());
+  const list = q ? pickableReciters().filter((r) => normalize(r.name).includes(q)).slice(0, 60) : picker.order;
+  grid.replaceChildren(...list.map((r) => {
+    const el = pickerItem(r);
+    picker.items.set(r.name, el);
+    return el;
+  }));
+  $('rp-empty').style.display = list.length ? 'none' : '';
+  $('rp-clear').style.display = picker.query ? '' : 'none';
+}
+
+function togglePick(r, el) {
+  const on = !picker.chosen.has(r.name);
+  if (on) picker.chosen.add(r.name); else picker.chosen.delete(r.name);
+  el.classList.toggle('on', on);
+  el.setAttribute('aria-pressed', String(on));
+  // Chosen from the search: at the head of the list once the search is cleared
+  if (on && !picker.order.includes(r)) picker.order.unshift(r);
+  // Chosen from the list: the reciters like them come in right after (moved up if further down)
+  if (on && !picker.query) {
+    const at = picker.order.indexOf(r);
+    const before = new Set(picker.order.slice(0, at + 1));
+    const related = pickRelated(r.name).filter((x) => !before.has(x));
+    picker.order = [...picker.order.slice(0, at + 1), ...related, ...picker.order.slice(at + 1).filter((x) => !related.includes(x))];
+    let after = el;
+    related.forEach((x) => {
+      picker.items.get(x.name)?.remove();
+      const item = pickerItem(x, true);
+      picker.items.set(x.name, item);
+      after.after(item);
+      after = item;
+    });
+  }
+  $('rp-done-wrap').classList.toggle('show', picker.chosen.size >= PICK_AT_LEAST);
+}
+
+function openReciterPicker() {
+  if ($('reciter-picker')) return;
+  picker.uid = currentUser.id;
+  picker.order = pickableReciters().filter((r) => r.hasPhoto).slice(0, 120);
+  picker.chosen = new Set();
+  picker.query = '';
+  const view = document.createElement('div');
+  view.id = 'reciter-picker';
+  view.className = 'rp';
+  view.setAttribute('role', 'dialog');
+  view.setAttribute('aria-modal', 'true');
+  view.setAttribute('aria-labelledby', 'rp-title');
+  view.innerHTML = `
+    <div class="rp-scroll">
+      <h1 class="rp-title" id="rp-title">اختر ${PICK_AT_LEAST} أو أكثر من الرواديد الذين تحبهم.</h1>
+      <div class="rp-search-bar">
+        <label class="rp-search">${icon('search')}<input id="rp-input" type="search" placeholder="ابحث" autocomplete="off" enterkeyhint="search" />
+          <button id="rp-clear" class="rp-clear" aria-label="مسح" style="display: none;">${icon('close')}</button></label>
+      </div>
+      <div class="rp-grid" id="rp-grid"></div>
+      <p class="rp-empty" id="rp-empty" style="display: none;">لم نجد رادوداً بهذا الاسم</p>
+    </div>
+    <div class="rp-done-wrap" id="rp-done-wrap"><button class="rp-done" id="rp-done">تم</button></div>`;
+  document.body.appendChild(view);
+  const input = $('rp-input');
+  input.oninput = () => { picker.query = input.value; paintPicker(); $('reciter-picker').querySelector('.rp-scroll').scrollTop = 0; };
+  input.onkeydown = (e) => { if (e.key === 'Enter') input.blur(); };
+  $('rp-clear').onclick = (e) => { e.preventDefault(); input.value = ''; picker.query = ''; paintPicker(); };
+  $('rp-done').onclick = finishPicking;
+  paintPicker();
+  requestAnimationFrame(() => view.classList.add('open'));
+}
+
+function closeReciterPicker() {
+  const view = $('reciter-picker');
+  if (!view) return;
+  view.removeAttribute('id');
+  view.classList.remove('open');
+  setTimeout(() => view.remove(), 300);
+}
+
+// "تم": the chosen reciters followed in the account, then the home screen
+async function finishPicking() {
+  const btn = $('rp-done');
+  const uid = picker.uid;
+  const chosen = [...picker.chosen].map((n) => reciterByName.get(n)).filter((r) => r?.dbId);
+  if (chosen.length < PICK_AT_LEAST || btn.disabled) return;
+  btn.disabled = true;
+  btn.innerHTML = icon('spinner');
+  const { error } = await supabase.from('follows').upsert(chosen.map((r) => ({ follower_id: uid, followed_reciter_id: Number(r.dbId) })),
+    { onConflict: 'follower_id,followed_reciter_id', ignoreDuplicates: true });
+  if (owner !== uid) return; // signed out or into another account meanwhile (the picker went with it)
+  if (error) {
+    console.warn('Could not save follows:', error);
+    btn.disabled = false;
+    btn.textContent = 'تم';
+    toast('تعذر الحفظ، تحقق من اتصالك وحاول مجدداً');
+    return;
+  }
+  chosen.forEach((r) => lib.follows.add(r.name));
+  lib.saveLocal();
+  store.set(own('sawt_reciters_picked'), true);
+  libraryChanged();
+  paintFollowButtons();
+  refreshOpenViews();
+  closeReciterPicker();
+  toast(`تتابع الآن ${formatCount(chosen.length)} من الرواديد`);
 }
 
 const safePlaylistId = (id) => (/^[A-Za-z0-9_-]{1,100}$/.test(String(id)) ? String(id) : `pl_${Date.now()}`);
@@ -6206,6 +6357,7 @@ function switchOwner(id) {
   id = id || null;
   if (id === owner) return false;
   owner = id;
+  closeReciterPicker();
   clearPlayer();
   lib.likes = ownLikes();
   lib.playlists = ownPlaylists();
