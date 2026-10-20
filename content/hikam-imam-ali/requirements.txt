@@ -1,0 +1,7 @@
+numpy>=1.26
+scipy>=1.11
+soundfile>=0.12
+pillow>=10.0      # needs libraqm (bundled in the PyPI wheels) for Arabic shaping
+opencv-python-headless>=4.9
+sherpa-onnx>=1.12
+pyloudnorm>=0.1.1

@@ -1,0 +1,129 @@
+{
+  "files": {
+    "final_video.mp4": {
+      "exists": true,
+      "bytes": 39405084
+    },
+    "voiceover.wav": {
+      "exists": true,
+      "bytes": 4752044
+    },
+    "voiceover.mp3": {
+      "exists": true,
+      "bytes": 793197
+    },
+    "subtitles.srt": {
+      "exists": true,
+      "bytes": 712
+    }
+  },
+  "probe": {
+    "container_duration": 33.0,
+    "size_mb": 39.41,
+    "video_codec": "h264",
+    "profile": "High",
+    "width": 1080,
+    "height": 1920,
+    "fps": 30.0,
+    "pix_fmt": "yuv420p",
+    "color_space": "bt709",
+    "frames": 990,
+    "audio_codec": "aac",
+    "audio_rate": 48000,
+    "audio_channels": 2,
+    "bitrate_kbps": 9553
+  },
+  "decode_errors": "none",
+  "black_intervals": [
+    [
+      0.0,
+      0.4
+    ],
+    [
+      32.8,
+      32.9667
+    ]
+  ],
+  "unintended_black": [],
+  "loudness": {
+    "integrated_lufs": -14.0,
+    "true_peak_dbtp": -1.5
+  },
+  "caption_sync": [
+    {
+      "line": "من أقوال أمير المؤمنين،",
+      "caption_in": 1.6,
+      "speech_onset": 1.726,
+      "lead_ms": 126
+    },
+    {
+      "line": "الإمام علي عليه السلام",
+      "caption_in": 4.75,
+      "speech_onset": 4.874,
+      "lead_ms": 124
+    },
+    {
+      "line": "ضَرُورَاتُ الْأَحْوَالِ",
+      "caption_in": 9.79,
+      "speech_onset": 9.921,
+      "lead_ms": 131
+    },
+    {
+      "line": "تُذِلُّ رِقَابَ الرِّجَالِ",
+      "caption_in": 12.068,
+      "speech_onset": 12.195,
+      "lead_ms": 127
+    },
+    {
+      "line": "وقال أيضًا عليه السلام",
+      "caption_in": 16.238,
+      "speech_onset": 16.368,
+      "lead_ms": 130
+    },
+    {
+      "line": "أَصْدَقُ الْمَقَالِ",
+      "caption_in": 19.528,
+      "speech_onset": 19.656,
+      "lead_ms": 128
+    },
+    {
+      "line": "مَا نَطَقَ بِهِ لِسَانُ الْحَالِ",
+      "caption_in": 21.368,
+      "speech_onset": 21.498,
+      "lead_ms": 130
+    }
+  ],
+  "voiceover_vs_dry_alignment_ms": 0.0,
+  "srt": {
+    "cues": 7,
+    "max_lines": 2,
+    "monotonic": true,
+    "within_video": true
+  },
+  "asr": {
+    "intro": {
+      "expected": "مِنْ أَقْوَالِ أَمِيرِ الْمُؤْمِنِينَ، الْإِمَامِ عَلِيٍّ عَلَيْهِ السَّلَامُ...",
+      "heard": "من أقوال أمير المؤمنين الإمام علي عليه السلام",
+      "similarity": 1.0
+    },
+    "h1": {
+      "expected": "ضَرُورَاتُ الْأَحْوَالِ تُذِلُّ رِقَابَ الرِّجَالِ.",
+      "heard": "ضرورات الأحوال تذل رقاب الرجال",
+      "similarity": 1.0
+    },
+    "link": {
+      "expected": "وَقَالَ أَيْضًا عَلَيْهِ السَّلَامُ...",
+      "heard": "وقال أيضا عليه السلام",
+      "similarity": 1.0
+    },
+    "h2": {
+      "expected": "أَصْدَقُ الْمَقَالِ مَا نَطَقَ بِهِ لِسَانُ الْحَالِ.",
+      "heard": "أصدق المقال ما نطق به لسان الحال",
+      "similarity": 1.0
+    },
+    "full_mix_first_30s": {
+      "heard": "من أقوال أمير المؤمنين الإمام علي عليه السلام ضرورات الأحوال تذل رقاب الرجال وقال أيضا عليه السلام أصدق المقال ما نطق به لسان الحال",
+      "similarity": 1.0
+    }
+  }
+}
