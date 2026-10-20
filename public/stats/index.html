@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<meta name="referrer" content="no-referrer" />
+<title>إحصائيات صوت الأحزان</title>
+<link rel="icon" href="../favicon-48.png" />
+<!--
+  The owner's numbers from the anonymous counter (supabase/counter.sql):
+  how many phones and browsers the apps were opened on, and when. Read with
+  the owner's key (app_stats checks it); opened as stats/#k=<key> once, the
+  key is kept in this browser and taken out of the address.
+-->
+<style>
+  :root { color-scheme: dark; --bg: #121212; --card: #1c1c1c; --line: #2a2a2a; --text: #f2f2f2; --muted: #9a9a9a; --gold: #D4AF37; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: Rubik, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 20px 16px 40px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+  h1 { font-size: 20px; margin: 0; }
+  .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  button { font: inherit; cursor: pointer; }
+  .refresh { background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; font-size: 13px; }
+  .hero { background: var(--card); border-radius: 16px; padding: 18px; margin-bottom: 12px; }
+  .hero .label, .tile .label { color: var(--muted); font-size: 13px; }
+  .hero .value { font-size: 52px; font-weight: 800; line-height: 1.1; margin-top: 4px; }
+  .hero .note { color: var(--muted); font-size: 12.5px; margin-top: 6px; }
+  .group { color: var(--muted); font-size: 13px; margin: 4px 2px 8px; }
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }
+  .tiles.two { grid-template-columns: repeat(2, 1fr); }
+  .tile { background: var(--card); border-radius: 14px; padding: 14px; }
+  .tile .value { font-size: 24px; font-weight: 700; margin-top: 4px; }
+  section { background: var(--card); border-radius: 16px; padding: 16px; margin-bottom: 12px; }
+  h2 { font-size: 15px; margin: 0 0 2px; }
+  section .sub { margin-bottom: 12px; }
+  .chart { position: relative; }
+  /* numbers and their axis read left to right, inside the page's right-to-left */
+  .chart svg { display: block; width: 100%; height: 200px; overflow: visible; direction: ltr; }
+  .chart .tick { fill: var(--muted); font-size: 11px; }
+  .chart .grid { stroke: var(--line); stroke-width: 1; }
+  .chart .col { fill: var(--gold); }
+  .chart .col.dim { opacity: 0.45; }
+  .chart .hit { fill: transparent; }
+  .tip { position: absolute; pointer-events: none; background: #2b2b2b; border: 1px solid #3a3a3a; border-radius: 10px; padding: 8px 10px; font-size: 12.5px;
+         line-height: 1.6; white-space: nowrap; transform: translateY(-100%); display: none; z-index: 2; }
+  .tip b { font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { color: var(--muted); font-weight: 500; font-size: 12.5px; text-align: start; padding: 0 0 8px; }
+  td { padding: 8px 0; border-top: 1px solid var(--line); vertical-align: middle; }
+  td.num, th.num { text-align: end; font-variant-numeric: tabular-nums; width: 76px; }
+  .bar { height: 6px; border-radius: 3px; background: var(--gold); margin-top: 6px; min-width: 2px; }
+  .muted { color: var(--muted); }
+  .key { max-width: 420px; margin: 18vh auto 0; text-align: center; }
+  .key input { width: 100%; margin: 16px 0 10px; padding: 12px 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--text); font: inherit; direction: ltr; text-align: center; }
+  .gold { background: var(--gold); color: #121212; border: none; border-radius: 999px; padding: 12px 22px; font-weight: 800; width: 100%; }
+  .msg { color: #FF8A80; font-size: 14px; margin-top: 12px; line-height: 1.6; }
+  details { margin-top: 10px; }
+  summary { color: var(--muted); font-size: 13px; cursor: pointer; }
+</style>
+</head>
+<body>
+<main id="app"><p class="muted">جارٍ التحميل…</p></main>
+<script>
+(() => {
+  const SUPABASE = 'https://ckhtndmrcypkqrpjlzli.supabase.co';
+  const PUBLIC_KEY = 'sb_publishable_8jeopxp1S7VUh8hj0B6syA_4rSIaJuN';
+  const STORE = 'sawt_stats_key';
+  const app = document.getElementById('app');
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const num = (n) => Number(n || 0).toLocaleString('en-US');
+  const PLATFORMS = {
+    android: 'تطبيق أندرويد',
+    'android-play': 'أندرويد من Google Play',
+    'web-iphone': 'تطبيق الويب على آيفون',
+    'web-android': 'تطبيق الويب على أندرويد',
+    'web-desktop': 'تطبيق الويب على الكمبيوتر',
+  };
+  const read = () => { try { return localStorage.getItem(STORE); } catch { return null; } };
+  const keep = (k) => { try { k ? localStorage.setItem(STORE, k) : localStorage.removeItem(STORE); } catch { /* private mode */ } };
+
+  // The key from the link (#k=…): kept here, and out of the address bar
+  const fromLink = /[#&]k=([A-Za-z0-9]+)/.exec(location.hash);
+  if (fromLink) { keep(fromLink[1]); history.replaceState(null, '', location.pathname); }
+
+  function askKey(message) {
+    app.innerHTML = `<div class="key">
+      <h1>إحصائيات صوت الأحزان</h1>
+      <p class="sub">أدخل مفتاح الإحصائيات</p>
+      <input id="k" autocomplete="off" spellcheck="false" placeholder="المفتاح" />
+      <button class="gold" id="go">عرض</button>
+      ${message ? `<p class="msg">${message}</p>` : ''}
+    </div>`;
+    const go = () => { const k = document.getElementById('k').value.trim(); if (k) { keep(k); load(); } };
+    document.getElementById('go').onclick = go;
+    document.getElementById('k').onkeydown = (e) => { if (e.key === 'Enter') go(); };
+  }
+
+  async function load() {
+    const key = read();
+    if (!key) return askKey();
+    app.innerHTML = '<p class="muted">جارٍ التحميل…</p>';
+    let res, body;
+    try {
+      res = await fetch(`${SUPABASE}/rest/v1/rpc/app_stats`, {
+        method: 'POST',
+        headers: { apikey: PUBLIC_KEY, 'content-type': 'application/json' },
+        body: JSON.stringify({ p_key: key }),
+        cache: 'no-store',
+      });
+      body = await res.json().catch(() => null);
+    } catch {
+      app.innerHTML = '<p class="msg">تعذّر الاتصال. تأكد من الإنترنت ثم <button class="refresh" id="again">أعد المحاولة</button></p>';
+      document.getElementById('again').onclick = load;
+      return;
+    }
+    if (res.ok) return show(body);
+    const why = `${body?.message || ''} ${body?.code || ''}`;
+    if (/forbidden|42501/.test(why)) { keep(null); return askKey('المفتاح غير صحيح.'); }
+    if (/PGRST202|app_stats|404/.test(why) || res.status === 404) {
+      app.innerHTML = '<p class="msg">العدّاد لم يُفعَّل بعد في قاعدة البيانات: شغّل ملف SQL الخاص به في Supabase (SQL Editor) ثم أعد فتح الصفحة.</p>';
+      return;
+    }
+    app.innerHTML = `<p class="msg">حدث خطأ (${res.status}). <button class="refresh" id="again">أعد المحاولة</button></p>`;
+    document.getElementById('again').onclick = load;
+  }
+
+  function show(d) {
+    const days = d.days || [];
+    const platforms = d.platforms || [];
+    const versions = (d.versions || []).filter((v) => v.platform === 'android' || v.platform === 'android-play');
+    const maxPlatform = Math.max(1, ...platforms.map((p) => p.total));
+    app.innerHTML = `
+      <header>
+        <div><h1>إحصائيات صوت الأحزان</h1><div class="sub">اليوم ${esc(d.today)} · بتوقيت بغداد</div></div>
+        <button class="refresh" id="refresh">تحديث</button>
+      </header>
+      <div class="hero">
+        <div class="label">الأجهزة التي فُتح عليها التطبيق</div>
+        <div class="value">${num(d.total)}</div>
+        <div class="note">هواتف ومتصفحات مختلفة منذ إضافة العدّاد (الأندرويد وتطبيق الويب معاً)</div>
+      </div>
+      <div class="group">أجهزة فُتح عليها التطبيق</div>
+      <div class="tiles">
+        <div class="tile"><div class="label">اليوم</div><div class="value">${num(d.active1)}</div></div>
+        <div class="tile"><div class="label">آخر 7 أيام</div><div class="value">${num(d.active7)}</div></div>
+        <div class="tile"><div class="label">آخر 30 يوماً</div><div class="value">${num(d.active30)}</div></div>
+      </div>
+      <div class="group">أجهزة جديدة</div>
+      <div class="tiles two">
+        <div class="tile"><div class="label">اليوم</div><div class="value">${num(d.added1)}</div></div>
+        <div class="tile"><div class="label">آخر 7 أيام</div><div class="value">${num(d.added7)}</div></div>
+      </div>
+      <section>
+        <h2>الأجهزة التي فُتح عليها كل يوم</h2>
+        <div class="sub">آخر 30 يوماً · المس عموداً لترى يومه</div>
+        <div class="chart" id="chart"></div>
+        <details><summary>عرض الأرقام كجدول</summary>
+          <table><thead><tr><th>اليوم</th><th class="num">فتحوه</th><th class="num">جدد</th></tr></thead><tbody>
+          ${days.slice().reverse().map((x) => `<tr><td>${esc(x.day)}</td><td class="num">${num(x.active)}</td><td class="num">${num(x.added)}</td></tr>`).join('')}
+          </tbody></table>
+        </details>
+      </section>
+      <section>
+        <h2>حسب المنصة</h2>
+        <div class="sub">كل الأجهزة، ومن فُتح عليها في آخر 30 يوماً</div>
+        <table><thead><tr><th>المنصة</th><th class="num">الكل</th><th class="num">30 يوماً</th></tr></thead><tbody>
+        ${platforms.map((p) => `<tr><td>${esc(PLATFORMS[p.platform] || p.platform)}<div class="bar" style="width:${(p.total / maxPlatform) * 100}%"></div></td>
+          <td class="num">${num(p.total)}</td><td class="num">${num(p.active30)}</td></tr>`).join('') || '<tr><td class="muted" colspan="3">لا شيء بعد</td></tr>'}
+        </tbody></table>
+      </section>
+      <section>
+        <h2>إصدارات تطبيق الأندرويد</h2>
+        <div class="sub">على الأجهزة التي فُتح عليها في آخر 30 يوماً</div>
+        <table><thead><tr><th>الإصدار</th><th class="num">الأجهزة</th></tr></thead><tbody>
+        ${versions.map((v) => `<tr><td>${esc(v.version || '—')}${v.platform === 'android-play' ? ' <span class="muted">(Google Play)</span>' : ''}</td><td class="num">${num(v.devices)}</td></tr>`).join('') || '<tr><td class="muted" colspan="2">لا شيء بعد</td></tr>'}
+        </tbody></table>
+      </section>
+      <p class="sub">يُحسب كل جهاز مرة في اليوم عند فتح التطبيق، برقم عشوائي لا يدل على صاحبه. حذف التطبيق ثم تثبيته من جديد يُحسب جهازاً جديداً.</p>`;
+    document.getElementById('refresh').onclick = load;
+    shown = days;
+    drawChart(document.getElementById('chart'), days);
+  }
+  let shown = null;
+
+  // Columns, one a day (oldest on the right, as the page reads): a single series in gold
+  function drawChart(box, days) {
+    const W = Math.max(280, box.clientWidth), H = 200, top = 10, bottom = 24, left = 0, axis = 34;
+    const plotW = W - axis - left, plotH = H - top - bottom;
+    const max = Math.max(...days.map((x) => x.active), 0);
+    const step = niceStep(max);
+    const yMax = Math.max(step, Math.ceil(max / step) * step);
+    const slot = plotW / Math.max(1, days.length);
+    const bw = Math.min(24, Math.max(3, slot - 2));
+    const y = (v) => top + plotH - (v / yMax) * plotH;
+    // RTL: the first day at the right edge, today at the left
+    const x = (i) => axis + plotW - (i + 1) * slot + (slot - bw) / 2;
+    let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="الأجهزة التي فُتح عليها كل يوم في آخر 30 يوماً">`;
+    for (let v = 0; v <= yMax; v += step) {
+      svg += `<line class="grid" x1="${axis}" x2="${W}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${axis - 6}" y="${y(v) + 4}" text-anchor="end">${compact(v)}</text>`;
+    }
+    days.forEach((dd, i) => {
+      const h = Math.max(0, plotH * (dd.active / yMax));
+      const r = Math.min(4, bw / 2, h);
+      const x0 = x(i), y0 = top + plotH - h;
+      // rounded at the data end, square at the baseline
+      if (h > 0) svg += `<path class="col" d="M${x0},${top + plotH} V${y0 + r} Q${x0},${y0} ${x0 + r},${y0} H${x0 + bw - r} Q${x0 + bw},${y0} ${x0 + bw},${y0 + r} V${top + plotH} Z"/>`;
+      svg += `<rect class="hit" data-i="${i}" x="${axis + plotW - (i + 1) * slot}" y="${top}" width="${slot}" height="${plotH + bottom}"/>`;
+    });
+    // Day labels: the first, the middle and today
+    [0, Math.floor((days.length - 1) / 2), days.length - 1].forEach((i) => {
+      if (!days[i]) return;
+      svg += `<text class="tick" x="${x(i) + bw / 2}" y="${H - 6}" text-anchor="middle">${shortDay(days[i].day)}</text>`;
+    });
+    svg += '</svg><div class="tip" id="tip"></div>';
+    box.innerHTML = svg;
+    const tip = box.querySelector('#tip');
+    const svgEl = box.querySelector('svg');
+    const pick = (e) => {
+      const t = e.target.closest('.hit');
+      if (!t) { tip.style.display = 'none'; return; }
+      const i = Number(t.dataset.i), dd = days[i];
+      const scale = svgEl.getBoundingClientRect().width / W;
+      tip.innerHTML = `<b>${esc(dd.day)}</b><br>فتحوه: ${num(dd.active)}<br>جدد: ${num(dd.added)}`;
+      tip.style.display = 'block';
+      const cx = (x(i) + bw / 2) * scale;
+      tip.style.left = `${Math.min(Math.max(cx - tip.offsetWidth / 2, 0), box.clientWidth - tip.offsetWidth)}px`;
+      tip.style.top = `${y(dd.active) * scale - 8}px`;
+    };
+    svgEl.addEventListener('pointermove', pick);
+    svgEl.addEventListener('pointerdown', pick);
+    svgEl.addEventListener('pointerleave', () => { tip.style.display = 'none'; });
+  }
+  function niceStep(max) {
+    if (max <= 4) return 1;
+    const raw = max / 4, p = 10 ** Math.floor(Math.log10(raw));
+    return [1, 2, 5, 10].map((m) => m * p).find((s) => s >= raw);
+  }
+  const compact = (v) => (v >= 1000 ? `${+(v / 1000).toFixed(1)}K` : String(v));
+  const shortDay = (iso) => { const [, m, d] = iso.split('-'); return `${+d}/${+m}`; };
+
+  // A new width (turned, resized): the chart drawn again, from what was read
+  addEventListener('resize', () => { const c = document.getElementById('chart'); if (c && shown) drawChart(c, shown); });
+  load();
+})();
+</script>
+</body>
+</html>
