@@ -1588,10 +1588,10 @@ body.has-player .up-bar { bottom: calc(var(--nav-height) + var(--safe-bottom) + 
 #home-view .horizontal-scroller > .square-card.pl-square { width: 58vw; max-width: 240px; }
 .pl-cover {
   --frame: 6px;
-  container-type: inline-size; border-radius: 10px; padding: var(--frame);
+  container-type: inline-size; border-radius: 1%; padding: var(--frame);
   background: linear-gradient(135deg, #FFEB97 0%, #D9B66A 28%, #583714 55%, #B08A4A 78%, #FFEB97 100%);
 }
-.pl-cover > img { border-radius: 4px; }
+.pl-cover > img { border-radius: 0; }
 .square-card > .pl-cover { box-shadow: 0 8px 20px rgba(0,0,0,0.45); }
 .pl-cover .mix-logo { top: calc(var(--frame) + 4cqw); left: calc(var(--frame) + 4cqw); width: 13cqw; height: 13cqw; }
 /* No colour under the name: a deeper shadow keeps it readable on any cover */
