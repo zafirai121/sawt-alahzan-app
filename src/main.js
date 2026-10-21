@@ -2177,18 +2177,17 @@ function withReciters(tracks) {
 // The pictures of the gold mark (public/cards)
 const CARDS = `${import.meta.env.BASE_URL}cards/`;
 
-// A playlist's card, bigger than the other square cards: its first cover, the
-// cover's colour rising from the bottom with the playlist's name on it, the app's
-// mark in the corner and a gold line just inside its edge; who is in it under it
+// A playlist's card, bigger than the other square cards: its first cover in a wide
+// gold frame, the app's mark in the corner and the playlist's name on the cover;
+// who is in it under it
 function playlistCard(list) {
   const first = list.tracks.find((t) => t.coverImage) || list.tracks[0];
   const card = document.createElement('div');
   card.className = 'square-card pl-square';
   card.innerHTML = `
-    <div class="art pl-cover"><img src="${esc(thumb(first.coverImage, 240))}" alt="" loading="lazy" /><span class="pl-shade"></span>
+    <div class="art pl-cover"><img src="${esc(thumb(first.coverImage, 240))}" alt="" loading="lazy" />
       ${sLogo('mix-logo')}<span class="pl-title">${esc(list.title)}</span></div>
     <div class="square-subtitle">${esc(withReciters(list.tracks))}</div>`;
-  withShades(first, (sh) => card.querySelector('.pl-cover').style.setProperty('--pl', sh.vivid));
   return clickable(card, () => openListPage(list.title, list.tracks));
 }
 
