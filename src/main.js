@@ -321,19 +321,39 @@ async function loadData() {
   handleDeepLink();
 
   // The rest of the library, in parallel, without holding up the first screen
-  try {
-    const pages = [];
-    for (let from = PAGE_SIZE; from < (first.count || 0); from += PAGE_SIZE) pages.push(fetchTrackPage(from));
-    const rest = await Promise.all(pages);
-    rest.forEach((p) => allTracks.push(...p.rows.map(mapTrack)));
-    // A track uploaded while the pages load shifts them by one: the same track
-    // can then arrive twice (mapTrack hands back the same object)
-    allTracks = [...new Set(allTracks)];
-    fullyLoaded = true;
-  } catch (err) {
-    console.warn('Could not load the whole library:', err);
+  const rest = [];
+  for (let from = PAGE_SIZE; from < (first.count || 0); from += PAGE_SIZE) rest.push(from);
+  await loadRestPages(rest);
+}
+
+// A page of the library, asked again when it fails: supabase-js retries only
+// some errors (503, 520, a dropped connection), and only for a few seconds
+async function fetchTrackPageRetrying(from) {
+  for (let attempt = 1; ; attempt++) {
+    try { return await fetchTrackPage(from); } catch (err) {
+      if (attempt === 3) throw err;
+      await new Promise((resolve) => setTimeout(resolve, attempt * 3000));
+    }
   }
-  buildReciters(recRes.data || []);
+}
+
+let missingPages = []; // the library's pages that could not be read (asked again when the connection returns)
+let loadingRest = false;
+
+// The pages that came are kept even when another one fails; the library is
+// whole (fullyLoaded) once none is missing
+async function loadRestPages(froms) {
+  loadingRest = true;
+  const got = await Promise.allSettled(froms.map(fetchTrackPageRetrying));
+  loadingRest = false;
+  got.forEach((p) => { if (p.status === 'fulfilled') allTracks.push(...p.value.rows.map(mapTrack)); });
+  missingPages = froms.filter((_, i) => got[i].status === 'rejected');
+  if (missingPages.length) console.warn('Could not load the whole library:', got.find((p) => p.status === 'rejected').reason);
+  // A track uploaded while the pages load shifts them by one: the same track
+  // can then arrive twice (mapTrack hands back the same object)
+  allTracks = [...new Set(allTracks)];
+  fullyLoaded = !missingPages.length;
+  buildReciters(reciterRows);
   backfillDownloadMeta();
   dataVersion++;
   if (fullyLoaded) announceFollowedNew();
@@ -367,7 +387,14 @@ function showOfflineHome() {
 window.addEventListener('offline', () => toast('انقطع الاتصال بالإنترنت، تنزيلاتك متاحة للاستماع'));
 window.addEventListener('online', () => {
   if (loadState === 'failed') { toast('عاد الاتصال بالإنترنت'); loadData(); }
+  else retryMissingPages();
 });
+// Back to the app (the server may have been down a while ago)
+document.addEventListener('visibilitychange', () => { if (!document.hidden) retryMissingPages(); });
+
+function retryMissingPages() {
+  if (missingPages.length && !loadingRest) loadRestPages(missingPages);
+}
 
 // Reciters come from the reciters table (real photos); names that only appear
 // on tracks are added too, using a cover of theirs as the photo.
@@ -694,12 +721,15 @@ async function toggleLike(track) {
   libraryChanged();
   toast(liked ? 'أُضيف إلى المفضلة' : 'أُزيل من المفضلة');
   if (currentUser) {
+    const uid = currentUser.id;
     const q = liked
-      ? supabase.from('favorites').upsert({ user_id: currentUser.id, poem_id: cloudId(track.id) }, { onConflict: 'user_id,poem_id', ignoreDuplicates: true })
-      : supabase.from('favorites').delete().eq('user_id', currentUser.id).eq('poem_id', cloudId(track.id));
+      ? supabase.from('favorites').upsert({ user_id: uid, poem_id: cloudId(track.id) }, { onConflict: 'user_id,poem_id', ignoreDuplicates: true })
+      : supabase.from('favorites').delete().eq('user_id', uid).eq('poem_id', cloudId(track.id));
     const { error } = await q;
     if (error) {
       console.warn('Could not save like:', error);
+      // Signed out or into another account meanwhile: the likes on screen are not the ones changed
+      if (owner !== uid) return lib.likes.has(track.id);
       if (liked) lib.likes.delete(track.id); else lib.likes.add(track.id);
       refreshLikeButtons();
       libraryChanged();
@@ -748,12 +778,15 @@ async function toggleFollow(reciter) {
   libraryChanged();
   paintFollowButtons();
   if (currentUser && reciter.dbId) {
+    const uid = currentUser.id;
     const q = following
-      ? supabase.from('follows').upsert({ follower_id: currentUser.id, followed_reciter_id: Number(reciter.dbId) }, { onConflict: 'follower_id,followed_reciter_id', ignoreDuplicates: true })
-      : supabase.from('follows').delete().eq('follower_id', currentUser.id).eq('followed_reciter_id', Number(reciter.dbId));
+      ? supabase.from('follows').upsert({ follower_id: uid, followed_reciter_id: Number(reciter.dbId) }, { onConflict: 'follower_id,followed_reciter_id', ignoreDuplicates: true })
+      : supabase.from('follows').delete().eq('follower_id', uid).eq('followed_reciter_id', Number(reciter.dbId));
     const { error } = await q;
     if (error) {
       console.warn('Could not save follow:', error);
+      // Signed out or into another account meanwhile: the follows on screen are not the ones changed
+      if (owner !== uid) return lib.follows.has(reciter.name);
       if (following) lib.follows.delete(reciter.name); else lib.follows.add(reciter.name);
       libraryChanged();
       paintFollowButtons();
@@ -6511,9 +6544,10 @@ window.submitAuth = async () => {
 };
 
 // Signing out stops what is playing (it was theirs); the home screen underneath, the sign-in screen on top
+// (this browser only: the phone app and other browsers stay signed in)
 window.doLogout = async () => {
   audio.pause();
-  await supabase.auth.signOut();
+  await supabase.auth.signOut({ scope: 'local' });
   toast('تم تسجيل الخروج');
   goHome();
   openAuthModal();
