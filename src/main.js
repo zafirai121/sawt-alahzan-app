@@ -1276,6 +1276,7 @@ let scrollFrame = 0;
 function startPageScroll(viewId) {
   onPageScroll = viewScroll[viewId] || plainBar(viewId);
   $('page-bar').classList.remove('show');
+  document.body.classList.remove('bar-shown');
   onPageScroll?.(mainEl().scrollTop, true);
 }
 // The library's bar: a hairline under it once the page has scrolled
@@ -1306,14 +1307,15 @@ function plainBar(viewId) {
   });
 }
 
-// The bar: `title` on `color()`, shown once the page has scrolled past `at()`;
+// The bar: `title` on `color()`, shown once the page has scrolled past `at()`
+// (or its cover is gone, or its play button has reached it);
 // `back`: false on a tab, there being nowhere to go back to
 // `play`: a play button for the page's list on the bar, `own`: the page's own.
-// Spotify's: once the page's has gone up so far that its middle reaches the
-// bar's bottom edge, it stays there, half over the bar, the same size and
-// where it was across (the bar's shows in its place, so the two never show
-// together)
-// `shrink`: the page's cover, shrinking as the page goes up (see shrinkOnScroll)
+// The page's goes up with the page until its top reaches the bar's bottom edge,
+// and stops there: from then the bar's shows in its place, the same size and
+// where it was across, just under the bar (never under it)
+// `shrink`: the page's cover, shrinking as the page goes up (see shrinkOnScroll);
+// the bar comes as soon as it is gone
 function pageScroller({ title, color, at, play = null, own = null, extra = null, back = true, shrink = null }) {
   const bar = $('page-bar');
   const handler = (top, init) => {
@@ -1323,30 +1325,29 @@ function pageScroller({ title, color, at, play = null, own = null, extra = null,
       bar.classList.toggle('no-back', !back);
       bar.querySelector('.page-bar-end').replaceChildren(...(play ? [play()] : []));
     }
-    const show = top > at();
+    const cover = shrink?.();
+    const coverGone = cover ? shrinkOnScroll(cover, top) : false;
+    const barPlay = bar.querySelector('.page-bar-end .big-play');
+    const ownPlay = barPlay && own?.();
+    // The bar is fixed at the top of the screen: its bottom edge is its height
+    // (not its box, which slides a little while it comes and goes)
+    const r = ownPlay?.getBoundingClientRect();
+    const reached = !!r && r.width > 0 && r.top <= bar.offsetHeight;
+    const show = top > at() || coverGone || reached;
     if (show !== bar.classList.contains('show')) {
       bar.classList.toggle('show', show);
       bar.setAttribute('aria-hidden', String(!show));
+      document.body.classList.toggle('bar-shown', show); // the page's own back goes, the bar has one
     }
-    const barPlay = bar.querySelector('.page-bar-end .big-play');
-    const ownPlay = own?.();
     if (barPlay) {
-      let on = show;
-      if (ownPlay) {
-        const r = ownPlay.getBoundingClientRect();
-        const b = bar.getBoundingClientRect();
-        on = show && r.top + r.height / 2 < b.bottom;
-        if (r.width) {
-          barPlay.style.left = `${r.left - b.left}px`;
-          barPlay.style.width = barPlay.style.height = `${r.width}px`;
-          barPlay.style.top = `calc(100% - ${r.height / 2}px)`;
-        }
+      const on = ownPlay ? reached : show;
+      if (r?.width) {
+        barPlay.style.left = `${r.left - bar.getBoundingClientRect().left}px`;
+        barPlay.style.width = barPlay.style.height = `${r.width}px`;
       }
       barPlay.classList.toggle('play-off', !on);
       ownPlay?.classList.toggle('play-off', on);
     }
-    const cover = shrink?.();
-    if (cover) shrinkOnScroll(cover, top);
     extra?.(top);
   };
   handler.recolor = () => { if (onPageScroll === handler) bar.style.background = color(); };
@@ -1356,15 +1357,17 @@ function pageScroller({ title, color, at, play = null, own = null, extra = null,
 // Spotify's cover at the top of a page, as the page goes up (`top`, scrolled):
 // it goes up at half the page's speed and shrinks from its top by as much, so
 // the gap down to the words under it stays the same; at about half its size it
-// fades away (by then under the bar). As the phone app's
+// fades away (by then under the bar). As the phone app's. Whether it is gone
 function shrinkOnScroll(el, top) {
   const h = el.offsetHeight;
-  if (!h) return;
+  if (!h) return false;
   const up = Math.min(Math.max(top, 0), h * 1.2);
   const scale = Math.max(1 - up / (2 * h), 0.45);
+  const opacity = Math.min(Math.max((scale - 0.45) / 0.15, 0), 1);
   el.style.transformOrigin = '50% 0';
   el.style.transform = up ? `translateY(${up / 2}px) scale(${scale})` : '';
-  el.style.opacity = up ? String(Math.min(Math.max((scale - 0.45) / 0.15, 0), 1)) : '';
+  el.style.opacity = up ? String(opacity) : '';
+  return opacity === 0;
 }
 
 // A copy for the bar of a page's own play button (one of the pages written in
