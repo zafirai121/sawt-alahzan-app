@@ -3,7 +3,7 @@ import { icon, iconSvg, setIcon, startIcons } from './icons.js';
 import { dominantHsl, playerShades, mixHex, bandColors, NEUTRAL_SHADES } from './color.js';
 import occasionBg from './assets/occasion-bg.webp';
 import BUILD from './version.json';
-import { readTags, readDuration, shrinkCover, fixTag, guess as guessUpload, dbCategory, extFor, countWord, checkReciter, reciterSuggestions, reciterProblem } from './uploads.js';
+import { readTags, readDuration, shrinkCover, fixTag, cleanText, shownTitle, guess as guessUpload, dbCategory, extFor, countWord, checkReciter, reciterSuggestions, reciterProblem } from './uploads.js';
 
 // Sizes that follow a card's width (cqw: the occasion, radio and mix cards):
 // older iPhones (iOS 15 and before) don't know them; there, a small helper
@@ -217,7 +217,10 @@ function mapTrack(row) {
   const existing = trackById.get(String(row.id));
   const track = {
     id: String(row.id),
-    title: row.title || row.file_name || 'قصيدة بدون عنوان',
+    // As shown: readable, without junk, without the reciter's name (shown under it anyway);
+    // the stored one (rawTitle) is what its uploader edits
+    title: shownTitle(row.title || row.file_name, translateReciterName(row.reciter_name), row.reciter_name) || 'قصيدة بدون عنوان',
+    rawTitle: cleanText(row.title),
     reciterName: translateReciterName(row.reciter_name),
     reciterDbId: row.reciter_id ? String(row.reciter_id) : null,
     coverImage: row.image_url || '',
@@ -4984,7 +4987,7 @@ function renderEditTrack(id) {
   const startCat = categoryOf(t)?.id || null;
   if (editDraft?.id !== id) {
     const lyrics = t.detailed ? t.lyrics || '' : null;
-    editDraft = { id, title: t.title, reciter: t.reciterName, newReciter: null, category: startCat, album: t.album || '', lyrics, savedLyrics: lyrics, cover: null, coverUrl: null, saving: false, error: null, lyricsFailed: false };
+    editDraft = { id, title: t.rawTitle || t.title, reciter: t.reciterName, newReciter: null, category: startCat, album: t.album || '', lyrics, savedLyrics: lyrics, cover: null, coverUrl: null, saving: false, error: null, lyricsFailed: false };
   }
   const d = editDraft;
   view.innerHTML = `${head(true)}

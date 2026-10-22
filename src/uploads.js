@@ -422,6 +422,74 @@ export function reciterInTitle(title, reciters, translate) {
   return rest.length >= 2 ? [found[0], rest] : null;
 }
 
+// ─── A library title as shown ─────────────────────────────────────────────────
+
+/**
+ * Text as typed into the library, without what can't be read: the
+ * object-replacement mark (U+FFFC) and the unreadable-character one (U+FFFD)
+ * that pasting from some apps leaves behind, and stray control characters.
+ */
+export const cleanText = (s) => String(s ?? '').replace(/[￼�]|[\u0000-\u0009\u000B-\u001F\u007F-\u009F]/g, '').replace(/ {2,}/g, ' ').trim();
+
+// Words before a reciter's name in a title that say who they are ("الرادود", "بصوت"), as compared
+const BEFORE_NAME = new Set(['الرادود', 'رادود', 'للرادود', 'الملا', 'ملا', 'للملا', 'السيد', 'سيد', 'للسيد', 'الشيخ', 'شيخ', 'للشيخ',
+  'الحاج', 'حاج', 'للحاج', 'المنشد', 'منشد', 'للمنشد', 'القاري', 'الخطيب', 'بصوت', 'اداء', 'باداء']);
+const SEPARATOR = /^[-–—_|ـ:،,.·/\\]+$/;
+
+/**
+ * `title` without the name of its reciter (`names`: theirs as shown, and as
+ * stored when it differs), who is shown under it anyway: "يا حسين - الرادود
+ * باسم الكربلائي", "باسم الكربلائي | يا حسين", "يا حسين (بصوت باسم الكربلائي)"
+ * are all "يا حسين". With the words before the name that say who they are and
+ * the dash beside it. A name of one word is left (it could be any word of the
+ * title), and so is a title that would be left with no words.
+ */
+const nameWords = new Map(); // a reciter's name → its words as compared, worked out once
+export function withoutReciter(title, ...names) {
+  let t = String(title).replace(/\s+/g, ' ').trim();
+  for (const name of new Set(names.filter(Boolean))) {
+    if (!nameWords.has(name)) nameWords.set(name, nameKey(name).split(' ').filter(Boolean));
+    const words = nameWords.get(name);
+    // Most titles don't have it: a quick look first (every track is shown through this)
+    if (words.length < 2 || !normalize(t).includes(words[words.length - 1])) continue;
+    for (let round = 0; round < 3; round++) {
+      const tokens = t.split(' ');
+      const cores = normalize(t).split(' ').map((w) => w.replace(/[^\p{L}\p{N}]/gu, '')); // word for word (normalize keeps the spaces)
+      // The name word by word ("لباسم" and "بباسم": "for" / "by" it)
+      const at = cores.findIndex((_, i) => words.every((w, k) => cores[i + k] === w
+        || (k === 0 && (cores[i] === `ل${w}` || cores[i] === `ب${w}`))));
+      if (at < 0) break;
+      let s = at;
+      let e = at + words.length;
+      for (;;) {
+        if (s > 0 && BEFORE_NAME.has(cores[s - 1])) s--;
+        else if (s > 1 && cores[s - 1] === 'الحسيني' && BEFORE_NAME.has(cores[s - 2])) s -= 2; // "الرادود الحسيني"
+        else break;
+      }
+      // Brackets round the name stay (dropped below when nothing is left in them)
+      const open = tokens[s].match(/^[([{«]*/)[0];
+      const close = tokens[e - 1].match(/[)\]}»]*$/)[0];
+      if (s > 0 && SEPARATOR.test(tokens[s - 1])) s--; // the dash before it, else the one after
+      else if (e < tokens.length && SEPARATOR.test(tokens[e])) e++;
+      const rest = [...tokens.slice(0, s), open + close, ...tokens.slice(e)].join(' ')
+        .replace(/[([{«]\s*[)\]}»]/g, ' ').replace(/([([{«])\s+/g, '$1').replace(/\s+([)\]}»])/g, '$1')
+        .replace(/\s+/g, ' ');
+      let left = trimEdges(rest);
+      if (/^\([^()]*\)$/.test(left)) left = left.slice(1, -1).trim();
+      if (!/\p{L}.*\p{L}/u.test(left)) break; // nothing but the name: the title stays as it is
+      t = left;
+    }
+  }
+  return t;
+}
+
+/** A track's title as the apps show it: readable, without junk, without its reciter's name. */
+export function shownTitle(title, ...names) {
+  const clean = cleanText(title);
+  const t = cleanTitle(clean);
+  return withoutReciter(/\p{L}/u.test(t) ? t : clean, ...names);
+}
+
 const CATEGORY_WORDS = [
   ['ziyarat', ['زياره', 'زيارات']],
   ['dua', ['دعاء', 'مناجاه', 'ادعيه', 'كميل', 'الجوشن', 'الافتتاح', 'الندبه', 'السمات', 'التوسل', 'الصحيفه', 'dua', 'duaa', 'supplication']],

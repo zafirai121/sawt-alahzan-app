@@ -95,3 +95,33 @@ test('lengths', () => {
   assert.equal(duration(3725000), '1:02:05');
   assert.equal(duration(null), '0:00');
 });
+
+test('library titles shown without their reciter\'s name', async () => {
+  const { shownTitle, withoutReciter, cleanText } = await import('../src/uploads.js');
+  const b = 'باسم الكربلائي';
+  assert.equal(shownTitle('يا حسين - باسم الكربلائي', b), 'يا حسين');
+  assert.equal(shownTitle('باسم الكربلائي - يا حسين', b), 'يا حسين');
+  assert.equal(shownTitle('باسم الكربلائي | يا حسين', b), 'يا حسين');
+  assert.equal(shownTitle('يا حسين الرادود باسم الكربلائي', b), 'يا حسين');
+  assert.equal(shownTitle('يا حسين - الرادود الحسيني باسم الكربلائي', b), 'يا حسين');
+  assert.equal(shownTitle('يا حسين (بصوت الملا باسم الكربلائى)', b), 'يا حسين');
+  assert.equal(shownTitle('يا حسين - (باسم الكربلائي)', b), 'يا حسين');
+  assert.equal(shownTitle('(باسم الكربلائي - يا حسين)', b), 'يا حسين');
+  assert.equal(shownTitle('قصيدة يا حسين - باسم الكربلائي - محرم 1445', b), 'قصيدة يا حسين - محرم 1445');
+  assert.equal(shownTitle('لطمية لباسم الكربلائي', b), 'لطمية');
+  assert.equal(shownTitle('يا زهراء ـ السيد فاقد الموسوي', 'سيد فاقد الموسوي'), 'يا زهراء');
+  assert.equal(shownTitle('Ya Hussain - Basim Karbalaei', b, 'basim_karbalaei'), 'Ya Hussain');
+  // Left as they are: the title is the name alone, or the name and a year;
+  // a one-word name; another reciter's name; a title with nothing to take
+  assert.equal(shownTitle('باسم الكربلائي', b), 'باسم الكربلائي');
+  assert.equal(shownTitle('باسم الكربلائي 2023', b), 'باسم الكربلائي 2023');
+  assert.equal(shownTitle('يا حسين', 'حسين'), 'يا حسين');
+  assert.equal(shownTitle('يا حسين - علي الدلفي', b), 'يا حسين - علي الدلفي');
+  assert.equal(shownTitle('العزاء الحسيني يا باسم', b), 'العزاء الحسيني يا باسم');
+  assert.equal(withoutReciter('يا حسين', ''), 'يا حسين');
+  // Cleaned: what can't be read, file names and junk
+  assert.equal(cleanText('يا حسين￼�\u0007  الشهيد'), 'يا حسين الشهيد');
+  assert.equal(shownTitle('01 - يا حسين (Official Video).mp3￼', b), 'يا حسين');
+  assert.equal(shownTitle('منو_اليسند - باسم_الكربلائي', b), 'منو اليسند');
+  assert.equal(shownTitle('  ', b), '');
+});
