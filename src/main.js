@@ -1311,9 +1311,9 @@ function plainBar(viewId) {
 // (or its cover is gone, or its play button has reached it);
 // `back`: false on a tab, there being nowhere to go back to
 // `play`: a play button for the page's list on the bar, `own`: the page's own.
-// The page's goes up with the page until its top reaches the bar's bottom edge,
-// and stops there: from then the bar's shows in its place, the same size and
-// where it was across, just under the bar (never under it)
+// Spotify's: once the page's reaches the bar, the bar's takes its place, over the
+// bar (so it never goes under it), the same size and where it was across; it goes
+// on up with the page until its middle is on the bar's bottom edge, and stops there
 // `shrink`: the page's cover, shrinking as the page goes up (see shrinkOnScroll);
 // the bar comes as soon as it is gone
 function pageScroller({ title, color, at, play = null, own = null, extra = null, back = true, shrink = null }) {
@@ -1344,6 +1344,7 @@ function pageScroller({ title, color, at, play = null, own = null, extra = null,
       if (r?.width) {
         barPlay.style.left = `${r.left - bar.getBoundingClientRect().left}px`;
         barPlay.style.width = barPlay.style.height = `${r.width}px`;
+        barPlay.style.top = `${Math.max(r.top, bar.offsetHeight - r.height / 2)}px`;
       }
       barPlay.classList.toggle('play-off', !on);
       ownPlay?.classList.toggle('play-off', on);

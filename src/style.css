@@ -425,9 +425,10 @@ header { display: flex; justify-content: space-between; align-items: center; mar
 .page-bar-end { min-width: 40px; display: flex; justify-content: flex-end; }
 /* A tab's bar: nothing to go back to (its place kept, the title in the middle) */
 .page-bar.no-back > .icon-btn:first-child { visibility: hidden; }
-/* The page's play button once it has gone up to the bar: just under its bottom edge,
-   as big as on the page and where it was across (see pageScroller) */
-.page-bar-end .big-play { position: absolute; top: 100%; left: 16px; }
+/* The page's play button once it has reached the bar: over it, as big as on the page and
+   where it was across, going up with the page until its middle is on the bar's bottom edge
+   (pageScroller sets where; this, for a page without a button of its own) */
+.page-bar-end .big-play { position: absolute; top: calc(100% - 27px); left: 16px; }
 
 /* Collections (likes, downloads, a playlist): Spotify's playlist page */
 .cl-top {
