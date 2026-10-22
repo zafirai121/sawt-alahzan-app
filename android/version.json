@@ -1,7 +1,7 @@
 {
- "versionCode": 113,
- "versionName": "1.0.113",
- "url": "https://zafirai121.github.io/sawt-alahzan-app/android/sawt-alahzan-1.0.113.apk",
- "notes": "تحسينات للجزيرة وبطاقة التشغيل في الهاتف.",
+ "versionCode": 114,
+ "versionName": "1.0.114",
+ "url": "https://zafirai121.github.io/sawt-alahzan-app/android/sawt-alahzan-1.0.114.apk",
+ "notes": "إصلاح: إذا أُغلق التطبيق وفُتح من جديد يكمل من القائمة نفسها التي كنت تسمعها، فيبقى زر «التالي» في التطبيق وفي الجزيرة.",
  "size": 3573846
 }
