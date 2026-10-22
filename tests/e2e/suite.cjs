@@ -355,7 +355,7 @@ async function startServer() {
     const mine = (page) => page.evaluate(() => {
       window.goHome();
       const s = document.querySelector('#sections-container [data-home="mine"]');
-      return s ? [...s.querySelectorAll('.pl-name')].map((x) => x.textContent) : null;
+      return s ? [...s.querySelectorAll('.square-title')].map((x) => x.textContent) : null;
     });
     const { page, mock } = await L.newPage(browser);
     await L.boot(page, mock);
