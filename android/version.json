@@ -1,7 +1,7 @@
 {
- "versionCode": 118,
- "versionName": "1.0.118",
- "url": "https://zafirai121.github.io/sawt-alahzan-app/android/sawt-alahzan-1.0.118.apk",
- "notes": "جديد: قوائم التشغيل التي أنشأتها تظهر في الصفحة الرئيسية تحت «قوائمك»، لك وحدك، بتصميم المكتبة: أربعة من أغلفة القائمة في بطاقة واحدة.",
+ "versionCode": 119,
+ "versionName": "1.0.119",
+ "url": "https://zafirai121.github.io/sawt-alahzan-app/android/sawt-alahzan-1.0.119.apk",
+ "notes": "تحسين: الشريط العلوي يظهر بمجرد اختفاء الصورة، وزر التشغيل كما في سبوتيفاي: حين يصل إلى الشريط يصعد فوقه حتى يقف منتصفه على حافته.",
  "size": 3557462
 }
