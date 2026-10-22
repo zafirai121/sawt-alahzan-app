@@ -1,7 +1,7 @@
 {
- "versionCode": 116,
- "versionName": "1.0.116",
- "url": "https://zafirai121.github.io/sawt-alahzan-app/android/sawt-alahzan-1.0.116.apk",
- "notes": "جديد: بطاقات قوائم التشغيل في الرئيسية بتصميم جديد: الغلاف مع شريط بألوانه على الجانب والأسفل واسم القائمة بخط كبير.",
- "size": 3557458
+ "versionCode": 117,
+ "versionName": "1.0.117",
+ "url": "https://zafirai121.github.io/sawt-alahzan-app/android/sawt-alahzan-1.0.117.apk",
+ "notes": "عناوين أنظف: لم يعد اسم الرادود يتكرر في عنوان المقطع (يظهر تحته)، وحُذفت من العناوين الرموز التي لا تُقرأ وامتدادات الملفات وما يشبهها.",
+ "size": 3557462
 }
