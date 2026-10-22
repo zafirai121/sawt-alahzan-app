@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://sout-al-ahzan-web.pages.dev/sitemap.xml
+Sitemap: https://web.soutalahzan.com/sitemap.xml
