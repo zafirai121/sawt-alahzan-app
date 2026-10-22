@@ -1627,6 +1627,17 @@ function renderHome() {
   const w = taste();
 
   const sections = {
+    // Their own playlists, the newest first (kept under their account: nobody
+    // else's), as the app's own playlists' cards; each opens its page to play or change it
+    mine: () => {
+      if (!lib.playlists.length) return null;
+      const lists = [...lib.playlists].reverse().map((pl) => ({ pl, title: pl.name, tracks: playlistTracks(pl) }));
+      return section('قوائمك', scroller(lists, (l) => playlistCard(l, {
+        open: () => openPlaylistPage(l.pl),
+        subtitle: `قائمة تشغيل • ${formatCount(fullyLoaded ? l.tracks.length : l.pl.tracks.length)} مقطع`,
+      })), openLibraryPlaylists);
+    },
+
     // Quick grid (Spotify's, six cards): what they played from last, each
     // opening its page; otherwise the newest
     quick: () => {
@@ -1717,8 +1728,8 @@ function renderHome() {
   // What is theirs first for a listener who has played, liked or followed;
   // for a new one, what is new and most listened first
   const order = returning
-    ? ['quick', 'newest', 'occasion', 'friday', 'mixes', 'playlists', 'recents', 'followed', 'radios', 'albums', 'return', 'likes', 'similar', 'popular', 'short', 'more', 'reciters', 'daily', 'feedback']
-    : ['quick', 'newest', 'occasion', 'friday', 'playlists', 'reciters', 'popular', 'albums', 'radios', 'short', 'daily', 'more', 'feedback'];
+    ? ['quick', 'mine', 'newest', 'occasion', 'friday', 'mixes', 'playlists', 'recents', 'followed', 'radios', 'albums', 'return', 'likes', 'similar', 'popular', 'short', 'more', 'reciters', 'daily', 'feedback']
+    : ['quick', 'mine', 'newest', 'occasion', 'friday', 'playlists', 'reciters', 'popular', 'albums', 'radios', 'short', 'daily', 'more', 'feedback'];
   order.forEach((key) => {
     const el = sections[key]();
     if (el) { el.dataset.home = key; container.appendChild(el); }
@@ -2272,26 +2283,27 @@ const CARDS = `${import.meta.env.BASE_URL}cards/`;
 // A playlist's card, as YouTube Music's mixes: its first cover across the card, a
 // band of the cover's colours down its left side and across its bottom, thin light
 // stripes on it, the playlist's name large and dark on the band and the app's mark
-// in the corner; under it the name and who is in it
-function playlistCard(list) {
+// in the corner; under it the name and who is in it. For a listener's own playlist:
+// `open` its page, `subtitle` its count (and no cover yet while it is empty)
+function playlistCard(list, { open = null, subtitle = null } = {}) {
   const first = list.tracks.find((t) => t.coverImage) || list.tracks[0];
   const card = document.createElement('div');
   card.className = 'square-card pl-square';
   const size = list.title.length <= 18 ? 12 : list.title.length <= 28 ? 10 : 8.5;
   card.innerHTML = `
-    <div class="art pl-cover"><img src="${esc(thumb(first.coverImage, 240))}" alt="" loading="lazy" />
+    <div class="art pl-cover">${first ? `<img src="${esc(thumb(first.coverImage, 240))}" alt="" loading="lazy" />` : ''}
       <span class="pl-band"></span>${sLogo('mix-logo')}<span class="pl-title" style="font-size:${size}cqw">${esc(list.title)}</span></div>
     <div class="square-title pl-name">${esc(list.title)}</div>
-    <div class="square-subtitle">${esc(withReciters(list.tracks))}</div>`;
+    <div class="square-subtitle">${esc(subtitle ?? withReciters(list.tracks))}</div>`;
   const cover = card.querySelector('.pl-cover');
-  withShades(first, (sh) => {
+  if (first) withShades(first, (sh) => {
     const [left, right, ink] = bandColors(sh.vivid);
     // Their cover faint under them (an alpha of 0.88)
     cover.style.setProperty('--band-left', `${left}e0`);
     cover.style.setProperty('--band-right', `${right}e0`);
     cover.style.setProperty('--band-ink', ink);
   });
-  return clickable(card, () => openListPage(list.title, list.tracks));
+  return clickable(card, open || (() => openListPage(list.title, list.tracks)));
 }
 
 // A size for a line of `text` on a poster card that fits it on one line: `most`

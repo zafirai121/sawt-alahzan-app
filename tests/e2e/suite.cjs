@@ -351,6 +351,28 @@ async function startServer() {
     expect(realErrors(page).length === 0, 'no page errors', realErrors(page));
   });
 
+  await test('T13', 'The home screen\'s "قوائمك": each account sees its own playlists, a guest without any sees none', async ({ browser, expect }) => {
+    const mine = (page) => page.evaluate(() => {
+      window.goHome();
+      const s = document.querySelector('#sections-container [data-home="mine"]');
+      return s ? [...s.querySelectorAll('.pl-name')].map((x) => x.textContent) : null;
+    });
+    const { page, mock } = await L.newPage(browser);
+    await L.boot(page, mock);
+    expect((await mine(page)) === null, 'a guest without playlists: no section');
+    await L.googleReturn(page, mock, 'A');
+    await L.until(async () => (await mine(page))?.length);
+    const a = await mine(page);
+    expect(JSON.stringify(a) === JSON.stringify(['قائمة أ الخاصة']), 'A: A\'s playlist only', a);
+    await L.logout(page);
+    await L.sleep(800);
+    await L.googleReturn(page, mock, 'B');
+    await L.until(async () => (await mine(page))?.length);
+    const b = await mine(page);
+    expect(JSON.stringify(b) === JSON.stringify(['قائمة ب الخاصة']), 'B: B\'s playlist only, nothing of A', b);
+    expect(realErrors(page).length === 0, 'no page errors', realErrors(page));
+  });
+
   if (server) server.kill();
   const failed = results.filter((r) => r.status !== 'passed');
   console.log(`
