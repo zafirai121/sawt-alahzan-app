@@ -32,8 +32,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;800;900&display=swap" crossorigin />
-    <script type="module" crossorigin src="/sawt-alahzan-app/assets/index-BGmAB3Bf.js"></script>
-    <link rel="stylesheet" crossorigin href="/sawt-alahzan-app/assets/index-DysiJRCV.css">
+    <script type="module" crossorigin src="/sawt-alahzan-app/assets/index-DW10DRXO.js"></script>
+    <link rel="stylesheet" crossorigin href="/sawt-alahzan-app/assets/index-8ghpHK5H.css">
   </head>
   <body>
     <svg width="0" height="0" style="position: absolute;" aria-hidden="true">
@@ -229,8 +229,10 @@
           <div class="stats-grid">
             <div class="stat-box"><i class="ic" data-icon="music"></i><div id="stat-listened">0</div><span>مقطع استمعت إليه</span></div>
             <div class="stat-box"><i class="ic" data-icon="heart"></i><div id="stat-likes">0</div><span>إعجاب</span></div>
-            <div class="stat-box"><i class="ic" data-icon="playlist"></i><div id="stat-playlists">0</div><span>قائمة تشغيل</span></div>
+            <button class="stat-box" onclick="openLibraryPlaylists()"><i class="ic" data-icon="playlist"></i><div id="stat-playlists">0</div><span>قائمة تشغيل</span></button>
           </div>
+
+          <div id="profile-playlists"></div>
 
           <div class="settings-list">
             <button class="settings-row" onclick="openSleepTimerSheet()">
