@@ -1726,8 +1726,8 @@ function renderHome() {
   // What is theirs first for a listener who has played, liked or followed;
   // for a new one, what is new and most listened first
   const order = returning
-    ? ['quick', 'mine', 'newest', 'occasion', 'friday', 'mixes', 'playlists', 'recents', 'followed', 'radios', 'albums', 'return', 'likes', 'similar', 'popular', 'short', 'more', 'reciters', 'daily', 'feedback']
-    : ['quick', 'mine', 'newest', 'occasion', 'friday', 'playlists', 'reciters', 'popular', 'albums', 'radios', 'short', 'daily', 'more', 'feedback'];
+    ? ['quick', 'newest', 'occasion', 'mine', 'friday', 'mixes', 'playlists', 'recents', 'followed', 'radios', 'albums', 'return', 'likes', 'similar', 'popular', 'short', 'more', 'reciters', 'daily', 'feedback']
+    : ['quick', 'newest', 'occasion', 'mine', 'friday', 'playlists', 'reciters', 'popular', 'albums', 'radios', 'short', 'daily', 'more', 'feedback'];
   order.forEach((key) => {
     const el = sections[key]();
     if (el) { el.dataset.home = key; container.appendChild(el); }
