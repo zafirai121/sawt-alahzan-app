@@ -423,6 +423,11 @@ header { display: flex; justify-content: space-between; align-items: center; mar
 .page-bar.show { opacity: 1; transform: none; pointer-events: auto; }
 .page-bar-title { flex: 1; min-width: 0; text-align: center; font-size: 17px; font-weight: 800; }
 .page-bar-end { min-width: 40px; display: flex; justify-content: flex-end; }
+/* A tab's bar: nothing to go back to (its place kept, the title in the middle) */
+.page-bar.no-back > .icon-btn:first-child { visibility: hidden; }
+/* The page's play button once it has gone up to the bar: on its bottom edge, half over it,
+   as big as on the page and where it was across (see pageScroller) */
+.page-bar-end .big-play { position: absolute; top: calc(100% - 27px); left: 16px; }
 
 /* Collections (likes, downloads, a playlist): Spotify's playlist page */
 .cl-top {
@@ -530,7 +535,7 @@ header { display: flex; justify-content: space-between; align-items: center; mar
 
 /* "This is": the words, the photo, the reciter's colour across the bottom */
 .this-is { position: relative; aspect-ratio: 1; border-radius: 6px; overflow: hidden; background: #fff; container-type: inline-size; margin-bottom: 10px; }
-.this-is-word { position: absolute; top: 4cqw; left: 0; right: 0; text-align: center; color: #111; font-weight: 900; font-size: 12cqw; line-height: 1.1; }
+.this-is-word { position: absolute; top: 4cqw; left: 0; right: 0; padding-inline: 6px; text-align: center; color: #111; font-weight: 900; font-size: 12cqw; line-height: 1.1; }
 .this-is-band { position: absolute; left: 0; right: 0; bottom: 0; height: 30cqw; background: var(--accent); }
 .this-is img { position: absolute; top: 21cqw; left: 19cqw; width: 62cqw; aspect-ratio: 1; object-fit: cover; }
 .this-is-name { position: absolute; left: 6px; right: 6px; bottom: 3.5cqw; text-align: center; color: #111; font-weight: 800; font-size: 8.5cqw; }
@@ -579,6 +584,8 @@ header { display: flex; justify-content: space-between; align-items: center; mar
 
 /* Track page */
 .overlay-view { position: relative; margin: -10px -12px 0; min-height: 100%; }
+/* Its back button stays on top as the page goes up, until the bar comes down over it (as the phone app's) */
+#track-detail-view > .hero-back { position: sticky; top: 14px; margin: 14px 10px -56px auto; }
 .td-glow {
   position: absolute; top: 0; left: 0; right: 0; height: 680px; z-index: 0; pointer-events: none; --glow: #4a4a4a;
   background: linear-gradient(180deg, var(--glow) 0%, color-mix(in srgb, var(--glow) 78%, transparent) 30%,
@@ -777,6 +784,20 @@ header { display: flex; justify-content: space-between; align-items: center; mar
 .stat-box > .ic { color: var(--accent); font-size: 20px; }
 .stat-box div { font-size: 20px; font-weight: 800; }
 .stat-box span { color: var(--text-secondary); font-size: 12px; }
+button.stat-box { color: inherit; font: inherit; cursor: pointer; }
+button.stat-box:active { opacity: 0.7; }
+
+/* Their playlists, the newest first, after a card to make one */
+#profile-playlists .section { margin-bottom: 28px; }
+.profile-pl-note { color: var(--text-secondary); font-size: 13px; margin: -4px 0 12px; }
+.new-pl-art {
+  aspect-ratio: 1; border-radius: 6px; margin-bottom: 10px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+  display: flex; align-items: center; justify-content: center;
+}
+.new-pl-art > span {
+  width: 52px; height: 52px; border-radius: 50%; background: var(--gold); color: #121212; font-size: 26px;
+  display: flex; align-items: center; justify-content: center;
+}
 
 .settings-list { background: rgba(255,255,255,0.03); border-radius: 20px; padding: 6px; border: 1px solid rgba(255,255,255,0.05); }
 .settings-row {
@@ -1583,39 +1604,23 @@ body.has-player .up-bar { bottom: calc(var(--nav-height) + var(--safe-bottom) + 
 }
 
 /* ─── The home screen's playlists and albums ─── */
-/* A playlist, bigger than the other square cards: its first cover in a wide gold frame
-   (the gold of #FFEB97 to #583714, light and deep in turn like polished metal) */
-#home-view .horizontal-scroller > .square-card.pl-square { width: 58vw; max-width: 240px; }
-.pl-cover {
-  --frame: 6px;
-  container-type: inline-size; border-radius: 1%; padding: var(--frame);
-  background: linear-gradient(135deg, #FFEB97 0%, #D9B66A 28%, #583714 55%, #B08A4A 78%, #FFEB97 100%);
-}
-.pl-cover > img { border-radius: 0; }
+/* A playlist, as YouTube Music's mixes: the cover across the card, a band of its colours
+   down the left side and across the bottom with thin light stripes, the name large and dark on it */
+#home-view .horizontal-scroller > .square-card.pl-square { width: 50vw; max-width: 210px; }
+.pl-cover { container-type: inline-size; border-radius: 10px; overflow: hidden; }
 .square-card > .pl-cover { box-shadow: 0 8px 20px rgba(0,0,0,0.45); }
-.pl-cover .mix-logo { top: calc(var(--frame) + 4cqw); left: calc(var(--frame) + 4cqw); width: 13cqw; height: 13cqw; }
-/* No colour under the name: a deeper shadow keeps it readable on any cover */
-.pl-title {
-  position: absolute; inset-inline: calc(var(--frame) + 6cqw); bottom: calc(var(--frame) + 6cqw); color: #fff; font-size: 11.5cqw;
-  font-weight: 900; line-height: 1.2; text-shadow: 0 2px 10px rgba(0,0,0,0.85), 0 0 2px rgba(0,0,0,0.6);
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-}
-/* An album: the sleeve at the start, a record in the category's colour peeking out at the end */
-.album-art { position: relative; width: 100%; aspect-ratio: 1.3; margin-bottom: 10px; }
-.album-sleeve {
-  position: absolute; inset-inline-start: 0; top: 0; height: 100%; width: auto; aspect-ratio: 1; object-fit: cover;
-  border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.45); z-index: 1;
-}
-.album-disc {
-  position: absolute; inset-inline-end: 0; top: 2%; height: 96%; aspect-ratio: 1; border-radius: 50%;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.45);
+.pl-band {
+  position: absolute; inset: 0; clip-path: polygon(0 0, 22% 0, 22% 64%, 100% 64%, 100% 100%, 0 100%);
   background:
-    radial-gradient(circle closest-side, #0b0b0b 0 5%, var(--label, #8400E7) 5.5% 33%, rgba(255,255,255,0.25) 33.5% 34.5%, transparent 35%),
-    radial-gradient(circle closest-side, transparent 0 92%, var(--label, #8400E7) 92.5% 97%, transparent 97.5%),
-    radial-gradient(circle closest-side, transparent 0 54.5%, rgba(255,255,255,0.1) 55% 56%, transparent 56.5% 64.5%, rgba(255,255,255,0.1) 65% 66%,
-      transparent 66.5% 74.5%, rgba(255,255,255,0.1) 75% 76%, transparent 76.5% 84.5%, rgba(255,255,255,0.1) 85% 86%, transparent 86.5%),
-    radial-gradient(circle closest-side, #3a3a3a, #101010);
+    repeating-linear-gradient(to right, transparent 0 calc(3.5% - 0.5px), rgba(255,255,255,0.14) calc(3.5% - 0.5px) calc(3.5% + 0.5px), transparent calc(3.5% + 0.5px) 7%),
+    linear-gradient(to right, var(--band-left, #5e5e5ee0), var(--band-right, #8c8c8ce0));
 }
+.pl-cover .mix-logo { top: 4.5cqw; left: 4.5cqw; width: 13cqw; height: 13cqw; }
+.pl-title {
+  position: absolute; inset-inline: 5cqw; bottom: 4.5cqw; color: var(--band-ink, #111); font-weight: 700; line-height: 1.12;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; transition: color 0.6s ease;
+}
+.pl-name { font-size: 15px; font-weight: 400; margin-bottom: 2px; }
 .album-meta { -webkit-line-clamp: 1; }
 
 /* ─── The home screen's last card: what the listeners think of the app ─── */

@@ -1,6 +1,6 @@
 import { supabase, isPasswordRecovery } from './supabaseClient.js';
 import { icon, iconSvg, setIcon, startIcons } from './icons.js';
-import { dominantHsl, playerShades, mixHex, NEUTRAL_SHADES } from './color.js';
+import { dominantHsl, playerShades, mixHex, bandColors, NEUTRAL_SHADES } from './color.js';
 import occasionBg from './assets/occasion-bg.webp';
 import BUILD from './version.json';
 import { readTags, readDuration, shrinkCover, fixTag, guess as guessUpload, dbCategory, extFor, countWord, checkReciter, reciterSuggestions, reciterProblem } from './uploads.js';
@@ -1271,7 +1271,7 @@ const viewScroll = {};     // view id → the page's scroll handler
 let onPageScroll = null;
 let scrollFrame = 0;
 function startPageScroll(viewId) {
-  onPageScroll = viewScroll[viewId] || null;
+  onPageScroll = viewScroll[viewId] || plainBar(viewId);
   $('page-bar').classList.remove('show');
   onPageScroll?.(mainEl().scrollTop, true);
 }
@@ -1285,17 +1285,39 @@ mainEl().addEventListener('scroll', () => {
   scrollFrame = requestAnimationFrame(() => { scrollFrame = 0; onPageScroll?.(mainEl().scrollTop, false); });
 }, { passive: true });
 
+const barHeight = () => $('page-bar').offsetHeight || 56;
+// How far down the page (scrolled to its top) `el`'s bottom is
+const bottomInPage = (el) => el.getBoundingClientRect().bottom - mainEl().getBoundingClientRect().top + mainEl().scrollTop;
+
+// Every page with a title of its own has the bar once that title has gone up
+// under it (as the phone app's): a tab's (no back on it) or a plain page's, on
+// the dark of the page; the home and the library have bars of their own
+const BAR_TABS = new Set(['search-view', 'downloads-view', 'profile-view']);
+function plainBar(viewId) {
+  if (viewId !== 'page-view' && !BAR_TABS.has(viewId)) return null;
+  const title = $(viewId).querySelector('header h1');
+  if (!title) return null;
+  return pageScroller({
+    title: title.textContent.trim(), color: () => '#121212', back: !BAR_TABS.has(viewId),
+    at: () => bottomInPage(title) - barHeight(),
+  });
+}
+
 // The bar: `title` on `color()`, shown once the page has scrolled past `at()`;
-// `play`: a play button for the page's list at its end
-// `own`: the page's own play button. The bar's shows only once that one has
-// gone under the bar (their centres past its edge), and that one hides then,
-// so the two never show together
-function pageScroller({ title, color, at, play = null, own = null, extra = null }) {
+// `back`: false on a tab, there being nowhere to go back to
+// `play`: a play button for the page's list on the bar, `own`: the page's own.
+// Spotify's: once the page's has gone up so far that its middle reaches the
+// bar's bottom edge, it stays there, half over the bar, the same size and
+// where it was across (the bar's shows in its place, so the two never show
+// together)
+// `shrink`: the page's cover, shrinking as the page goes up (see shrinkOnScroll)
+function pageScroller({ title, color, at, play = null, own = null, extra = null, back = true, shrink = null }) {
   const bar = $('page-bar');
   const handler = (top, init) => {
     if (init) {
       bar.querySelector('.page-bar-title').textContent = title;
       bar.style.background = color();
+      bar.classList.toggle('no-back', !back);
       bar.querySelector('.page-bar-end').replaceChildren(...(play ? [play()] : []));
     }
     const show = top > at();
@@ -1307,17 +1329,51 @@ function pageScroller({ title, color, at, play = null, own = null, extra = null 
     const ownPlay = own?.();
     if (barPlay) {
       let on = show;
-      if (on && ownPlay) {
+      if (ownPlay) {
         const r = ownPlay.getBoundingClientRect();
-        on = r.top + r.height / 2 < bar.getBoundingClientRect().bottom;
+        const b = bar.getBoundingClientRect();
+        on = show && r.top + r.height / 2 < b.bottom;
+        if (r.width) {
+          barPlay.style.left = `${r.left - b.left}px`;
+          barPlay.style.width = barPlay.style.height = `${r.width}px`;
+          barPlay.style.top = `calc(100% - ${r.height / 2}px)`;
+        }
       }
       barPlay.classList.toggle('play-off', !on);
       ownPlay?.classList.toggle('play-off', on);
     }
+    const cover = shrink?.();
+    if (cover) shrinkOnScroll(cover, top);
     extra?.(top);
   };
   handler.recolor = () => { if (onPageScroll === handler) bar.style.background = color(); };
   return handler;
+}
+
+// Spotify's cover at the top of a page, as the page goes up (`top`, scrolled):
+// it goes up at half the page's speed and shrinks from its top by as much, so
+// the gap down to the words under it stays the same; at about half its size it
+// fades away (by then under the bar). As the phone app's
+function shrinkOnScroll(el, top) {
+  const h = el.offsetHeight;
+  if (!h) return;
+  const up = Math.min(Math.max(top, 0), h * 1.2);
+  const scale = Math.max(1 - up / (2 * h), 0.45);
+  el.style.transformOrigin = '50% 0';
+  el.style.transform = up ? `translateY(${up / 2}px) scale(${scale})` : '';
+  el.style.opacity = up ? String(Math.min(Math.max((scale - 0.45) / 0.15, 0), 1)) : '';
+}
+
+// A copy for the bar of a page's own play button (one of the pages written in
+// index.html): it presses that one, and shows what it shows (paintPlayButtons)
+function mirrorPlay(own) {
+  const b = document.createElement('button');
+  b.className = 'big-play';
+  b.setAttribute('aria-label', own.getAttribute('aria-label') || 'تشغيل');
+  b.dataset.mirror = own.id;
+  b.innerHTML = own.innerHTML;
+  b.onclick = (e) => { e.stopPropagation(); own.click(); };
+  return b;
 }
 
 function drawPage(entry) {
@@ -2210,32 +2266,55 @@ function withReciters(tracks) {
 // The pictures of the gold mark (public/cards)
 const CARDS = `${import.meta.env.BASE_URL}cards/`;
 
-// A playlist's card, bigger than the other square cards: its first cover in a wide
-// gold frame, the app's mark in the corner and the playlist's name on the cover;
-// who is in it under it
+// A playlist's card, as YouTube Music's mixes: its first cover across the card, a
+// band of the cover's colours down its left side and across its bottom, thin light
+// stripes on it, the playlist's name large and dark on the band and the app's mark
+// in the corner; under it the name and who is in it
 function playlistCard(list) {
   const first = list.tracks.find((t) => t.coverImage) || list.tracks[0];
   const card = document.createElement('div');
   card.className = 'square-card pl-square';
+  const size = list.title.length <= 18 ? 12 : list.title.length <= 28 ? 10 : 8.5;
   card.innerHTML = `
     <div class="art pl-cover"><img src="${esc(thumb(first.coverImage, 240))}" alt="" loading="lazy" />
-      ${sLogo('mix-logo')}<span class="pl-title">${esc(list.title)}</span></div>
+      <span class="pl-band"></span>${sLogo('mix-logo')}<span class="pl-title" style="font-size:${size}cqw">${esc(list.title)}</span></div>
+    <div class="square-title pl-name">${esc(list.title)}</div>
     <div class="square-subtitle">${esc(withReciters(list.tracks))}</div>`;
+  const cover = card.querySelector('.pl-cover');
+  withShades(first, (sh) => {
+    const [left, right, ink] = bandColors(sh.vivid);
+    // Their cover faint under them (an alpha of 0.88)
+    cover.style.setProperty('--band-left', `${left}e0`);
+    cover.style.setProperty('--band-right', `${right}e0`);
+    cover.style.setProperty('--band-ink', ink);
+  });
   return clickable(card, () => openListPage(list.title, list.tracks));
 }
 
-// An album's card: its best known cover, a record in the category's colour half
-// out of the sleeve behind it; under it the album's name and its reciter (a real
+// A size for a line of `text` on a poster card that fits it on one line: `most`
+// at the largest, in hundredths of the card's width (as the phone app's)
+const fitCqw = (text, most) => Math.max(6, Math.min(most, 150 / Math.max(String(text).length, 1)));
+
+// An album's card, as Spotify's "This is": on white, the album's name in big
+// letters, its best known cover, a band of the cover's colour across the bottom
+// with its reciter on it; under it the album's name and its reciter (a real
 // album), or the reciter and what kind of work
 function albumCard(album) {
   const first = album.tracks.find((t) => t.coverImage) || album.tracks[0];
+  const top = album.real ? album.name : (album.label || album.category.title);
   const card = document.createElement('div');
   card.className = 'square-card';
   card.innerHTML = `
-    <div class="album-art"><span class="album-disc" style="--label:${album.category.color}"></span>
-      <img src="${esc(thumb(first.coverImage, 170))}" alt="" class="album-sleeve" loading="lazy" /></div>
+    <div class="this-is">
+      <div class="this-is-word ellipsis" style="font-size:${fitCqw(top, 12)}cqw">${esc(top)}</div>
+      <div class="this-is-band"></div>
+      <img src="${esc(thumb(first.coverImage, 240))}" alt="" loading="lazy" />
+      <div class="this-is-name ellipsis" style="font-size:${fitCqw(album.reciter, 8.5)}cqw">${esc(album.reciter)}</div>
+    </div>
     <div class="square-title">${esc(album.real ? album.name : album.reciter)}</div>
     <div class="square-subtitle album-meta">ألبوم • ${esc(album.real ? album.reciter : (album.label || album.category.title))} • ${formatCount(album.tracks.length)}</div>`;
+  const band = card.querySelector('.this-is-band');
+  withShades(first, (sh) => { band.style.background = sh.pastel; });
   return clickable(card, () => openAlbum(album));
 }
 
@@ -2371,7 +2450,7 @@ function renderOccasionPage(title) {
   const hero = view.querySelector('.occ-hero');
   viewScroll['page-view'] = pageScroller({
     title: o.title, color: () => OCCASION_DEEP, at: () => hero.offsetHeight - barHeight() * 1.4,
-    play: () => playAllButton(tracks, source, 'big-play small'),
+    play: () => playAllButton(tracks, source, 'big-play'),
     own: () => view.querySelector('.pv-actions .big-play'),
     extra: (top) => {
       hero.style.setProperty('--shift', `${Math.max(0, top) * 0.45}px`);
@@ -2782,8 +2861,9 @@ function renderSectionPage(title, list, source) {
   let color = '#4a4a4a';
   const handler = pageScroller({
     title, color: () => color, at: () => head.offsetHeight - barHeight() * 1.2,
-    play: () => playAllButton(list, source, 'big-play small'),
+    play: () => playAllButton(list, source, 'big-play'),
     own: () => view.querySelector('.pv-actions .big-play'),
+    shrink: () => view.querySelector('.sl-cover'),
   });
   if (cover) withShades(cover, (sh) => {
     if (view._token !== token) return;
@@ -2829,9 +2909,22 @@ function paintGlow(t) {
   if (t) withShades(t, (sh) => { if (glowFor === t) glow.style.setProperty('--glow', sh.vivid); });
 }
 
+// The list pages' bar (as the phone app's): the title once it has gone up under
+// it, in the glow's colour made deeper, with the play button
+function listBar(title, glowOf) {
+  let color = '#121212';
+  const handler = pageScroller({
+    title, color: () => color, at: () => bottomInPage($('playlist-title')) - barHeight(),
+    play: () => mirrorPlay($('playlist-play-all')), own: () => $('playlist-play-all'),
+  });
+  if (glowOf) withShades(glowOf, (sh) => { color = mixHex(sh.vivid, '#000000', 0.25); handler.recolor(); });
+  viewScroll['playlist-detail-view'] = handler;
+}
+
 function renderListPage(title, list, playlist, source = null) {
   playlistPage = { title, list, playlist, source };
   paintGlow(list.find((x) => x.coverImage) || null);
+  listBar(title, list.find((x) => x.coverImage) || null);
   $('playlist-tracks').className = 'track-list';
   $('playlist-search').parentElement.style.display = 'block';
   $('playlist-title').textContent = title;
@@ -2872,6 +2965,7 @@ function openAllReciters() {
     // The glow from the first reciter's photo
     const first = withTracks.find((r) => r.image);
     paintGlow(first ? { coverImage: first.image, reciterName: first.name } : null);
+    listBar('كل الرواديد', first ? { coverImage: first.image, reciterName: first.name } : null);
     $('playlist-title').textContent = 'كل الرواديد';
     $('playlist-subtitle').textContent = `${formatCount(withTracks.length)} رادود`;
     $('playlist-delete-btn').style.display = 'none';
@@ -2898,7 +2992,19 @@ function renderCategory(cat) {
   view.querySelector('.hero-image').style.background = cat.color;
   view.style.setProperty('--tint', cat.color);
   const token = newPageToken(view);
-  if (list[0]) withShades(list[0], (sh) => { if (view._token === token) view.style.setProperty('--tint', sh.vivid); });
+  // The bar once the picture, and the name on it, have gone up under it
+  let deep = mixHex(cat.color, '#000000', 0.25);
+  const handler = pageScroller({
+    title: cat.title, color: () => deep, at: () => view.querySelector('.hero-image').offsetHeight - barHeight() * 1.3,
+    play: () => mirrorPlay($('category-play-all')), own: () => $('category-play-all'),
+  });
+  viewScroll['category-view'] = handler;
+  if (list[0]) withShades(list[0], (sh) => {
+    if (view._token !== token) return;
+    view.style.setProperty('--tint', sh.vivid);
+    deep = mixHex(sh.vivid, '#000000', 0.25);
+    handler.recolor();
+  });
   const source = { kind: 'category', id: cat.id };
   renderTrackList($('category-tracks'), list, { numbered: true, source, emptyText: 'لا توجد مقاطع في هذا التصنيف بعد' });
   $('category-play-all').onclick = () => playFromList(list, 0, { shuffleStart: isShuffle, source });
@@ -3181,7 +3287,6 @@ function renderReciterPage(name) {
   viewScroll['page-view'] = handler;
 }
 
-const barHeight = () => $('page-bar').offsetHeight || 56;
 
 // The years of a few tracks' releases, in one request
 function loadDates(list) {
@@ -3280,7 +3385,7 @@ function renderRadioPage(seed) {
   let deep = '#121212';
   const handler = pageScroller({
     title, color: () => deep, at: () => top.offsetHeight - barHeight() * 1.4,
-    play: () => playAllButton(radio, source, 'big-play small'),
+    play: () => playAllButton(radio, source, 'big-play'),
     own: () => view.querySelector('.big-play'),
   });
   withShades(seed, (sh) => {
@@ -3342,8 +3447,9 @@ function renderMixPage(number) {
   const top = view.querySelector('.mx-top');
   viewScroll['page-view'] = pageScroller({
     title, color: () => deep, at: () => top.offsetHeight - barHeight() * 1.6,
-    play: () => playAllButton(tracks, source, 'big-play small'),
+    play: () => playAllButton(tracks, source, 'big-play'),
     own: () => view.querySelector('.big-play'),
+    shrink: () => view.querySelector('.mx-cover'),
   });
 }
 
@@ -3711,8 +3817,9 @@ function renderCollection(spec) {
   const top = view.querySelector('.cl-top');
   const handler = pageScroller({
     title, color: () => color, at: () => top.offsetHeight - barHeight() * 1.6,
-    play: list.length ? () => playAllButton(list, source, 'big-play small') : null,
+    play: list.length ? () => playAllButton(list, source, 'big-play') : null,
     own: () => view.querySelector('.big-play'),
+    shrink: () => view.querySelector('.cl-cover'),
   });
   const paint = (c) => { color = c; view.style.setProperty('--deep', c); handler.recolor(); };
   if (pl && list[0]) withShades(list[0], (sh) => { if (view._token === token) paint(sh.vivid); });
@@ -3854,8 +3961,21 @@ function renderTrackDetail(track) {
   $('td-play-btn').dataset.trackId = track.id;
   const shown = () => $('td-play-btn').dataset.trackId === track.id;
   loadDetails(track).then(() => { if (shown()) paintDetails(); });
-  // The cover's colour, bright, glowing down from the top
-  withShades(track, (sh) => { if (shown()) $('td-glow').style.setProperty('--glow', sh.vivid); });
+  // The cover's colour, bright, glowing down from the top; the bar's, deeper. As
+  // the page goes up, the cover shrinks, then the bar comes with the title, and
+  // the play button stays on its edge (Spotify's)
+  let deep = '#121212';
+  const handler = pageScroller({
+    title: track.title, color: () => deep, at: () => bottomInPage($('td-title')) - barHeight(),
+    play: () => mirrorPlay($('td-play-btn')), own: () => $('td-play-btn'), shrink: () => $('td-cover'),
+  });
+  viewScroll['track-detail-view'] = handler;
+  withShades(track, (sh) => {
+    if (!shown()) return;
+    $('td-glow').style.setProperty('--glow', sh.vivid);
+    deep = mixHex(sh.vivid, '#000000', 0.25);
+    handler.recolor();
+  });
 
   const playBtn = $('td-play-btn');
   playBtn.dataset.trackId = track.id;
@@ -5756,11 +5876,23 @@ audio.addEventListener('timeupdate', () => {
 });
 audio.addEventListener('loadedmetadata', updateProgressUI);
 
+// The queue kept with it (as the phone app's): up to this many tracks round the
+// one playing, so the app reopens on the whole list, not that track alone
+const MAX_SAVED_QUEUE = 300;
+let savedQueueKey = '';
+
 function saveLastPosition() {
   if (!currentTrack) return;
   lastSaved = Date.now();
   const t = Math.floor(audio.currentTime || 0);
   store.set(own('sawt_last'), { id: currentTrack.id, t });
+  const from = Math.max(0, queueIndex - 100);
+  const ids = queue.slice(from, from + MAX_SAVED_QUEUE).map((x) => x.id);
+  const key = `${own('')}|${ids.join(',')}|${queueSource?.kind}:${queueSource?.id}`;
+  if (key !== savedQueueKey) {
+    savedQueueKey = key;
+    store.set(own('sawt_last_queue'), { ids, source: queueSource, from: playingFrom });
+  }
   // A long track is carried on from here next time; heard to (nearly) the end, from the start.
   // Its length as the file says, else as the library has it ("1:02:03")
   const d = isFinite(audio.duration) && audio.duration > 0 ? audio.duration
@@ -5796,8 +5928,19 @@ function restoreLastTrack() {
   const last = store.get(own('sawt_last'), null);
   const track = last && trackById.get(String(last.id));
   if (!track || currentTrack) return;
-  queue = [track];
-  queueIndex = 0;
+  // With the queue it was played in, when that was kept with it
+  const saved = store.get(own('sawt_last_queue'), null);
+  const list = (saved?.ids || []).map((id) => trackById.get(String(id))).filter(Boolean);
+  const at = list.findIndex((x) => x.id === track.id);
+  if (at >= 0) {
+    queue = list;
+    queueIndex = at;
+    queueSource = saved.source || null;
+    playingFrom = saved.from || '';
+  } else {
+    queue = [track];
+    queueIndex = 0;
+  }
   playTrack(track, { autoplay: false, startAt: last.t || 0 });
 }
 
@@ -5807,6 +5950,7 @@ function paintPlayButtons() {
   const td = $('td-play-btn');
   setIcon(td.querySelector('.ic'), playing && currentTrack?.id === td.dataset.trackId ? 'pause' : 'play', { fill: true });
   document.querySelectorAll('[data-plays]').forEach(paintPlayButton);
+  document.querySelectorAll('[data-mirror]').forEach((b) => { b.innerHTML = $(b.dataset.mirror).innerHTML; });
   document.querySelectorAll('.short-card').forEach(paintShortCard);
   if ('mediaSession' in navigator) navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
 }
@@ -6111,7 +6255,9 @@ let nowShades = null;
 let shadesFor = null;          // the track the colour is being worked out for
 
 // Worked out once per cover and kept on the device
-const COLOR_STORE = 'sawt_cover_colors_v3'; // v3: the pages' colour rich and clear (vividHsl)
+const COLOR_STORE = 'sawt_cover_colors_v4'; // v4: the cover's colour at its depth, rich (as the phone app's)
+// The colours worked out the earlier ways, no longer read
+['sawt_cover_colors', 'sawt_cover_colors_v2', 'sawt_cover_colors_v3'].forEach((k) => { try { localStorage.removeItem(k); } catch { /* blocked */ } });
 const coverShades = new Map(Object.entries(store.get(COLOR_STORE, {})));
 function rememberShades(url, shades) {
   coverShades.set(url, shades);
@@ -6379,6 +6525,44 @@ function ownerChanged() {
   refreshOpenViews();
 }
 
+// The profile's playlists: a card to make a new one first (one made from here
+// shows beside it, not off the row's edge), then theirs, the newest first;
+// "عرض الكل" opens the library on its playlists
+function paintProfilePlaylists() {
+  const lists = [...lib.playlists].reverse();
+  const row = scroller([null, ...lists], (pl) => {
+    const card = document.createElement('div');
+    card.className = 'square-card';
+    if (!pl) {
+      card.innerHTML = `<div class="new-pl-art"><span>${icon('plus')}</span></div>
+        <div class="square-title">قائمة جديدة</div><div class="square-subtitle">أنشئ قائمة تشغيل</div>`;
+      return clickable(card, () => promptCreatePlaylist());
+    }
+    const tracks = playlistTracks(pl);
+    card.innerHTML = `${artHtml({ covers: tracks.map((t) => t.coverImage) }, { width: 240 })}
+      <div class="square-title">${esc(pl.name)}</div>
+      <div class="square-subtitle">${formatCount(fullyLoaded ? tracks.length : pl.tracks.length)} مقطع</div>`;
+    return clickable(card, () => openPlaylistPage(pl));
+  });
+  const s = section('قوائم التشغيل', row, lists.length ? openLibraryPlaylists : null);
+  s.classList.remove('animate-in'); // drawn again on every change to them
+  if (!lists.length) {
+    const note = document.createElement('div');
+    note.className = 'profile-pl-note';
+    note.textContent = 'اجمع المقاطع التي تحبها في قوائمك، وتظهر هنا';
+    s.insertBefore(note, row);
+  }
+  $('profile-playlists').replaceChildren(s);
+}
+
+// The library, on its playlists (the profile's playlists count and "عرض الكل")
+function openLibraryPlaylists() {
+  libraryUi.filter = 'playlists';
+  libraryUi.query = '';
+  goLibrary();
+}
+window.openLibraryPlaylists = openLibraryPlaylists;
+
 function updateProfileUI() {
   const signedIn = !!currentUser && !currentUser.is_anonymous;
   const name = signedIn ? displayName() || 'مستخدم' : 'ضيف';
@@ -6398,6 +6582,7 @@ function updateProfileUI() {
   $('stat-listened').textContent = formatCount(lib.history.length);
   $('stat-likes').textContent = formatCount(likesCount());
   $('stat-playlists').textContent = formatCount(lib.playlists.length);
+  paintProfilePlaylists();
   $('hidden-count').textContent = formatCount(lib.hidden.size);
   $('excluded-count').textContent = formatCount(lib.excluded.size);
   if (!updateChecking) $('app-version').textContent = BUILD.versionName;

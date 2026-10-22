@@ -327,6 +327,30 @@ async function startServer() {
     expect(keys.some((k) => k.startsWith('sawt_history@')), 'A\'s data still kept on the device for next sign-in');
   });
 
+  await test('T12', 'Reopening the app brings back the whole queue, not the last track alone', async ({ browser, expect }) => {
+    const { page, mock } = await L.newPage(browser);
+    await L.boot(page, mock);
+    // A home section's list, from its third track
+    await page.evaluate(() => [...document.querySelectorAll('#home-view .link-btn')].find((b) => b.textContent.includes('عرض الكل')).click());
+    await L.until(() => page.locator('#page-view .track-item').count());
+    await page.locator('#page-view .track-item .track-info').nth(2).click();
+    await L.until(async () => (await L.miniPlayer(page)).shown);
+    const title = (await L.miniPlayer(page)).title;
+    await page.evaluate(() => window.togglePlay());
+    await L.sleep(500);
+    await page.goto('about:blank');
+    await L.boot(page, mock);
+    await L.until(async () => (await L.miniPlayer(page)).shown);
+    const mp = await L.miniPlayer(page);
+    expect(mp.title === title, 'the same track back in the player', { title, mp });
+    const next = await page.evaluate(() => document.querySelectorAll('#fp-queue-list .track-item').length);
+    expect(next > 0, 'the tracks after it are still queued', next);
+    await page.evaluate(() => window.playNext());
+    await L.sleep(800);
+    expect((await L.miniPlayer(page)).title !== title, 'next plays the list\'s next track');
+    expect(realErrors(page).length === 0, 'no page errors', realErrors(page));
+  });
+
   if (server) server.kill();
   const failed = results.filter((r) => r.status !== 'passed');
   console.log(`
