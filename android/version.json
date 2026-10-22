@@ -1,7 +1,7 @@
 {
- "versionCode": 114,
- "versionName": "1.0.114",
- "url": "https://zafirai121.github.io/sawt-alahzan-app/android/sawt-alahzan-1.0.114.apk",
- "notes": "إصلاح: إذا أُغلق التطبيق وفُتح من جديد يكمل من القائمة نفسها التي كنت تسمعها، فيبقى زر «التالي» في التطبيق وفي الجزيرة.",
- "size": 3573846
+ "versionCode": 115,
+ "versionName": "1.0.115",
+ "url": "https://zafirai121.github.io/sawt-alahzan-app/android/sawt-alahzan-1.0.115.apk",
+ "notes": "جديد: صفحة المقطع والقوائم كما في سبوتيفاي: الغلاف يصغر ويبهت بسلاسة عند التمرير، وزر التشغيل يثبت على الشريط العلوي بحجمه نفسه.",
+ "size": 3557462
 }
