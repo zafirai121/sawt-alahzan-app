@@ -64,7 +64,7 @@ function cut(line) {
 
 // The page in sections: what is said about the text (its source, its merit)
 // and the text itself; references and the like left out
-const SKIP = /^(مراجع|المراجع|المصادر|مصادر|انظر أيضا|انظر أيضاً|وصلات خارجية|هوامش)$/
+const SKIP = /^(مراجع|المراجع|المصادر|مصادر|المصدر|انظر أيضا|انظر أيضاً|وصلات خارجية|هوامش)$/
 const BODY = /(كلمات|نص|متن)\s+(الدعاء|الزيارة|المناجاة)|^الدعاء$|^الزيارة$/
 function sections(wt) {
   const parts = []
