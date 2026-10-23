@@ -1,0 +1,4817 @@
+[
+ {
+  "n": 1,
+  "title": "الكافي",
+  "author": "محمد بن يعقوب الكليني",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*كافي* OR *كافى*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(كافي OR الكافي OR كافى OR الكافى)",
+  "hits": 80,
+  "old": 1,
+  "other": 2,
+  "found": [
+   {
+    "id": "AAlexandrina-148399",
+    "title": "148399 - الاصول من الجامع الكافى",
+    "creator": "\"الكلينى، محمد بن يعقوب\"",
+    "date": "1885-01-01T00:00:00Z",
+    "publisher": "المطبع العالى",
+    "old": true
+   },
+   {
+    "id": "AAlexandrina-118895",
+    "title": "118895 - هذا كتاب اصول الكافى",
+    "creator": "\"الكلينى، محمد بن يعقوب\"",
+    "date": "1311-01-01T00:00:00Z",
+    "publisher": "د.ن",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09776",
+    "title": "الاصول_من_الكافى_09776_الكلينى،_ابو_جعفر_محمد_بن_يعقوب_بن_اسحق_الغفارى،",
+    "creator": "الكلينى، ابو جعفر محمد بن يعقوب بن اسحق|الغفارى، على اكبر.",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 2,
+  "title": "من لا يحضره الفقيه",
+  "author": "الشيخ الصدوق",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*فقيه* OR *فقية*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(فقيه OR الفقيه OR فقية OR الفقية)",
+  "hits": 39,
+  "old": 0,
+  "other": 6,
+  "found": [
+   {
+    "id": "AAlexandrina-164229",
+    "title": "164229_الجزء_الاول_الرابع_من_كتاب_من_لا_يحضره_الفقيه",
+    "creator": "\"ابن بابويه القمي، محمد بن علي\"",
+    "date": "1307-01-01T00:00:00Z",
+    "publisher": "المطبع الجعفرية",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09453",
+    "title": "من_لا_يحضره_الفقيه_09453_ابن_بابويه_القمي،_أبو_جعفر_محمد_بن_علي",
+    "creator": "ابن بابويه القمي، أبو جعفر محمد بن علي بن الحسين بن موسى|شمس الدين، محمد جعفر",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-164117",
+    "title": "164117_الجزء_الاول_الرابع_من_كتاب_من_لا_يحضره_الفقيه",
+    "creator": "\"ابن بابويه القمي، محمد بن علي\"",
+    "date": "1307-01-01T00:00:00Z",
+    "publisher": "المطبع الجعفرية",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-095370",
+    "title": "095370_الجزء_الاول_الرابع_من_كتاب_من_لا_يحضره_الفقيه",
+    "creator": "\"ابن بابويه القمي، محمد بن علي\"",
+    "date": "1307-01-01T00:00:00Z",
+    "publisher": "المطبع الجعفرية",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-155996",
+    "title": "155996_الجزء_الاول_الرابع_من_كتاب_من_لا_يحضره_الفقيه",
+    "creator": "\"ابن بابويه القمي، محمد بن علي\"",
+    "date": "1307-01-01T00:00:00Z",
+    "publisher": "المطبع الجعفرية",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-150690",
+    "title": "150690_الجزء_الاول_الرابع_من_كتاب_من_لا_يحضره_الفقيه",
+    "creator": "\"ابن بابويه القمي، محمد بن علي\"",
+    "date": "1307-01-01T00:00:00Z",
+    "publisher": "المطبع الجعفرية",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 3,
+  "title": "تهذيب الأحكام",
+  "author": "الشيخ الطوسي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*احكام*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(احكام OR الاحكام)",
+  "hits": 356,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 4,
+  "title": "الاستبصار",
+  "author": "الشيخ الطوسي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*استبصار*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(استبصار OR الاستبصار)",
+  "hits": 17,
+  "old": 0,
+  "other": 15,
+  "found": [
+   {
+    "id": "BBib-Alex-03941",
+    "title": "الاستبصار_فيما_اختلف_من_الأخبار_الجزء_02_03941_أبي_جعفر_محمد_بن",
+    "creator": "أبي جعفر محمد بن الحسن الطوسي",
+    "date": "1991-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-03939",
+    "title": "الاستبصار_فيما_اختلف_من_الأخبار_الجزء_01_02_03939_أبي_جعفر_محمد",
+    "creator": "أبي جعفر محمد بن الحسن الطوسي",
+    "date": "1991-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-072755",
+    "title": "072755_كتاب_الاستبصار_فيما_اختلف_من_الاخبار",
+    "creator": "\"الطوسي، محمد بن الحسن\"",
+    "date": "1307-01-01T00:00:00Z",
+    "publisher": "المطبعة الجعفرية",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-145419",
+    "title": "145419_كتاب_الاستبصار_فيما_اختلف_من_الاخبار",
+    "creator": "\"الطوسي، محمد بن الحسن\"",
+    "date": "1307-01-01T00:00:00Z",
+    "publisher": "المطبعة الجعفرية",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-03942",
+    "title": "الاستبصار_فيما_اختلف_من_الأخبار_الجزء_03_04_03942_أبي_جعفر_محمد",
+    "creator": "أبي جعفر محمد بن الحسن الطوسي",
+    "date": "1991-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-03944",
+    "title": "الاستبصار_فيما_اختلف_من_الأخبار_الجزء_04_03944_أبي_جعفر_محمد_بن",
+    "creator": "أبي جعفر محمد بن الحسن الطوسي",
+    "date": "1991-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-03945",
+    "title": "الاستبصار_فيما_اختلف_من_الاخبار_03945_الطوسى،_ابو_جعفر_محمد_بن_الحسن",
+    "creator": "الطوسى، ابو جعفر محمد بن الحسن بن على|الخرسان، حسن الموسوى.",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-099523",
+    "title": "099523_كتاب_الاستبصار_فيما_اختلف_من_الاخبار",
+    "creator": "\"الطوسي، محمد بن الحسن\"",
+    "date": "1307-01-01T00:00:00Z",
+    "publisher": "المطبعة الجعفرية",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-03940",
+    "title": "الاستبصار_فيما_اختلف_من_الأخبار_الجزء_01_03940_أبي_جعفر_محمد_بن",
+    "creator": "أبي جعفر محمد بن الحسن الطوسي",
+    "date": "1991-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-03943",
+    "title": "الاستبصار_فيما_اختلف_من_الأخبار_الجزء_03_03943_أبي_جعفر_محمد_بن",
+    "creator": "أبي جعفر محمد بن الحسن الطوسي",
+    "date": "1991-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-03938",
+    "title": "الاستبصار_فيما_اختلف_من_الاخبار_03938_الطوسى،_ابو_جعفر_محمد_بن_الحسن",
+    "creator": "الطوسى، ابو جعفر محمد بن الحسن بن على|الخرسان، حسن الموسوى.",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-162599",
+    "title": "162599_كتاب_الاستبصار_فيما_اختلف_من_الاخبار",
+    "creator": "\"الطوسي، محمد بن الحسن\"",
+    "date": "1307-01-01T00:00:00Z",
+    "publisher": "المطبعة الجعفرية",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-03937",
+    "title": "الاستبصار_فيما_اختلف_من_الاخبار_03937_الطوسى،_ابو_جعفر_محمد_بن_الحسن",
+    "creator": "الطوسى، ابو جعفر محمد بن الحسن بن على|الخرسان، حسن الموسوى.",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-151951",
+    "title": "151951_كتاب_الاستبصار_فيما_اختلف_من_الاخبار",
+    "creator": "\"الطوسي، محمد بن الحسن\"",
+    "date": "1307-01-01T00:00:00Z",
+    "publisher": "المطبعة الجعفرية",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-045650",
+    "title": "045650_كتاب_الاستبصار_فيما_اختلف_من_الاخبار",
+    "creator": "\"الطوسي، محمد بن الحسن\"",
+    "date": "1307-01-01T00:00:00Z",
+    "publisher": "المطبعة الجعفرية",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 5,
+  "title": "الخصال",
+  "author": "الشيخ الصدوق",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*خصال*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(خصال OR الخصال)",
+  "hits": 5,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "AAlexandrina-106625",
+    "title": "106625 - كتاب الخصال",
+    "creator": "\"ابن بابويه القمي، محمد بن علي\"",
+    "date": "1302-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 6,
+  "title": "علل الشرائع",
+  "author": "الشيخ الصدوق",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*شرائع*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(شرائع OR الشرائع)",
+  "hits": 110,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 7,
+  "title": "التوحيد",
+  "author": "الشيخ الصدوق",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*توحيد*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(توحيد OR التوحيد)",
+  "hits": 216,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 8,
+  "title": "معاني الأخبار",
+  "author": "الشيخ الصدوق",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*اخبار*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(اخبار OR الاخبار)",
+  "hits": 377,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 9,
+  "title": "ثواب الأعمال",
+  "author": "الشيخ الصدوق",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*اعمال*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(اعمال OR الاعمال)",
+  "hits": 341,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 10,
+  "title": "عقاب الأعمال",
+  "author": "الشيخ الصدوق",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*اعمال*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(اعمال OR الاعمال)",
+  "hits": 347,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 11,
+  "title": "الأمالي",
+  "author": "الشيخ الصدوق",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*امالي* OR *امالى*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(امالي OR الامالي OR امالى OR الامالى)",
+  "hits": 37,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "AAlexandrina-162056",
+    "title": "162056_هذا_كتاب_الامالى،_المشهور،_بالمجالس",
+    "creator": "\"ابن بابويه القمي، محمد بن علي\"",
+    "date": "1287-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 12,
+  "title": "كمال الدين وتمام النعمة",
+  "author": "الشيخ الصدوق",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*دين*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(دين OR الدين)",
+  "hits": 519,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "AAlexandrina-137080",
+    "title": "137080_اكمال_الدين_واتمام_النعمة_فى_اثبات_النعمة_وكشف_الحيرة",
+    "creator": "\"ابن بابويه القمي، محمد بن علي\"",
+    "date": "1301-01-01T00:00:00Z",
+    "publisher": "دار الطباعة",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 13,
+  "title": "عيون أخبار الرضا",
+  "author": "الشيخ الصدوق",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*اخبار*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(اخبار OR الاخبار)",
+  "hits": 370,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "AAlexandrina-162972",
+    "title": "162972_هذا_الكتاب_الموسوم،_بعيون_اخبار_الرضا",
+    "creator": "\"ابن بابويه القمي، محمد بن علي\"",
+    "date": "1275-01-01T00:00:00Z",
+    "publisher": "د.ن",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 14,
+  "title": "صفات الشيعة",
+  "author": "الشيخ الصدوق",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*شيعه* OR *شيعة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(شيعه OR الشيعه OR شيعة OR الشيعة)",
+  "hits": 88,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 15,
+  "title": "الاعتقادات",
+  "author": "الشيخ الصدوق",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*اعتقادات*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(اعتقادات OR الاعتقادات)",
+  "hits": 4,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 16,
+  "title": "المقنع",
+  "author": "الشيخ الصدوق",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*مقنع*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(مقنع OR المقنع)",
+  "hits": 27,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 17,
+  "title": "الهداية",
+  "author": "الشيخ الصدوق",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*هدايه* OR *هداية*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(هدايه OR الهدايه OR هداية OR الهداية)",
+  "hits": 105,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 18,
+  "title": "المحاسن",
+  "author": "أحمد بن محمد البرقي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*محاسن*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(محاسن OR المحاسن)",
+  "hits": 84,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 19,
+  "title": "بصائر الدرجات",
+  "author": "محمد بن الحسن الصفار",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*درجات*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(درجات OR الدرجات)",
+  "hits": 6,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 20,
+  "title": "قرب الإسناد",
+  "author": "عبد الله بن جعفر الحميري",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*اسناد*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(اسناد OR الاسناد)",
+  "hits": 6,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 21,
+  "title": "كامل الزيارات",
+  "author": "جعفر بن محمد بن قولويه",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*زيارات*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(زيارات OR الزيارات)",
+  "hits": 4,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 22,
+  "title": "الغيبة",
+  "author": "محمد بن إبراهيم النعماني",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*غيبه* OR *غيبة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(غيبه OR الغيبه OR غيبة OR الغيبة)",
+  "hits": 4,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 23,
+  "title": "الغيبة",
+  "author": "الشيخ الطوسي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*غيبه* OR *غيبة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(غيبه OR الغيبه OR غيبة OR الغيبة)",
+  "hits": 4,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 24,
+  "title": "الاحتجاج",
+  "author": "أحمد بن علي الطبرسي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*احتجاج*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(احتجاج OR الاحتجاج)",
+  "hits": 6,
+  "old": 0,
+  "other": 2,
+  "found": [
+   {
+    "id": "AAlexandrina-139578",
+    "title": "139578 - احتجاج الطبرسى",
+    "creator": "\"الطبرسي، الفضل بن الحسن\"",
+    "date": "1302-01-01T00:00:00Z",
+    "publisher": "دار الطباعة",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-142913",
+    "title": "142913 - كتاب احتجاج الطبرسى",
+    "creator": "\"الطبرسي، الفضل بن الحسن\"",
+    "date": "1931-01-01T00:00:00Z",
+    "publisher": "د.ن",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 25,
+  "title": "تحف العقول",
+  "author": "ابن شعبة الحراني",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*عقول*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(عقول OR العقول)",
+  "hits": 52,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "BBib-Alex-00730",
+    "title": "تحف_العقول_عن_الرسول_00730_الحرانى,_الحسن_بن_على_بن_الحسين_بن_شعلة",
+    "creator": "الحرانى, الحسن بن على بن الحسين بن شعلة ق4ه-|الاعلمى، حسين",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 26,
+  "title": "روضة الواعظين",
+  "author": "الفتال النيسابوري",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*واعظين*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(واعظين OR الواعظين)",
+  "hits": 2,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 27,
+  "title": "الأمالي",
+  "author": "الشيخ المفيد",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*امالي* OR *امالى*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(امالي OR الامالي OR امالى OR الامالى)",
+  "hits": 37,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 28,
+  "title": "الأمالي",
+  "author": "الشيخ الطوسي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*امالي* OR *امالى*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(امالي OR الامالي OR امالى OR الامالى)",
+  "hits": 37,
+  "old": 0,
+  "other": 2,
+  "found": [
+   {
+    "id": "AAlexandrina-060052",
+    "title": "060052_هذا_كتاب_امالى_شيخ_الطايفة_ورئيس_الفرقة_الناجية_الامام_الطوسى",
+    "creator": "\"الطوسي، محمد بن الحسن\"",
+    "date": "1313-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-141128",
+    "title": "141128_هذا_كتاب_امالى_شيخ_الطايفة_ورئيس_الفرقة_الناجية_ا_الطوسى",
+    "creator": "\"الطوسي، محمد بن الحسن\"",
+    "date": "1313-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 29,
+  "title": "الإرشاد",
+  "author": "الشيخ المفيد",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*ارشاد*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(ارشاد OR الارشاد)",
+  "hits": 127,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "AAlexandrina-146812",
+    "title": "146812_كتاب_الارشاد_فى_معرفة_حجج_الله_على_العباد",
+    "creator": "\"الشيخ المفيد، محمد بن محمد\"",
+    "date": "1297-01-01T00:00:00Z",
+    "publisher": "د.ن",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 30,
+  "title": "أوائل المقالات",
+  "author": "الشيخ المفيد",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*مقالات*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(مقالات OR المقالات)",
+  "hits": 213,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "AAlexandrina-223746",
+    "title": "223746_أوائل_المقالات_في_المذاهب_المختارات",
+    "creator": "\"المفيد، محمد بن محمد\"",
+    "date": "1939-01-01T00:00:00Z",
+    "publisher": "مكتبة حقيقة",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 31,
+  "title": "تصحيح اعتقادات الإمامية",
+  "author": "الشيخ المفيد",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*اعتقادات*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(اعتقادات OR الاعتقادات)",
+  "hits": 4,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 32,
+  "title": "الفصول المختارة",
+  "author": "الشيخ المفيد",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*مختاره* OR *مختارة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(مختاره OR المختاره OR مختارة OR المختارة)",
+  "hits": 111,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 33,
+  "title": "الإفصاح",
+  "author": "الشيخ المفيد",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*افصاح*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(افصاح OR الافصاح)",
+  "hits": 3,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 34,
+  "title": "المقنعة",
+  "author": "الشيخ المفيد",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*مقنعه* OR *مقنعة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(مقنعه OR المقنعه OR مقنعة OR المقنعة)",
+  "hits": 1,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 35,
+  "title": "الاختصاص",
+  "author": "منسوب إلى الشيخ المفيد",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*اختصاص*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(اختصاص OR الاختصاص)",
+  "hits": 16,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 36,
+  "title": "الشافي في الإمامة",
+  "author": "الشريف المرتضى",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*امامه* OR *امامة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(امامه OR الامامه OR امامة OR الامامة)",
+  "hits": 37,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "AAlexandrina-068294",
+    "title": "068294_كتاب_الشافى_فى_الامامة_والنقض_عل_كتاب_المغنى",
+    "creator": "\"الشريف المرتضى، علي بن الحسين\"",
+    "date": "1301-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 37,
+  "title": "الذخيرة في علم الكلام",
+  "author": "الشريف المرتضى",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*ذخيره* OR *ذخيرة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(ذخيره OR الذخيره OR ذخيرة OR الذخيرة)",
+  "hits": 44,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 38,
+  "title": "جمل العلم والعمل",
+  "author": "الشريف المرتضى",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*والعمل*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(والعمل OR الوالعمل)",
+  "hits": 21,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 39,
+  "title": "الانتصار",
+  "author": "الشريف المرتضى",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*انتصار*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(انتصار OR الانتصار)",
+  "hits": 46,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 40,
+  "title": "تنزيه الأنبياء والأئمة",
+  "author": "الشريف المرتضى",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*انبياء*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(انبياء OR الانبياء)",
+  "hits": 71,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 41,
+  "title": "تلخيص الشافي",
+  "author": "الشيخ الطوسي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*شافي* OR *شافى*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(شافي OR الشافي OR شافى OR الشافى)",
+  "hits": 53,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 42,
+  "title": "تجريد الاعتقاد",
+  "author": "نصير الدين الطوسي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*اعتقاد*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(اعتقاد OR الاعتقاد)",
+  "hits": 29,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 43,
+  "title": "كشف المراد في شرح تجريد الاعتقاد",
+  "author": "العلامة الحلي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*مراد*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(مراد OR المراد)",
+  "hits": 79,
+  "old": 0,
+  "other": 4,
+  "found": [
+   {
+    "id": "AAlexandrina-067054",
+    "title": "067054_هذا_هو_الكتاب_المستطاب،_الموسوم،_بكشف_المراد_فى_شرح_اعتقاد",
+    "creator": "\"ابن المطهر الحلي، الحسن بن يوسف\"",
+    "date": "1310-01-01T00:00:00Z",
+    "publisher": "على المحلاتى الحايرى",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-166324",
+    "title": "166324_هذا_هو_الكتاب_المستطاب،_الموسوم،_بكشف_المراد_فى_اعتقاد",
+    "creator": "\"ابن المطهر الحلي، الحسن بن يوسف\"",
+    "date": "1310-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-111135",
+    "title": "111135_كشف_المراد_فى_شرح_تجريد_الاعتقاد",
+    "creator": "\"ابن المطهر الحلي، الحسن بن يوسف\"",
+    "date": "2025-01-18T00:00:00Z",
+    "publisher": "د.ن",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-142910",
+    "title": "142910_كتاب_المستطاب_الموسوم_بكشف_المراد_فى_شرح_تجريد_الاعتقاد",
+    "creator": "\"ابن المطهر الحلي، الحسن بن يوسف\"",
+    "date": "1933-01-01T00:00:00Z",
+    "publisher": "د. ن",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 44,
+  "title": "نهج الحق وكشف الصدق",
+  "author": "العلامة الحلي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*حق*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(حق OR الحق)",
+  "hits": 447,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 45,
+  "title": "منهاج الكرامة",
+  "author": "العلامة الحلي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*كرامه* OR *كرامة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(كرامه OR الكرامه OR كرامة OR الكرامة)",
+  "hits": 27,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "AAlexandrina-108333",
+    "title": "108333_هذا_كتاب_منهاج_الكرامة_فى_اثبات_الامامة",
+    "creator": "\"ابن المطهر الحلي، الحسن بن يوسف\"",
+    "date": "2025-12-18T00:00:00Z",
+    "publisher": ".د.ن",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 46,
+  "title": "الألفين",
+  "author": "العلامة الحلي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*الفين*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(الفين OR الالفين)",
+  "hits": 25,
+  "old": 0,
+  "other": 3,
+  "found": [
+   {
+    "id": "AAlexandrina-128658",
+    "title": "128658_هذا_الكتاب_،_المسمى،_بالالفين",
+    "creator": "\"ابن المطهر الحلي، الحسن بن يوسف\"",
+    "date": "1296-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-102908",
+    "title": "102908_كتاب_الالفين_الفارق_بين_الصدق_والمين_؛_وبهامشه_منهاج_ال_لامامة",
+    "creator": "\"ابن المطهر الحلي، الحسن بن يوسف\"",
+    "date": "",
+    "publisher": "",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-15591",
+    "title": "الالفين_فى_امامة_امير_المؤمنين_على_بن_ابى_طالب_عليه_السلام_15591",
+    "creator": "ابن مطهر الحلى, الحسن بن يوسف بن المطهر الشيخ جمال الدين ابومنصور الاسدى العراقى،",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 47,
+  "title": "قواعد الأحكام",
+  "author": "العلامة الحلي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*احكام*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(احكام OR الاحكام)",
+  "hits": 354,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "AAlexandrina-161901",
+    "title": "161901_هذا_كتاب_قواعد_الاحكام_فى_معرفة_الحلال_والحرام",
+    "creator": "\"ابن المطهر الحلي، الحسن بن يوسف\"",
+    "date": "1329-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 48,
+  "title": "تذكرة الفقهاء",
+  "author": "العلامة الحلي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*فقهاء*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(فقهاء OR الفقهاء)",
+  "hits": 44,
+  "old": 0,
+  "other": 5,
+  "found": [
+   {
+    "id": "AAlexandrina-162141",
+    "title": "162141_المجلد_الاول_الخامس_عشر_من_تذكرة_الفقهاء",
+    "creator": "\"ابن المطهر الحلي، الحسن بن يوسف\"",
+    "date": "1273-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-124932",
+    "title": "124932 - كتاب تذكرة الفقهاء",
+    "creator": "\"ابن المطهر الحلى، الحسن بن يوسف\"",
+    "date": "1321-01-01T00:00:00Z",
+    "publisher": "",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-143340",
+    "title": "143340_المجلد_الاول_الخامس_عشر_من_تذكرة_الفقهاء",
+    "creator": "\"ابن المطهر الحلي، الحسن بن يوسف\"",
+    "date": "1273-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-143294",
+    "title": "143294_المجلد_الاول_الخامس_عشر_من_تذكرة_الفقهاء",
+    "creator": "\"ابن المطهر الحلي، الحسن بن يوسف\"",
+    "date": "1273-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-127753",
+    "title": "127753 - كتاب تذكرة الفقهاء",
+    "creator": "\"ابن المطهر الحلى، الحسن بن يوسف\"",
+    "date": "1321-01-01T00:00:00Z",
+    "publisher": "",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 49,
+  "title": "إرشاد الأذهان",
+  "author": "العلامة الحلي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*اذهان*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(اذهان OR الاذهان)",
+  "hits": 5,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 50,
+  "title": "مختلف الشيعة",
+  "author": "العلامة الحلي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*شيعه* OR *شيعة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(شيعه OR الشيعه OR شيعة OR الشيعة)",
+  "hits": 88,
+  "old": 0,
+  "other": 2,
+  "found": [
+   {
+    "id": "AAlexandrina-137078",
+    "title": "137078_كتاب_مستطاب_الحاوى_لاحكام_الشريعة_الشهير_بمختلف_الشيعة",
+    "creator": "\"ابن المطهر الحلي، الحسن بن يوسف\"",
+    "date": "1309-01-01T00:00:00Z",
+    "publisher": "مطبع اثناعشرى",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-186173",
+    "title": "186173_مختلف_الشيعة_فى_احكام_الشريعة",
+    "creator": "\"ابن المطهر الحلي، الحسن بن يوسف\"",
+    "date": "1324-01-01T00:00:00Z",
+    "publisher": "مكتبة نينوى الحديثة",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 51,
+  "title": "تبصرة المتعلمين",
+  "author": "العلامة الحلي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*متعلمين*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(متعلمين OR المتعلمين)",
+  "hits": 4,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "AAlexandrina-128915",
+    "title": "128915_كتاب_تبصرة_المتعلمين_فى_احكام_الدين",
+    "creator": "\"ابن المطهر الحلي، الحسن بن يوسف\"",
+    "date": "2025-12-18T00:00:00Z",
+    "publisher": "مطبعة مرزاعلى",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 52,
+  "title": "خلاصة الأقوال",
+  "author": "العلامة الحلي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*اقوال*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(اقوال OR الاقوال)",
+  "hits": 119,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 53,
+  "title": "نهج البلاغة",
+  "author": "الشريف الرضي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*بلاغه* OR *بلاغة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(بلاغه OR البلاغه OR بلاغة OR البلاغة)",
+  "hits": 250,
+  "old": 3,
+  "other": 3,
+  "found": [
+   {
+    "id": "AAlexandrina-199757",
+    "title": "199757 - كتاب نهج البلاغة",
+    "creator": "\"الشريف الرضي، محمد بن الحسين\"",
+    "date": "1889-01-01T00:00:00Z",
+    "publisher": "المطبعة الادبية",
+    "old": true
+   },
+   {
+    "id": "AAlexandrina-194257",
+    "title": "194257 - نهج البلاغة",
+    "creator": "\"الشريف الرضي، محمد بن الحسين\"",
+    "date": "1900-01-01T00:00:00Z",
+    "publisher": "المطبعة الرحمانية",
+    "old": true
+   },
+   {
+    "id": "AAlexandrina-133709",
+    "title": "133709_نهج_البلاغة_مع_الشرح_اللغوى_والفهارس_المتنوعة",
+    "creator": "\"الشريف الرضي، محمد بن الحسين\"",
+    "date": "2008-01-01T00:00:00Z",
+    "publisher": "المستشارية الثقافية للجمهورية الاسلامية الايرانية",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-090013",
+    "title": "090013_نهج_البلاغة_مع_الشرح_اللغوى_والفهارس_المتنوعة",
+    "creator": "\"الشريف الرضي، محمد بن الحسين\"",
+    "date": "2007-01-01T00:00:00Z",
+    "publisher": "المستشارية الثقافية للجمهورية الاسلامية الايرانية",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-149823",
+    "title": "149823 - نهج البلاغة",
+    "creator": "\"الشريف الرضي، محمد بن الحسين\"",
+    "date": "2026-04-19T00:00:00Z",
+    "publisher": "د.ن",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-194258",
+    "title": "194258 - نهج البلاغة",
+    "creator": "\"الشريف الرضي، محمد بن الحسين\"",
+    "date": "1900-01-01T00:00:00Z",
+    "publisher": "مطبعة دار الكتب العربية الكبرى",
+    "old": true
+   }
+  ]
+ },
+ {
+  "n": 54,
+  "title": "الصحيفة السجادية",
+  "author": "الإمام زين العابدين",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*سجاديه* OR *سجادية*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(سجاديه OR السجاديه OR سجادية OR السجادية)",
+  "hits": 6,
+  "old": 1,
+  "other": 5,
+  "found": [
+   {
+    "id": "AAlexandrina-164758",
+    "title": "164758 - الصحيفة الثانية السجادية",
+    "creator": "زين العابدين علي بن الحسين",
+    "date": "1904-01-01T00:00:00Z",
+    "publisher": "مطبعة النيل",
+    "old": true
+   },
+   {
+    "id": "AAlexandrina-051835",
+    "title": "051835_كتاب_نور_الانوار_فى_شرح_الصحيفة_السجادية",
+    "creator": "\"الجزائري، نعمة الله بن عبد الله\"",
+    "date": "1312-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-170858",
+    "title": "170858_الصحيفة_السجادية_الكاملة_تقديم_محمد_باقر_الصدر",
+    "creator": "\"الصدر، محمد باقر.\"",
+    "date": "2026-08-19T00:00:00Z",
+    "publisher": "دار التعارف للمطبوعات",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-16999",
+    "title": "الصحيفة_السجادية_الكاملة_16999_زين_العابدين,_ابوالحسن_على_بن_الحسين",
+    "creator": "زين العابدين, ابوالحسن على بن الحسين بن على بن ابى طالب الهاشمى القرشى 38-94هـ.-الصدر, السيد محمد باقر،",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-17403",
+    "title": "صحيفة_كاملة_سجادية_17403_زين_العابدين,_ابوالحسن_على_بن_الحسين_بن",
+    "creator": "زين العابدين, ابوالحسن على بن الحسين بن على بن ابى طالب الهاشمى القرشى 38-94هـ.",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-109267",
+    "title": "109267_كتاب_الصحيفة_الرابعة_السجادية",
+    "creator": "زين العابدين علي بن الحسين",
+    "date": "1312-01-01T00:00:00Z",
+    "publisher": "[د.ن.]",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 55,
+  "title": "رسالة الحقوق",
+  "author": "الإمام زين العابدين",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*حقوق*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(حقوق OR الحقوق)",
+  "hits": 247,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 56,
+  "title": "مصباح المتهجد",
+  "author": "الشيخ الطوسي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*متهجد*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(متهجد OR المتهجد)",
+  "hits": 1,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "AAlexandrina-164339",
+    "title": "164339 - مصباح المتهجد وسلاح المتعبد",
+    "creator": "\"الطوسي، محمد بن الحسن\"",
+    "date": "1082-01-01T00:00:00Z",
+    "publisher": "اسمعيل الانصارى الزنجانى",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 57,
+  "title": "إقبال الأعمال",
+  "author": "السيد ابن طاووس",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*اعمال*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(اعمال OR الاعمال)",
+  "hits": 335,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 58,
+  "title": "فلاح السائل",
+  "author": "السيد ابن طاووس",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*سائل*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(سائل OR السائل)",
+  "hits": 311,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 59,
+  "title": "جمال الأسبوع",
+  "author": "السيد ابن طاووس",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*اسبوع*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(اسبوع OR الاسبوع)",
+  "hits": 16,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 60,
+  "title": "الدروع الواقية",
+  "author": "السيد ابن طاووس",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*واقيه* OR *واقية*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(واقيه OR الواقيه OR واقية OR الواقية)",
+  "hits": 3,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 61,
+  "title": "سعد السعود",
+  "author": "السيد ابن طاووس",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*سعود*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(سعود OR السعود)",
+  "hits": 267,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 62,
+  "title": "كشف المحجة",
+  "author": "السيد ابن طاووس",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*محجه* OR *محجة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(محجه OR المحجه OR محجة OR المحجة)",
+  "hits": 9,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 63,
+  "title": "اليقين",
+  "author": "السيد ابن طاووس",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*يقين*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(يقين OR اليقين)",
+  "hits": 40,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 64,
+  "title": "مهج الدعوات",
+  "author": "السيد ابن طاووس",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*دعوات*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(دعوات OR الدعوات)",
+  "hits": 13,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 65,
+  "title": "اللهوف على قتلى الطفوف",
+  "author": "السيد ابن طاووس",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*لهوف*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(لهوف OR اللهوف)",
+  "hits": 2,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 66,
+  "title": "البلد الأمين",
+  "author": "إبراهيم الكفعمي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*امين*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(امين OR الامين)",
+  "hits": 292,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 67,
+  "title": "مصباح الكفعمي",
+  "author": "إبراهيم الكفعمي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*كفعمي* OR *كفعمى*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(كفعمي OR الكفعمي OR كفعمى OR الكفعمى)",
+  "hits": 1,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "AAlexandrina-157107",
+    "title": "157107_جنة_الواقية_وجنة_الباقية_المشهور_مصباح_الكفعمى",
+    "creator": "\"الكفعمي، إبراهيم بن علي\"",
+    "date": "1312-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 68,
+  "title": "عدة الداعي ونجاح الساعي",
+  "author": "ابن فهد الحلي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*داعي* OR *داعى*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(داعي OR الداعي OR داعى OR الداعى)",
+  "hits": 84,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 69,
+  "title": "مفاتيح الجنان",
+  "author": "الشيخ عباس القمي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*مفاتيح*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(مفاتيح OR المفاتيح)",
+  "hits": 48,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "BBib-Alex-17295",
+    "title": "مفاتيح الجنان [17295] --- القمى, عباس",
+    "creator": "القمى, عباس.",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 70,
+  "title": "نفس المهموم",
+  "author": "الشيخ عباس القمي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*مهموم*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(مهموم OR المهموم)",
+  "hits": 0,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 71,
+  "title": "منتهى الآمال",
+  "author": "الشيخ عباس القمي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*امال*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(امال OR الامال)",
+  "hits": 48,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "BBib-Alex-00644",
+    "title": "منتهى_الامال_فى_تواريخ_النبى_و_الال_02_00644_القمى,_عباس_التقى,",
+    "creator": "القمى, عباس.-التقى, نادر،",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 72,
+  "title": "سفينة البحار",
+  "author": "الشيخ عباس القمي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*بحار*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(بحار OR البحار)",
+  "hits": 178,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 73,
+  "title": "الأنوار النعمانية",
+  "author": "نعمة الله الجزائري",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*نعمانيه* OR *نعمانية*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(نعمانيه OR النعمانيه OR نعمانية OR النعمانية)",
+  "hits": 1,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "AAlexandrina-130019",
+    "title": "130019_كتاب_الانوار_النعمانية_فى_بيان_معرفة_النشأة_الانسانية",
+    "creator": "\"الجزائري، نعمة الله بن عبد الله\"",
+    "date": "1280-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 74,
+  "title": "زاد المعاد",
+  "author": "محمد باقر المجلسي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*معاد*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(معاد OR المعاد)",
+  "hits": 110,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 75,
+  "title": "بحار الأنوار",
+  "author": "محمد باقر المجلسي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*انوار*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(انوار OR الانوار)",
+  "hits": 169,
+  "old": 0,
+  "other": 25,
+  "found": [
+   {
+    "id": "AAlexandrina-162969",
+    "title": "162969_هذا_المجلد_الرابع_الخامس_والعشرون_من_كتاب_بحار_الانوار",
+    "creator": "\"المجلسي، محمد باقر بن محمد تقي\"",
+    "date": "1301-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-169091",
+    "title": "169091_هذا_المجلد_الرابع_الخامس_والعشرون_من_كتاب_بحار_الانوار",
+    "creator": "\"المجلسي، محمد باقر بن محمد تقي\"",
+    "date": "1301-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-117198",
+    "title": "117198 - بحار الانوار",
+    "creator": "\"المجلسي، محمد باقر بن محمد تقي\"",
+    "date": "1315-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-124939",
+    "title": "124939_هذا_المجلد_الرابع_الخامس_والعشرون_من_كتاب_بحار_الانوار",
+    "creator": "\"المجلسي، محمد باقر بن محمد تقي\"",
+    "date": "1301-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-161974",
+    "title": "161974_المجلد_السابع_عشر_من_كتاب_بحار_الانوار",
+    "creator": "\"المجلسي، محمد باقر بن محمد تقي\"",
+    "date": "1297-01-01T00:00:00Z",
+    "publisher": "دار الطباعة",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-161439",
+    "title": "161439_هذا_المجلد_الرابع_الخامس_والعشرون_من_كتاب_بحار_الانوار",
+    "creator": "\"المجلسي، محمد باقر بن محمد تقي\"",
+    "date": "",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-110978",
+    "title": "110978_هذا_المجلد_الرابع_الخامس_والعشرون_من_كتاب_بحار_الانوار",
+    "creator": "\"المجلسي، محمد باقر بن محمد تقي\"",
+    "date": "1301-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-063160",
+    "title": "063160_هذا_المجلد_الرابع_الخامس_والعشرون_من_كتاب_بحار_الانوار",
+    "creator": "\"المجلسي، محمد باقر بن محمد تقي\"",
+    "date": "1301-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-058684",
+    "title": "058684_هذا_المجلد_الرابع_الخامس_والعشرون_من_كتاب_بحار_الانوار",
+    "creator": "\"المجلسي، محمد باقر بن محمد تقي\"",
+    "date": "1301-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-137551",
+    "title": "137551_هذا_المجلد_الرابع_الخامس_والعشرون_من_كتاب_بحار_الانوار",
+    "creator": "\"المجلسي، محمد باقر بن محمد تقي\"",
+    "date": "1301-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-141519",
+    "title": "141519_هذا_المجلد_الرابع_الخامس_والعشرون_من_كتاب_بحار_الانوار",
+    "creator": "\"المجلسي، محمد باقر بن محمد تقي\"",
+    "date": "1301-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-148119",
+    "title": "148119_هذا_المجلد_الاول_السابع_من_كتاب_مستطاب_بحار_الانوار",
+    "creator": "\"المجلسي، محمد باقر بن محمد تقي\"",
+    "date": "1296-01-01T00:00:00Z",
+    "publisher": "دار طباعة الحاج ابراهيم التبريزى",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-148421",
+    "title": "148421_هذا_المجلد_الاول_السابع_من_كتاب_مستطاب_بحار_الانوار",
+    "creator": "\"المجلسي، محمد باقر بن محمد تقي\"",
+    "date": "1296-01-01T00:00:00Z",
+    "publisher": "دار طباعة الحاج ابراهيم التبريزى",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-151187",
+    "title": "151187 - بحار الانوار",
+    "creator": "\"المجلسي، محمد باقر بن محمد تقي\"",
+    "date": "1303-01-01T00:00:00Z",
+    "publisher": "دار الطباعة",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-110979",
+    "title": "110979_هذا_المجلد_الرابع_الخامس_والعشرون_من_كتاب_بحار_الانوار",
+    "creator": "\"المجلسي، محمد باقر بن محمد تقي\"",
+    "date": "1301-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-085073",
+    "title": "085073_هذا_المجلد_الرابع_الخامس_والعشرون_من_كتاب_بحار_الانوار",
+    "creator": "\"المجلسي، محمد باقر بن محمد تقي\"",
+    "date": "1301-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-137550",
+    "title": "137550_هذا_المجلد_الرابع_الخامس_والعشرون_من_كتاب_بحار_الانوار",
+    "creator": "\"المجلسي، محمد باقر بن محمد تقي\"",
+    "date": "1301-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-085074",
+    "title": "085074_هذا_المجلد_الرابع_الخامس_والعشرون_من_كتاب_بحار_الانوار",
+    "creator": "\"المجلسي، محمد باقر بن محمد تقي\"",
+    "date": "1301-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-168501",
+    "title": "168501_هذا_المجلد_الاول_السابع_من_كتاب_مستطاب_بحار_الانوار",
+    "creator": "\"المجلسي، محمد باقر بن محمد تقي\"",
+    "date": "1296-01-01T00:00:00Z",
+    "publisher": "دار طباعة الحاج ابراهيم التبريزى",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-137554",
+    "title": "137554 - كتاب بحار الانوار",
+    "creator": "\"المجلسي، محمد باقر بن محمد تقي\"",
+    "date": "2025-01-18T00:00:00Z",
+    "publisher": "د.ن",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-094916",
+    "title": "094916 - كتاب بحار الانوار",
+    "creator": "\"المجلسي، محمد باقر بن محمد تقي\"",
+    "date": "1306-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-168503",
+    "title": "168503_هذا_المجلد_الرابع_الخامس_والعشرون_من_كتاب_بحار_الانوار",
+    "creator": "\"المجلسي، محمد باقر بن محمد تقي\"",
+    "date": "1301-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-154501",
+    "title": "154501_هذا_المجلد_الرابع_الخامس_والعشرون_من_كتاب_بحار_الانوار",
+    "creator": "\"المجلسي، محمد باقر بن محمد تقي\"",
+    "date": "1301-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-104639",
+    "title": "104639_هذا_المجلد_الرابع_الخامس_والعشرون_من_كتاب_بحار_الانوار",
+    "creator": "\"المجلسي، محمد باقر بن محمد تقي\"",
+    "date": "1301-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-044363",
+    "title": "044363 - كتاب بحار الانوار",
+    "creator": "\"المجلسي، محمد باقر بن محمد تقي\"",
+    "date": "1306-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 76,
+  "title": "مرآة العقول",
+  "author": "محمد باقر المجلسي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*عقول*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(عقول OR العقول)",
+  "hits": 52,
+  "old": 0,
+  "other": 3,
+  "found": [
+   {
+    "id": "AAlexandrina-150681",
+    "title": "150681 - مرآة العقول شرح اصول الكافى",
+    "creator": "\"المجلسي، محمد باقر بن محمد تقي\"",
+    "date": "1321-01-01T00:00:00Z",
+    "publisher": "د.ن",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-150682",
+    "title": "150682 - مرآة العقول شرح اصول الكافى",
+    "creator": "\"المجلسي، محمد باقر بن محمد تقي\"",
+    "date": "1321-01-01T00:00:00Z",
+    "publisher": "د.ن",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-089464",
+    "title": "089464 - مرآة العقول شرح اصول الكافى",
+    "creator": "\"المجلسي، محمد باقر بن محمد تقي\"",
+    "date": "1321-01-01T00:00:00Z",
+    "publisher": "د.ن",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 77,
+  "title": "روضة المتقين",
+  "author": "محمد تقي المجلسي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*متقين*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(متقين OR المتقين)",
+  "hits": 24,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 78,
+  "title": "الوافي",
+  "author": "الفيض الكاشاني",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*وافي* OR *وافى*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(وافي OR الوافي OR وافى OR الوافى)",
+  "hits": 84,
+  "old": 0,
+  "other": 26,
+  "found": [
+   {
+    "id": "BBib-Alex-10622",
+    "title": "كتاب_الوافي_المجلد_01_10622_محمد_محسن_الكاشاني",
+    "creator": "محمد محسن الكاشاني",
+    "date": "1406-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مكتبة الإمام علي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10646",
+    "title": "كتاب_الوافي_المجلد_08_10646_محمد_محسن_الكاشاني",
+    "creator": "محمد محسن الكاشاني",
+    "date": "1406-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مكتبة الإمام علي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10642",
+    "title": "كتاب_الوافي_المجلد_04_10642_محمد_محسن_الكاشاني",
+    "creator": "محمد محسن الكاشاني",
+    "date": "1406-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مكتبة الإمام علي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10647",
+    "title": "كتاب_الوافي_المجلد_09_10647_محمد_محسن_الكاشاني",
+    "creator": "محمد محسن الكاشاني",
+    "date": "1406-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مكتبة الإمام علي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10624",
+    "title": "كتاب_الوافي_المجلد_11_10624_محمد_محسن_الكاشاني",
+    "creator": "محمد محسن الكاشاني",
+    "date": "1406-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مكتبة الإمام علي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10633",
+    "title": "كتاب_الوافى_10633_الكاشانى،_محمد_بن_مرتضى",
+    "creator": "الكاشانى، محمد بن مرتضى",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10640",
+    "title": "كتاب_الوافي_المجلد_26_10640_محمد_محسن_الكاشاني",
+    "creator": "محمد محسن الكاشاني",
+    "date": "1406-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مكتبة الإمام علي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10634",
+    "title": "كتاب_الوافي_المجلد_20_10634_محمد_محسن_الكاشاني",
+    "creator": "محمد محسن الكاشاني",
+    "date": "1406-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مكتبة الإمام علي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10639",
+    "title": "كتاب_الوافي_المجلد_25_10639_محمد_محسن_الكاشاني",
+    "creator": "محمد محسن الكاشاني",
+    "date": "1406-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مكتبة الإمام علي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10631",
+    "title": "كتاب_الوافي_المجلد_18_10631_محمد_محسن_الكاشاني",
+    "creator": "محمد محسن الكاشاني",
+    "date": "1406-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مكتبة الإمام علي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10641",
+    "title": "كتاب_الوافي_المجلد_03_10641_محمد_محسن_الكاشاني",
+    "creator": "محمد محسن الكاشاني",
+    "date": "1406-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مكتبة الإمام علي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10644",
+    "title": "كتاب_الوافي_المجلد_06_10644_محمد_محسن_الكاشاني",
+    "creator": "محمد محسن الكاشاني",
+    "date": "1406-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مكتبة الإمام علي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10625",
+    "title": "كتاب_الوافي_المجلد_12_10625_محمد_محسن_الكاشاني",
+    "creator": "محمد محسن الكاشاني",
+    "date": "1406-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مكتبة الإمام علي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10645",
+    "title": "كتاب_الوافي_المجلد_07_10645_محمد_محسن_الكاشاني",
+    "creator": "محمد محسن الكاشاني",
+    "date": "1406-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مكتبة الإمام علي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10636",
+    "title": "كتاب_الوافي_المجلد_22_10636_محمد_محسن_الكاشاني",
+    "creator": "محمد محسن الكاشاني",
+    "date": "1406-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مكتبة الإمام علي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10628",
+    "title": "كتاب_الوافي_المجلد_15_10628_محمد_محسن_الكاشاني",
+    "creator": "محمد محسن الكاشاني",
+    "date": "1406-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مكتبة الإمام علي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10629",
+    "title": "كتاب_الوافي_المجلد_16_10629_محمد_محسن_الكاشاني",
+    "creator": "محمد محسن الكاشاني",
+    "date": "1406-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مكتبة الإمام علي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10635",
+    "title": "كتاب_الوافي_المجلد_21_10635_محمد_محسن_الكاشاني",
+    "creator": "محمد محسن الكاشاني",
+    "date": "1406-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مكتبة الإمام علي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10638",
+    "title": "كتاب_الوافي_المجلد_24_10638_محمد_محسن_الكاشاني",
+    "creator": "محمد محسن الكاشاني",
+    "date": "1406-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مكتبة الإمام علي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10630",
+    "title": "كتاب_الوافي_المجلد_17_10630_محمد_محسن_الكاشاني",
+    "creator": "محمد محسن الكاشاني",
+    "date": "1406-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مكتبة الإمام علي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10623",
+    "title": "كتاب_الوافي_المجلد_10_10623_محمد_محسن_الكاشاني",
+    "creator": "محمد محسن الكاشاني",
+    "date": "1406-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مكتبة الإمام علي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10632",
+    "title": "كتاب_الوافي_المجلد_19_10632_محمد_محسن_الكاشاني",
+    "creator": "محمد محسن الكاشاني",
+    "date": "1406-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مكتبة الإمام علي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10637",
+    "title": "كتاب_الوافي_المجلد_23_10637_محمد_محسن_الكاشاني",
+    "creator": "محمد محسن الكاشاني",
+    "date": "1406-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مكتبة الإمام علي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10626",
+    "title": "كتاب_الوافى_10626_الكاشانى،_محمد_بن_مرتضى",
+    "creator": "الكاشانى، محمد بن مرتضى",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10627",
+    "title": "كتاب_الوافي_المجلد_14_10627_محمد_محسن_الكاشاني",
+    "creator": "محمد محسن الكاشاني",
+    "date": "1406-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مكتبة الإمام علي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10643",
+    "title": "كتاب_الوافي_المجلد_05_10643_محمد_محسن_الكاشاني",
+    "creator": "محمد محسن الكاشاني",
+    "date": "1406-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مكتبة الإمام علي",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 79,
+  "title": "المحجة البيضاء",
+  "author": "الفيض الكاشاني",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*بيضاء*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(بيضاء OR البيضاء)",
+  "hits": 31,
+  "old": 0,
+  "other": 6,
+  "found": [
+   {
+    "id": "BBib-Alex-16918",
+    "title": "المحجة_البيضاء_في_تهذيب_الأحياء_الجزء_01_16918_المولى_محسن_الكاشاني",
+    "creator": "المولى محسن الكاشاني",
+    "date": "1982-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية مؤسسة الأعلمي للمطبوعات",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-16920",
+    "title": "المحجة_البيضاء_في_تهذيب_الأحياء_الجزء_03_16920_المولى_محسن_الكاشاني",
+    "creator": "المولى محسن الكاشاني",
+    "date": "1982-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية مؤسسة الأعلمي للمطبوعات",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-16919",
+    "title": "المحجة_البيضاء_في_تهذيب_الأحياء_الجزء_02_16919_المولى_محسن_الكاشاني",
+    "creator": "المولى محسن الكاشاني",
+    "date": "1982-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية مؤسسة الأعلمي للمطبوعات",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-16923",
+    "title": "المحجة_البيضاء_في_تهذيب_الأحياء_الجزء_08_16923_المولى_محسن_الكاشاني",
+    "creator": "المولى محسن الكاشاني",
+    "date": "1982-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية مؤسسة الأعلمي للمطبوعات",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-16921",
+    "title": "المحجة_البيضاء_في_تهذيب_الأحياء_الجزء_05_16921_المولى_محسن_الكاشاني",
+    "creator": "المولى محسن الكاشاني",
+    "date": "1982-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية مؤسسة الأعلمي للمطبوعات",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-16922",
+    "title": "المحجة_البيضاء_في_تهذيب_الأحياء_الجزء_07_16922_المولى_محسن_الكاشاني",
+    "creator": "المولى محسن الكاشاني",
+    "date": "1982-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية مؤسسة الأعلمي للمطبوعات",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 80,
+  "title": "الصافي في تفسير القرآن",
+  "author": "الفيض الكاشاني",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*صافي* OR *صافى*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(صافي OR الصافي OR صافى OR الصافى)",
+  "hits": 25,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 81,
+  "title": "الأصفى في تفسير القرآن",
+  "author": "الفيض الكاشاني",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*اصفي* OR *اصفى*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(اصفي OR الاصفي OR اصفى OR الاصفى)",
+  "hits": 19,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 82,
+  "title": "مفاتيح الشرائع",
+  "author": "الفيض الكاشاني",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*شرائع*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(شرائع OR الشرائع)",
+  "hits": 110,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 83,
+  "title": "الحدائق الناضرة",
+  "author": "يوسف البحراني",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*حدائق*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(حدائق OR الحدائق)",
+  "hits": 103,
+  "old": 0,
+  "other": 27,
+  "found": [
+   {
+    "id": "BBib-Alex-08597",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_02_08597_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08606",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_06_08606_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-07237",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_22_07237_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08598",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_20_08598_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08602",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_25_08602_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-086420",
+    "title": "086420_كتاب_الحدائق_الناضرة_فى_احكام_العترة_الطاهرة",
+    "creator": "\"البحراني، يوسف بن أحمد\"",
+    "date": "1316-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-07236",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_15_07236_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08594",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_16_08594_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08588",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_01_08588_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08608",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_08_08608_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08596",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_18_08596_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08592",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_13_08592_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08595",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_17_08595_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-086419",
+    "title": "086419_كتاب_الحدائق_الناضرة_فى_احكام_العترة_الطاهرة",
+    "creator": "\"البحراني، يوسف بن أحمد\"",
+    "date": "1316-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-148120",
+    "title": "148120_هذا_هو_المجلد_السادس_من_كتاب_الحدائق_الناضرة_فى_ا_لطاهرة",
+    "creator": "\"البحراني، يوسف بن أحمد\"",
+    "date": "1316-01-01T00:00:00Z",
+    "publisher": "مطبعة الحاج ابراهيم",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08589",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_10_08589_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08591",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_12_08591_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08604",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_04_08604_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08607",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_07_08607_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08593",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_14_08593_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08603",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_03_08603_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08605",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_05_08605_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08609",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_09_08609_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08590",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_11_08590_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08599",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_21_08599_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08600",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_23_08600_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08601",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_24_08601_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 84,
+  "title": "وسائل الشيعة",
+  "author": "الحر العاملي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*شيعه* OR *شيعة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(شيعه OR الشيعه OR شيعة OR الشيعة)",
+  "hits": 88,
+  "old": 3,
+  "other": 0,
+  "found": [
+   {
+    "id": "AAlexandrina-134855",
+    "title": "134855_تفصيل_وسائل_الشيعة_الى_تحصيل_مسائل_الشريعة",
+    "creator": "\"الحر العاملي، محمد بن الحسن\"",
+    "date": "1893-01-01T00:00:00Z",
+    "publisher": "د.ن",
+    "old": true
+   },
+   {
+    "id": "AAlexandrina-134856",
+    "title": "134856_تفصيل_وسائل_الشيعة_الى_تحصيل_مسائل_الشريعة",
+    "creator": "\"الحر العاملي، محمد بن الحسن\"",
+    "date": "1893-01-01T00:00:00Z",
+    "publisher": "د.ن",
+    "old": true
+   },
+   {
+    "id": "AAlexandrina-161904",
+    "title": "161904_وسائل_الشيعة_الى_تحصيل_مسائل_الشريعة",
+    "creator": "\"الحر العاملي، محمد بن الحسن\"",
+    "date": "1894-01-01T00:00:00Z",
+    "publisher": "دار الطباعة",
+    "old": true
+   }
+  ]
+ },
+ {
+  "n": 85,
+  "title": "هداية الأمة إلى أحكام الأئمة",
+  "author": "الحر العاملي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*هدايه* OR *هداية*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(هدايه OR الهدايه OR هداية OR الهداية)",
+  "hits": 105,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 86,
+  "title": "إثبات الهداة بالنصوص والمعجزات",
+  "author": "الحر العاملي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*بالنصوص*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(بالنصوص OR البالنصوص)",
+  "hits": 0,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 87,
+  "title": "الفصول المهمة في أصول الأئمة",
+  "author": "الحر العاملي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*فصول*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(فصول OR الفصول)",
+  "hits": 255,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "AAlexandrina-140308",
+    "title": "140308_الفصول_المهمة_فى_اصول_الائمة_عليهم_السلام",
+    "creator": "\"الحر العاملي، محمد بن الحسن\"",
+    "date": "1958-01-01T00:00:00Z",
+    "publisher": "المطبعة الحيدرية",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 88,
+  "title": "جامع أحاديث الشيعة",
+  "author": "حسين البروجردي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*احاديث*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(احاديث OR الاحاديث)",
+  "hits": 179,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 89,
+  "title": "مستدرك الوسائل",
+  "author": "حسين النوري الطبرسي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*وسائل*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(وسائل OR الوسائل)",
+  "hits": 124,
+  "old": 0,
+  "other": 3,
+  "found": [
+   {
+    "id": "AAlexandrina-145461",
+    "title": "145461_المجلدة_الثالثة_من_كتاب_مستدرك_الوسائل_ومستنبط_المسائل",
+    "creator": "حسين النوري",
+    "date": "1318-01-01T00:00:00Z",
+    "publisher": "[د.ن.]",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-076434",
+    "title": "076434_المجلدة_الثالثة_من_كتاب_مستدرك_الوسائل_ومستنبط_المسائل",
+    "creator": "حسين النوري",
+    "date": "1318-01-01T00:00:00Z",
+    "publisher": "[د.ن.]",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-161913",
+    "title": "161913_المجلدة_الثالثة_من_كتاب_مستدرك_الوسائل_ومستنبط_المسائل",
+    "creator": "حسين النوري",
+    "date": "1318-01-01T00:00:00Z",
+    "publisher": "[د.ن.]",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 90,
+  "title": "مستدرك سفينة البحار",
+  "author": "علي النمازي الشاهرودي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*مستدرك*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(مستدرك OR المستدرك)",
+  "hits": 23,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 91,
+  "title": "تفسير القمي",
+  "author": "علي بن إبراهيم القمي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*قمي* OR *قمى*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(قمي OR القمي OR قمى OR القمى)",
+  "hits": 54,
+  "old": 0,
+  "other": 9,
+  "found": [
+   {
+    "id": "AAlexandrina-142883",
+    "title": "142883 - القميص - قصص مصرية قصيرة",
+    "creator": "\"موسى، صبري\"",
+    "date": "1958-01-01T00:00:00Z",
+    "publisher": "مطابع الناشر العربى",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-07258",
+    "title": "الكنى_و_الالقاب_07258_القمى,_عباس_الامينى,_محمد_هادى",
+    "creator": "القمى, عباس.-الامينى, محمد هادى",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-17318",
+    "title": "منازل_الاخرة_حول_الموت_و_عالم_ما_بعد_الموت_17318_القمى،_عباس_كورانى،",
+    "creator": "القمى، عباس.-كورانى، حسين،",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-00644",
+    "title": "منتهى_الامال_فى_تواريخ_النبى_و_الال_02_00644_القمى,_عباس_التقى,",
+    "creator": "القمى, عباس.-التقى, نادر،",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-07259",
+    "title": "الكنى_و_الالقاب_07259_القمى,_عباس_الامينى,_محمد_هادى",
+    "creator": "القمى, عباس.-الامينى, محمد هادى",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-17295",
+    "title": "مفاتيح الجنان [17295] --- القمى, عباس",
+    "creator": "القمى, عباس.",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09453",
+    "title": "من_لا_يحضره_الفقيه_09453_ابن_بابويه_القمي،_أبو_جعفر_محمد_بن_علي",
+    "creator": "ابن بابويه القمي، أبو جعفر محمد بن علي بن الحسين بن موسى|شمس الدين، محمد جعفر",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-14114",
+    "title": "شرح_خطبة_الزهراء_و_اسبابها_14114_القميحا,_نزيه",
+    "creator": "القميحا, نزيه.",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-07646",
+    "title": "كحل_البصر_فى_سيرة_سيد_البشر_07646_القمى,_عباس",
+    "creator": "القمى, عباس.",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 92,
+  "title": "تفسير العياشي",
+  "author": "محمد بن مسعود العياشي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*عياشي* OR *عياشى*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(عياشي OR العياشي OR عياشى OR العياشى)",
+  "hits": 8,
+  "old": 0,
+  "other": 3,
+  "found": [
+   {
+    "id": "AAlexandrina-109688",
+    "title": "109688_ماء_الموائد_العياشى_الرحلة_ليبيا_طرابلس_وبرقة",
+    "creator": "\"عبد الحميد، سعد زغلول.\"",
+    "date": "1996-01-01T00:00:00Z",
+    "publisher": "منشاة المعارف",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-009757",
+    "title": "009757_الحركة_العياشية_حلقة_من_تاريخ_المغرب_فى_القرن_17",
+    "creator": "\"الشادلي، عبد اللطيف.\"",
+    "date": "1982-01-01T00:00:00Z",
+    "publisher": "كلية الاداب و العلوم الانسانية",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-04099",
+    "title": "الحركة_العياشية_حلقة_من_تاريخ_المغرب_في_القرن_17_04099_عبد_اللطيف",
+    "creator": "عبد اللطيف الشادلي",
+    "date": "1982-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى منشورات كلية الآداب والعلوم الإنسانية بالرباط",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 93,
+  "title": "تفسير فرات الكوفي",
+  "author": "فرات الكوفي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*كوفي* OR *كوفى*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(كوفي OR الكوفي OR كوفى OR الكوفى)",
+  "hits": 22,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 94,
+  "title": "التبيان في تفسير القرآن",
+  "author": "الشيخ الطوسي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*تبيان*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(تبيان OR التبيان)",
+  "hits": 23,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 95,
+  "title": "مجمع البيان",
+  "author": "الفضل بن الحسن الطبرسي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*بيان*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(بيان OR البيان)",
+  "hits": 445,
+  "old": 0,
+  "other": 4,
+  "found": [
+   {
+    "id": "AAlexandrina-089093",
+    "title": "089093 - مجمع البيان فى تفسير القران",
+    "creator": "\"الطبرسي، الفضل بن الحسن\"",
+    "date": "1284-01-01T00:00:00Z",
+    "publisher": "كارخانه كربلائى محمد قلى",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-095233",
+    "title": "095233 - مجمع البيان فى تفسير القران",
+    "creator": "\"الطبرسي، الفضل بن الحسن\"",
+    "date": "1284-01-01T00:00:00Z",
+    "publisher": "كارخانه كربلائى محمد قلى",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-142439",
+    "title": "142439 - مجمع البيان فى تفسير القرآن",
+    "creator": "\"الطبرسي، الفضل بن الحسن\"",
+    "date": "1937-01-01T00:00:00Z",
+    "publisher": "د.ن",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-154499",
+    "title": "154499_قرآن_مجيد_معه_تفسير_مجمع_البيان_والبيضاوى_والوجي_قاموس",
+    "creator": "\"الطبرسي، الفضل بن الحسن\"",
+    "date": "1313-01-01T00:00:00Z",
+    "publisher": "د.ن",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 96,
+  "title": "جوامع الجامع",
+  "author": "الفضل بن الحسن الطبرسي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*جامع*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(جامع OR الجامع)",
+  "hits": 479,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 97,
+  "title": "البرهان في تفسير القرآن",
+  "author": "هاشم البحراني",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*برهان*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(برهان OR البرهان)",
+  "hits": 62,
+  "old": 0,
+  "other": 2,
+  "found": [
+   {
+    "id": "AAlexandrina-105690",
+    "title": "105690 - البرهان فى تفسير القرآن",
+    "creator": "\"البحرانى، هاشم بن سليمان.\"",
+    "date": "1295-01-01T00:00:00Z",
+    "publisher": "عليقلى خاقان قاجار",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-057745",
+    "title": "057745 - البرهان فى تفسير القرآن",
+    "creator": "\"البحرانى، هاشم بن سليمان.\"",
+    "date": "1295-01-01T00:00:00Z",
+    "publisher": "عليقلى خاقان قاجار",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 98,
+  "title": "نور الثقلين",
+  "author": "عبد علي الحويزي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*ثقلين*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(ثقلين OR الثقلين)",
+  "hits": 3,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 99,
+  "title": "تأويل الآيات الظاهرة",
+  "author": "شرف الدين النجفي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*ظاهره* OR *ظاهرة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(ظاهره OR الظاهره OR ظاهرة OR الظاهرة)",
+  "hits": 90,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 100,
+  "title": "تفسير شبر",
+  "author": "عبد الله شبر",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*شبر*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(شبر OR الشبر)",
+  "hits": 5,
+  "old": 1,
+  "other": 4,
+  "found": [
+   {
+    "id": "BBib-Alex-02884",
+    "title": "المناهج_الحسينية_02884_شبر,_جواد_قانصو,_حاج_غازى،",
+    "creator": "شبر, جواد.-قانصو, حاج غازى،",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-438138",
+    "title": "438138_هداية_الراوي_لشرح_منظومة_الشبراوي_فى_النحو",
+    "creator": "",
+    "date": "",
+    "publisher": "",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-431319",
+    "title": "431319 - ديوان الشبراوى",
+    "creator": "\"الشبراوي، عبد الله بن محمد\"",
+    "date": "",
+    "publisher": "المكتبة الازهرية للتراث :",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-223848",
+    "title": "223848_ديوان_الشيخ_عبد_الله_إبن_محمد_الشبراوي",
+    "creator": "\"الشبراوي، عبد الله\"",
+    "date": "1863-01-01T00:00:00Z",
+    "publisher": "المطبعة السنية",
+    "old": true
+   },
+   {
+    "id": "BBib-Alex-17464",
+    "title": "تسلية_الفؤاد_فى_بيان_الموت_و_المعاد_17464_شبر,_السيد_عبدالله",
+    "creator": "شبر, السيد عبدالله.",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 101,
+  "title": "كنز الدقائق وبحر الغرائب",
+  "author": "محمد المشهدي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*دقائق*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(دقائق OR الدقائق)",
+  "hits": 44,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 102,
+  "title": "منهج الصادقين",
+  "author": "فتح الله الكاشاني",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*صادقين*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(صادقين OR الصادقين)",
+  "hits": 1,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 103,
+  "title": "زبدة التفاسير",
+  "author": "فتح الله الكاشاني",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*تفاسير*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(تفاسير OR التفاسير)",
+  "hits": 45,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 104,
+  "title": "متشابه القرآن ومختلفه",
+  "author": "ابن شهر آشوب",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*ومختلفه* OR *ومختلفة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(ومختلفه OR الومختلفه OR ومختلفة OR الومختلفة)",
+  "hits": 0,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 105,
+  "title": "رجال النجاشي",
+  "author": "أحمد بن علي النجاشي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*نجاشي* OR *نجاشى*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(نجاشي OR النجاشي OR نجاشى OR النجاشى)",
+  "hits": 5,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 106,
+  "title": "رجال الطوسي",
+  "author": "الشيخ الطوسي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*طوسي* OR *طوسى*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(طوسي OR الطوسي OR طوسى OR الطوسى)",
+  "hits": 29,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 107,
+  "title": "الفهرست",
+  "author": "الشيخ الطوسي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*فهرست*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(فهرست OR الفهرست)",
+  "hits": 36,
+  "old": 3,
+  "other": 0,
+  "found": [
+   {
+    "id": "AAlexandrina-161323",
+    "title": "161323 - فهرست كتب الشيعة",
+    "creator": "\"الطوسي، محمد بن الحسن\"",
+    "date": "1853-01-01T00:00:00Z",
+    "publisher": "Baptist Mission Press",
+    "old": true
+   },
+   {
+    "id": "AAlexandrina-167375",
+    "title": "167375 - فهرست كتب الشيعة",
+    "creator": "\"الطوسي، محمد بن الحسن\"",
+    "date": "1853-01-01T00:00:00Z",
+    "publisher": "Baptist Mission Press",
+    "old": true
+   },
+   {
+    "id": "AAlexandrina-088631",
+    "title": "088631 - فهرست كتب الشيعة",
+    "creator": "\"الطوسي، محمد بن الحسن\"",
+    "date": "1853-01-01T00:00:00Z",
+    "publisher": "Baptist Mission Press",
+    "old": true
+   }
+  ]
+ },
+ {
+  "n": 108,
+  "title": "اختيار معرفة الرجال",
+  "author": "الشيخ الطوسي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*اختيار*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(اختيار OR الاختيار)",
+  "hits": 36,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 109,
+  "title": "معالم العلماء",
+  "author": "ابن شهر آشوب",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*علماء*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(علماء OR العلماء)",
+  "hits": 228,
+  "old": 1,
+  "other": 1,
+  "found": [
+   {
+    "id": "AAlexandrina-186144",
+    "title": "186144_معالم_العلماء_فى_فهرست_كتب_الشيعة_واسماء_المص_لفهرست",
+    "creator": "\"ابن شهراشوب، محمد بن علي\"",
+    "date": "1900-01-01T00:00:00Z",
+    "publisher": "دار الاضواء",
+    "old": true
+   },
+   {
+    "id": "AAlexandrina-224209",
+    "title": "224209_كتاب_معالم_العلماء_فهرست_كتب_الشيعة_وأسماء_المصنفي_وحديثا",
+    "creator": "\"إبن شهراشوب ، محمد بن علي\"",
+    "date": "1934-01-01T00:00:00Z",
+    "publisher": "مطبعة فردين",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 110,
+  "title": "رجال ابن داود",
+  "author": "ابن داود الحلي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*رجال*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(رجال OR الرجال)",
+  "hits": 248,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 111,
+  "title": "نقد الرجال",
+  "author": "مصطفى التفرشي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*رجال*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(رجال OR الرجال)",
+  "hits": 248,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 112,
+  "title": "جامع الرواة",
+  "author": "محمد الأردبيلي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*رواه* OR *رواة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(رواه OR الرواه OR رواة OR الرواة)",
+  "hits": 19,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 113,
+  "title": "تنقيح المقال",
+  "author": "عبد الله المامقاني",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*مقال*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(مقال OR المقال)",
+  "hits": 279,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 114,
+  "title": "معجم رجال الحديث",
+  "author": "أبو القاسم الخوئي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*حديث*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(حديث OR الحديث)",
+  "hits": 465,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 115,
+  "title": "أعيان الشيعة",
+  "author": "محسن الأمين",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*شيعه* OR *شيعة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(شيعه OR الشيعه OR شيعة OR الشيعة)",
+  "hits": 88,
+  "old": 0,
+  "other": 9,
+  "found": [
+   {
+    "id": "BBib-Alex-07866",
+    "title": "مستدركات_أعيان_الشيعة_المجلد_05_07866_حسن_الأمين",
+    "creator": "حسن الأمين",
+    "date": "1991-01-01T00:00:00Z",
+    "publisher": "دار التعارف",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-07869",
+    "title": "مستدركات_أعيان_الشيعة_المجلد_08_07869_حسن_الأمين",
+    "creator": "حسن الأمين",
+    "date": "1991-01-01T00:00:00Z",
+    "publisher": "دار التعارف",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08067",
+    "title": "سيرة_السيد_محسن_الامين_و_هى_جزء_من_كتاب_اعيان_الشيعة_08067_الامين،",
+    "creator": "الامين، هيثم.-ميرفان، صابرينا،",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-07864",
+    "title": "مستدركات_أعيان_الشيعة_المجلد_03_07864_حسن_الأمين",
+    "creator": "حسن الأمين",
+    "date": "1991-01-01T00:00:00Z",
+    "publisher": "دار التعارف",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-07867",
+    "title": "مستدركات_أعيان_الشيعة_المجلد_06_07867_حسن_الأمين",
+    "creator": "حسن الأمين",
+    "date": "1991-01-01T00:00:00Z",
+    "publisher": "دار التعارف",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-07863",
+    "title": "مستدركات_أعيان_الشيعة_المجلد_02_07863_حسن_الأمين",
+    "creator": "حسن الأمين",
+    "date": "1991-01-01T00:00:00Z",
+    "publisher": "دار التعارف",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-07868",
+    "title": "مستدركات_أعيان_الشيعة_المجلد_07_07868_حسن_الأمين",
+    "creator": "حسن الأمين",
+    "date": "1991-01-01T00:00:00Z",
+    "publisher": "دار التعارف",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-07862",
+    "title": "مستدركات_أعيان_الشيعة_المجلد_01_07862_حسن_الأمين",
+    "creator": "حسن الأمين",
+    "date": "1991-01-01T00:00:00Z",
+    "publisher": "دار التعارف",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-07865",
+    "title": "مستدركات_أعيان_الشيعة_المجلد_04_07865_حسن_الأمين",
+    "creator": "حسن الأمين",
+    "date": "1991-01-01T00:00:00Z",
+    "publisher": "دار التعارف",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 116,
+  "title": "الذريعة إلى تصانيف الشيعة",
+  "author": "آغا بزرگ الطهراني",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*ذريعه* OR *ذريعة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(ذريعه OR الذريعه OR ذريعة OR الذريعة)",
+  "hits": 10,
+  "old": 0,
+  "other": 3,
+  "found": [
+   {
+    "id": "AAlexandrina-141943",
+    "title": "141943 - الذريعة الى تصانيف الشيعة",
+    "creator": "\"آغا بزرگ الطهراني، محمد محسن\"",
+    "date": "1355-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-075270",
+    "title": "075270 - الذريعة الى تصانيف الشيعة",
+    "creator": "\"آغا بزرگ الطهراني، محمد محسن\"",
+    "date": "1355-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-075266",
+    "title": "075266 - الذريعة الى تصانيف الشيعة",
+    "creator": "\"آغا بزرگ الطهراني، محمد محسن\"",
+    "date": "1355-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 117,
+  "title": "تأسيس الشيعة لعلوم الإسلام",
+  "author": "حسن الصدر",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*شيعه* OR *شيعة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(شيعه OR الشيعه OR شيعة OR الشيعة)",
+  "hits": 88,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 118,
+  "title": "الغارات",
+  "author": "إبراهيم الثقفي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*غارات*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(غارات OR الغارات)",
+  "hits": 2,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "BBib-Alex-00411",
+    "title": "الغارات_00411_ابن_هلال_الثقفى,_ابى_اسحق_ابراهيم_بن_محمد_بن_سعيد",
+    "creator": "ابن هلال الثقفى, ابى اسحق ابراهيم بن محمد بن سعيد.-الخطيب, السيد عبدالزهراء الحسينى،",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 119,
+  "title": "وقعة صفين",
+  "author": "نصر بن مزاحم المنقري",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*وقعه* OR *وقعة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(وقعه OR الوقعه OR وقعة OR الوقعة)",
+  "hits": 15,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "BBib-Alex-06030",
+    "title": "وقعة_صفين_06030_نصر_بن_مزاحم,_ابوالفضل_نصر_بن_مزاحم_بن_سيار_المنقرى",
+    "creator": "نصر بن مزاحم, ابوالفضل نصر بن مزاحم بن سيار المنقرى التميمى الكوفى،-هارون، عبد السلام محمد",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 120,
+  "title": "مقاتل الطالبيين",
+  "author": "أبو الفرج الأصفهاني",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*طالبيين*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(طالبيين OR الطالبيين)",
+  "hits": 5,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 121,
+  "title": "مناقب آل أبي طالب",
+  "author": "ابن شهر آشوب",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*مناقب*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(مناقب OR المناقب)",
+  "hits": 95,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 122,
+  "title": "كشف الغمة في معرفة الأئمة",
+  "author": "علي بن عيسى الإربلي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*غمه* OR *غمة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(غمه OR الغمه OR غمة OR الغمة)",
+  "hits": 15,
+  "old": 0,
+  "other": 4,
+  "found": [
+   {
+    "id": "BBib-Alex-10595",
+    "title": "كشف_الغمة_فى_معرفة_الأئمة_الجزء_03_10595_أبي_الحسن_علي_بن_عيسى_بن",
+    "creator": "أبي الحسن علي بن عيسى بن أبي الفتح الأربلي",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-147001",
+    "title": "147001_هذا_كتاب_كشف_الغمة_فى_معرفة_الائمة",
+    "creator": "\"الإربلي، علي بن عيسى\"",
+    "date": "1294-01-01T00:00:00Z",
+    "publisher": "دار الطباعة الاستاذ كربلائى محمد حسين الطهرانى",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10593",
+    "title": "كشف_الغمة_فى_معرفة_الأئمة_الجزء_01_10593_أبي_الحسن_علي_بن_عيسى_بن",
+    "creator": "أبي الحسن علي بن عيسى بن أبي الفتح الأربلي",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10594",
+    "title": "كشف_الغمة_فى_معرفة_الأئمة_الجزء_02_10594_أبي_الحسن_علي_بن_عيسى_بن",
+    "creator": "أبي الحسن علي بن عيسى بن أبي الفتح الأربلي",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 123,
+  "title": "إعلام الورى بأعلام الهدى",
+  "author": "الفضل بن الحسن الطبرسي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*باعلام*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(باعلام OR الباعلام)",
+  "hits": 1,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 124,
+  "title": "مثير الأحزان",
+  "author": "ابن نما الحلي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*احزان*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(احزان OR الاحزان)",
+  "hits": 16,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 125,
+  "title": "مقتل الحسين",
+  "author": "أبو مخنف",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*حسين*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(حسين OR الحسين)",
+  "hits": 402,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "BBib-Alex-05127",
+    "title": "مقتل_الحسين_عليه_السلام_و_مصرع_اهل_بيته_و_اصحابه_فى_كربلاء_05127",
+    "creator": "ابومخنف الازدى, لوط بن يحيى بن سعيد الغامدى 157هـ.",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 126,
+  "title": "أبصار العين في أنصار الحسين",
+  "author": "محمد السماوي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*ابصار*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(ابصار OR الابصار)",
+  "hits": 61,
+  "old": 0,
+  "other": 2,
+  "found": [
+   {
+    "id": "AAlexandrina-150347",
+    "title": "150347_كتاب_ابصار_العين_فى_انصار_الحسين",
+    "creator": "\"السماوى، محمد بن طاهر.\"",
+    "date": "1341-01-01T00:00:00Z",
+    "publisher": "المطبعة الحيدرية",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-047386",
+    "title": "047386_كتاب_ابصار_العين_فى_انصار_الحسين",
+    "creator": "\"السماوى، محمد بن طاهر.\"",
+    "date": "1341-01-01T00:00:00Z",
+    "publisher": "المطبعة الحيدرية",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 127,
+  "title": "أسرار الشهادة",
+  "author": "فاضل الدربندي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*شهاده* OR *شهادة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(شهاده OR الشهاده OR شهادة OR الشهادة)",
+  "hits": 46,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "AAlexandrina-139257",
+    "title": "139257_هذا_كتاب_انوار_السعادة_فى_ترجمة_اسرار_الشهادة",
+    "creator": "\"الدربندي، أقا بن عابد\"",
+    "date": "1311-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 128,
+  "title": "الدمعة الساكبة",
+  "author": "محمد باقر البيرجندي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*ساكبه* OR *ساكبة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(ساكبه OR الساكبه OR ساكبة OR الساكبة)",
+  "hits": 0,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 129,
+  "title": "حياة الإمام الحسين",
+  "author": "باقر شريف القرشي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*حسين*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(حسين OR الحسين)",
+  "hits": 364,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "BBib-Alex-07540",
+    "title": "حياة_الإمام_الحسين_بن_علي_عليهما_السلام_دراسة_و_تحليل_الجزء_03_07540",
+    "creator": "باقر شريف القرشي",
+    "date": "1991-01-01T00:00:00Z",
+    "publisher": "الطبعة الرابعة مدرسة العلمية الإيرواني",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 130,
+  "title": "حياة الإمام علي بن أبي طالب",
+  "author": "باقر شريف القرشي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*حياه* OR *حياة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(حياه OR الحياه OR حياة OR الحياة)",
+  "hits": 419,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 131,
+  "title": "حياة الإمام الحسن",
+  "author": "باقر شريف القرشي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*حسن*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(حسن OR الحسن)",
+  "hits": 474,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "BBib-Alex-07541",
+    "title": "حياة_الامام_الحسن_بن_على_دراسة_و_تحليل_07541_القرشى,_باقر_شريف",
+    "creator": "القرشى, باقر شريف.",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 132,
+  "title": "حياة الإمام زين العابدين",
+  "author": "باقر شريف القرشي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*عابدين*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(عابدين OR العابدين)",
+  "hits": 23,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "BBib-Alex-07544",
+    "title": "حياة_الامام_زين_العابدين_دراسة_و_تحليل_07544_القرشي،_باقر_شريف",
+    "creator": "القرشي، باقر شريف.",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 133,
+  "title": "حياة الإمام محمد الباقر",
+  "author": "باقر شريف القرشي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*باقر*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(باقر OR الباقر)",
+  "hits": 50,
+  "old": 0,
+  "other": 5,
+  "found": [
+   {
+    "id": "BBib-Alex-07544",
+    "title": "حياة_الامام_زين_العابدين_دراسة_و_تحليل_07544_القرشي،_باقر_شريف",
+    "creator": "القرشي، باقر شريف.",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-16998",
+    "title": "الصحيفة_الصادقية_احدى_حلقات_حياة_الامام_الصادق_16998_القرشى,_باقر",
+    "creator": "القرشى, باقر شريف.",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-07542",
+    "title": "حياة_الامام_موسى_بن_جعفر_دراسة_و_تحليل_07542_القرشى,_باقر_شريف",
+    "creator": "القرشى, باقر شريف.",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-07543",
+    "title": "حياة_الامام_موسى_بن_جعفر_دراسة_و_تحليل_07543_القرشى,_باقر_شريف",
+    "creator": "القرشى, باقر شريف.",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-07541",
+    "title": "حياة_الامام_الحسن_بن_على_دراسة_و_تحليل_07541_القرشى,_باقر_شريف",
+    "creator": "القرشى, باقر شريف.",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 134,
+  "title": "حياة الإمام جعفر الصادق",
+  "author": "باقر شريف القرشي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*صادق*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(صادق OR الصادق)",
+  "hits": 90,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "BBib-Alex-16998",
+    "title": "الصحيفة_الصادقية_احدى_حلقات_حياة_الامام_الصادق_16998_القرشى,_باقر",
+    "creator": "القرشى, باقر شريف.",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 135,
+  "title": "حياة الإمام موسى الكاظم",
+  "author": "باقر شريف القرشي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*كاظم*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(كاظم OR الكاظم)",
+  "hits": 19,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 136,
+  "title": "حياة الإمام علي الرضا",
+  "author": "باقر شريف القرشي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*رضا*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(رضا OR الرضا)",
+  "hits": 149,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 137,
+  "title": "حياة الإمام محمد الجواد",
+  "author": "باقر شريف القرشي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*جواد*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(جواد OR الجواد)",
+  "hits": 75,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 138,
+  "title": "حياة الإمام علي الهادي",
+  "author": "باقر شريف القرشي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*هادي* OR *هادى*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(هادي OR الهادي OR هادى OR الهادى)",
+  "hits": 109,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 139,
+  "title": "حياة الإمام الحسن العسكري",
+  "author": "باقر شريف القرشي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*عسكري* OR *عسكرى*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(عسكري OR العسكري OR عسكرى OR العسكرى)",
+  "hits": 147,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 140,
+  "title": "حياة الإمام المهدي",
+  "author": "باقر شريف القرشي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*مهدي* OR *مهدى*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(مهدي OR المهدي OR مهدى OR المهدى)",
+  "hits": 82,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 141,
+  "title": "شرائع الإسلام",
+  "author": "المحقق الحلي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*اسلام*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(اسلام OR الاسلام)",
+  "hits": 537,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 142,
+  "title": "المختصر النافع",
+  "author": "المحقق الحلي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*مختصر*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(مختصر OR المختصر)",
+  "hits": 318,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "BBib-Alex-08748",
+    "title": "المختصر_النافع_فى_فقه_الامامية_08748_الحلى,_نجم_الدين_ابوالقاسم",
+    "creator": "الحلى, نجم الدين ابوالقاسم جعفر بن الحسن بن يحيى بن الحسين الهدبى 602-676هـ.",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 143,
+  "title": "المعتبر في شرح المختصر",
+  "author": "المحقق الحلي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*معتبر*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(معتبر OR المعتبر)",
+  "hits": 11,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 144,
+  "title": "النهاية في مجرد الفقه والفتاوى",
+  "author": "الشيخ الطوسي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*نهايه* OR *نهاية*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(نهايه OR النهايه OR نهاية OR النهاية)",
+  "hits": 349,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 145,
+  "title": "المبسوط في فقه الإمامية",
+  "author": "الشيخ الطوسي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*اماميه* OR *امامية*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(اماميه OR الاماميه OR امامية OR الامامية)",
+  "hits": 17,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "BBib-Alex-08694",
+    "title": "المبسوط_فى_فقه_الامامية_08694_الطوسى،_ابو_جعفر_محمد_بن_الحسن_بن",
+    "creator": "الطوسى، ابو جعفر محمد بن الحسن بن على|الكشفى، محمد تقى",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 146,
+  "title": "الخلاف",
+  "author": "الشيخ الطوسي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*خلاف*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(خلاف OR الخلاف)",
+  "hits": 151,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 147,
+  "title": "الاقتصاد الهادي إلى طريق الرشاد",
+  "author": "الشيخ الطوسي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*اقتصاد*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(اقتصاد OR الاقتصاد)",
+  "hits": 487,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 148,
+  "title": "الجمل والعقود",
+  "author": "الشيخ الطوسي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*والعقود*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(والعقود OR الوالعقود)",
+  "hits": 3,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 149,
+  "title": "المراسم العلوية",
+  "author": "سلار الديلمي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*مراسم*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(مراسم OR المراسم)",
+  "hits": 2,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 150,
+  "title": "المهذب",
+  "author": "ابن البراج",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*مهذب*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(مهذب OR المهذب)",
+  "hits": 49,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 151,
+  "title": "جواهر الفقه",
+  "author": "ابن البراج",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*جواهر*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(جواهر OR الجواهر)",
+  "hits": 205,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 152,
+  "title": "الكافي في الفقه",
+  "author": "أبو الصلاح الحلبي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*كافي* OR *كافى*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(كافي OR الكافي OR كافى OR الكافى)",
+  "hits": 80,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 153,
+  "title": "غنية النزوع",
+  "author": "ابن زهرة الحلبي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*نزوع*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(نزوع OR النزوع)",
+  "hits": 1,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 154,
+  "title": "الوسيلة",
+  "author": "ابن حمزة الطوسي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*وسيله* OR *وسيلة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(وسيله OR الوسيله OR وسيلة OR الوسيلة)",
+  "hits": 26,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 155,
+  "title": "إصباح الشيعة",
+  "author": "قطب الدين الكيدري",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*شيعه* OR *شيعة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(شيعه OR الشيعه OR شيعة OR الشيعة)",
+  "hits": 88,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 156,
+  "title": "الجامع للشرائع",
+  "author": "يحيى بن سعيد الحلي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*للشرائع*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(للشرائع OR الللشرائع)",
+  "hits": 0,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 157,
+  "title": "اللمعة الدمشقية",
+  "author": "الشهيد الأول",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*دمشقيه* OR *دمشقية*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(دمشقيه OR الدمشقيه OR دمشقية OR الدمشقية)",
+  "hits": 13,
+  "old": 1,
+  "other": 0,
+  "found": [
+   {
+    "id": "AAlexandrina-190221",
+    "title": "190221 - اللمعة الدمشقية",
+    "creator": "\"الشهيد الثاني، زين الدين بن علي\"",
+    "date": "1900-01-01T00:00:00Z",
+    "publisher": "جامعة النجف الدينية",
+    "old": true
+   }
+  ]
+ },
+ {
+  "n": 158,
+  "title": "الدروس الشرعية",
+  "author": "الشهيد الأول",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*شرعيه* OR *شرعية*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(شرعيه OR الشرعيه OR شرعية OR الشرعية)",
+  "hits": 107,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 159,
+  "title": "البيان",
+  "author": "الشهيد الأول",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*بيان*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(بيان OR البيان)",
+  "hits": 418,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 160,
+  "title": "الروضة البهية",
+  "author": "الشهيد الثاني",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*روضه* OR *روضة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(روضه OR الروضه OR روضة OR الروضة)",
+  "hits": 75,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "AAlexandrina-162025",
+    "title": "162025_هذة_الروضة_البهية،_المسماة،_بشرح_اللمعة",
+    "creator": "\"الشهيد الثاني، زين الدين بن علي\"",
+    "date": "2025-01-18T00:00:00Z",
+    "publisher": "د.ن",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 161,
+  "title": "مسالك الأفهام",
+  "author": "الشهيد الثاني",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*افهام*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(افهام OR الافهام)",
+  "hits": 8,
+  "old": 1,
+  "other": 0,
+  "found": [
+   {
+    "id": "AAlexandrina-141960",
+    "title": "141960_مسالك_الافهام_فى_شرح_شرايع_الاسلام",
+    "creator": "\"الشهيد الثاني، زين الدين بن علي\"",
+    "date": "1556-01-01T00:00:00Z",
+    "publisher": "دار الطباعة",
+    "old": true
+   }
+  ]
+ },
+ {
+  "n": 162,
+  "title": "الروض الجنان",
+  "author": "الشهيد الثاني",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*جنان*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(جنان OR الجنان)",
+  "hits": 35,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 163,
+  "title": "معالم الدين",
+  "author": "حسن بن زين الدين العاملي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*معالم*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(معالم OR المعالم)",
+  "hits": 146,
+  "old": 0,
+  "other": 4,
+  "found": [
+   {
+    "id": "BBib-Alex-04991",
+    "title": "معالم_التاريخ_الاسلامى_04991_الفقى،_عصام_الدين_عبد_الرؤوف",
+    "creator": "الفقى، عصام الدين عبد الرؤوف.",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10654",
+    "title": "كتاب_معالم_الدين_10654_المصعبى،_عبد_العزيز_بن_ابراهيم_الثمينى",
+    "creator": "المصعبى، عبد العزيز بن ابراهيم الثمينى",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09795",
+    "title": "المعالم_فى_علم_اصول_الفقة_09795_الرازى،_فخر_الدين_ابو_عبد_الله_محمد",
+    "creator": "الرازى، فخر الدين ابو عبد الله محمد بن عمر بن الحسين البكرى الطبرستانى|عوض، على محمد.",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-162623",
+    "title": "162623_كتاب_هداية_المسترشدين_فى_شرح_اصول_معالم_الدين",
+    "creator": "\"النجفي، محمد حسن بن محمد باقر\"",
+    "date": "2026-12-18T00:00:00Z",
+    "publisher": "د.ن",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 164,
+  "title": "مدارك الأحكام",
+  "author": "السيد محمد العاملي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*احكام*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(احكام OR الاحكام)",
+  "hits": 358,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "AAlexandrina-089435",
+    "title": "089435_كتاب_مدارك_الاحكام_فى_شرح_شرائع_الاسلام",
+    "creator": "\"العاملي، محمد بن علي\"",
+    "date": "1332-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 165,
+  "title": "الحدائق الناضرة",
+  "author": "يوسف البحراني",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*حدائق*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(حدائق OR الحدائق)",
+  "hits": 103,
+  "old": 0,
+  "other": 27,
+  "found": [
+   {
+    "id": "BBib-Alex-08597",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_02_08597_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08606",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_06_08606_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-086419",
+    "title": "086419_كتاب_الحدائق_الناضرة_فى_احكام_العترة_الطاهرة",
+    "creator": "\"البحراني، يوسف بن أحمد\"",
+    "date": "1316-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-07237",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_22_07237_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08598",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_20_08598_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08602",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_25_08602_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-086420",
+    "title": "086420_كتاب_الحدائق_الناضرة_فى_احكام_العترة_الطاهرة",
+    "creator": "\"البحراني، يوسف بن أحمد\"",
+    "date": "1316-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-07236",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_15_07236_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08594",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_16_08594_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08596",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_18_08596_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08607",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_07_08607_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08592",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_13_08592_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08595",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_17_08595_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08588",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_01_08588_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08589",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_10_08589_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08591",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_12_08591_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08604",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_04_08604_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08593",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_14_08593_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08603",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_03_08603_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08605",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_05_08605_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08609",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_09_08609_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-148120",
+    "title": "148120_هذا_هو_المجلد_السادس_من_كتاب_الحدائق_الناضرة_فى_ا_لطاهرة",
+    "creator": "\"البحراني، يوسف بن أحمد\"",
+    "date": "1316-01-01T00:00:00Z",
+    "publisher": "مطبعة الحاج ابراهيم",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08590",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_11_08590_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08599",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_21_08599_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08600",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_23_08600_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08601",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_24_08601_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-08608",
+    "title": "الحدائق_الناضرة_في_أحكام_العترة_الطاهرة_الجزء_08_08608_يوسف_البحراني",
+    "creator": "يوسف البحراني",
+    "date": "1984-01-01T00:00:00Z",
+    "publisher": "الطبعة الثانية دار الأضواء",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 166,
+  "title": "جواهر الكلام",
+  "author": "محمد حسن النجفي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*كلام*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(كلام OR الكلام)",
+  "hits": 306,
+  "old": 1,
+  "other": 48,
+  "found": [
+   {
+    "id": "BBib-Alex-09163",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_10_09163_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09164",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_11_09164_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09187",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_32_09187_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09195",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_40_09195_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09182",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_28_09182_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09199",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_05_09199_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09205",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_39_09205_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09180",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_26_09180_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09183",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_29_09183_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09175",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_21_09175_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09188",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_34_09188_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09190",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_36_09190_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09185",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_30_09185_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09196",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_41_09196_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09181",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_27_09181_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09194",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_04_09194_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-056160",
+    "title": "056160_جواهر_الكلام_فى_شرح_شرائع_الاسلام",
+    "creator": "\"النجفي، محمد حسن بن محمد باقر\"",
+    "date": "1271-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-109602",
+    "title": "109602_جواهر_الكلام_فى_شرح_شرائع_الاسلام",
+    "creator": "\"النجفي، محمد حسن بن محمد باقر\"",
+    "date": "1271-01-01T00:00:00Z",
+    "publisher": "د.ن.]",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09171",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_18_09171_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09172",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_19_09172_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09167",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_14_09167_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09170",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_17_09170_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09202",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_08_09202_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09168",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_15_09168_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09176",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_22_09176_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09192",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_38_09192_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-125143",
+    "title": "125143 - جواهر الكلام",
+    "creator": "\"النجفي، محمد حسن بن محمد باقر\"",
+    "date": "1306-01-01T00:00:00Z",
+    "publisher": "د.ن",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-064665",
+    "title": "064665_كتاب_جواهر_الكلام_شرح_شرائع_الاسلام",
+    "creator": "\"النجفي، محمد حسن بن محمد باقر\"",
+    "date": "1894-01-01T00:00:00Z",
+    "publisher": "د.ن",
+    "old": true
+   },
+   {
+    "id": "BBib-Alex-09173",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_02_09173_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09169",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_16_09169_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09189",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_35_09189_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09201",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_07_09201_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09203",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_09_09203_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09191",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_37_09191_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09197",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_42_09197_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09200",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_06_09200_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09204",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_38_09204_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09166",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_13_09166_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09184",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_03_09184_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-09193",
+    "title": "جواهر_الكلام_فى_شرح_شرائع_الإسلام_الجزء_39_09193_محمد_حسن_النجفي",
+    "creator": "محمد حسن النجفي",
+    "date": "1981-01-01T00:00:00Z",
+    "publisher": "الطبعة السابعة دار إحياء التراث العربي",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 167,
+  "title": "مصباح الفقيه",
+  "author": "محمد رضا الهمداني",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*فقيه* OR *فقية*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(فقيه OR الفقيه OR فقية OR الفقية)",
+  "hits": 39,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 168,
+  "title": "المكاسب",
+  "author": "الشيخ مرتضى الأنصاري",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*مكاسب*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(مكاسب OR المكاسب)",
+  "hits": 2,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 169,
+  "title": "فرائد الأصول",
+  "author": "الشيخ مرتضى الأنصاري",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*اصول*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(اصول OR الاصول)",
+  "hits": 408,
+  "old": 0,
+  "other": 2,
+  "found": [
+   {
+    "id": "AAlexandrina-110805",
+    "title": "110805 - [فرائد الاصول]",
+    "creator": "\"الأنصاري، مرتضى بن محمد أمين، 1214-1281 هـ.\"",
+    "date": "2026-03-18T00:00:00Z",
+    "publisher": "د.ن",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-109259",
+    "title": "109259_حاشية_على_كتاب_الرسائل_المسمى،_بفرائد_الاصول_للشي_انصارى",
+    "creator": "\"الأنصاري، مرتضى بن محمد أمين، 1214-1281 هـ.\"",
+    "date": "1319-01-01T00:00:00Z",
+    "publisher": "مطبعة اقا ميرزا حسن",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 170,
+  "title": "كفاية الأصول",
+  "author": "محمد كاظم الخراساني",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*اصول*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(اصول OR الاصول)",
+  "hits": 432,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 171,
+  "title": "العروة الوثقى",
+  "author": "محمد كاظم اليزدي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*عروه* OR *عروة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(عروه OR العروه OR عروة OR العروة)",
+  "hits": 19,
+  "old": 0,
+  "other": 6,
+  "found": [
+   {
+    "id": "AAlexandrina-139096",
+    "title": "139096_هذا_هو_المجلد_الثانى_الثالث_من_العروة_الوثقى_فيما_ت_البلوى",
+    "creator": "\"اليزدي، محمد كاظم بن عبد العظيم\"",
+    "date": "1339-01-01T00:00:00Z",
+    "publisher": "مطبعة الحيدرية",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-18123",
+    "title": "العروة_الوثقى_الجزء_02_18123_محمد_كاظم_الطبطبائي_اليزدي",
+    "creator": "محمد كاظم الطبطبائي اليزدي",
+    "date": "1989-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى الدار الإسلامية",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-18122",
+    "title": "العروة_الوثقى_الجزء_01_18122_محمد_كاظم_الطبطبائي_اليزدي",
+    "creator": "محمد كاظم الطبطبائي اليزدي",
+    "date": "1989-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى الدار الإسلامية",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-140618",
+    "title": "140618_هذا_هو_المجلد_الثانى_الثالث_من_العروة_الوثقى_فيما_ت_البلوى",
+    "creator": "\"اليزدي، محمد كاظم بن عبد العظيم\"",
+    "date": "1339-01-01T00:00:00Z",
+    "publisher": "مطبعة الحيدرية",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-065631",
+    "title": "065631_هذا_هو_المجلد_الثانى_الثالث_من_العروة_الوثقى_فيما_تعم_به",
+    "creator": "\"اليزدي، محمد كاظم بن عبد العظيم\"",
+    "date": "1339-01-01T00:00:00Z",
+    "publisher": "مطبعة الحيدرية",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-094255",
+    "title": "094255_العروة_الوثقى_فيما_تعم_به_البلوى",
+    "creator": "\"اليزدي، محمد كاظم بن عبد العظيم\"",
+    "date": "1330-01-01T00:00:00Z",
+    "publisher": "مطبعة دار السلام",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 172,
+  "title": "مستمسك العروة الوثقى",
+  "author": "محسن الحكيم",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*مستمسك*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(مستمسك OR المستمسك)",
+  "hits": 0,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 173,
+  "title": "منهاج الصالحين",
+  "author": "أبو القاسم الخوئي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*صالحين*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(صالحين OR الصالحين)",
+  "hits": 27,
+  "old": 0,
+  "other": 2,
+  "found": [
+   {
+    "id": "BBib-Alex-17325",
+    "title": "منهاج_الصالحين_01_17325_الخوئى،_ابو_القاسم_الموسوى",
+    "creator": "الخوئى، ابو القاسم الموسوى.",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-17326",
+    "title": "منهاج_الصالحين_02_17326_الخوئى،_ابو_القاسم_الموسوى",
+    "creator": "الخوئى، ابو القاسم الموسوى.",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 174,
+  "title": "منهاج الصالحين",
+  "author": "علي السيستاني",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*صالحين*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(صالحين OR الصالحين)",
+  "hits": 27,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 175,
+  "title": "الفتاوى الواضحة",
+  "author": "محمد باقر الصدر",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*فتاوي* OR *فتاوى*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(فتاوي OR الفتاوي OR فتاوى OR الفتاوى)",
+  "hits": 297,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 176,
+  "title": "دروس في علم الأصول",
+  "author": "محمد باقر الصدر",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*اصول*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(اصول OR الاصول)",
+  "hits": 434,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "BBib-Alex-09854",
+    "title": "دروس_فى_علم_الاصول_09854_الصدر،_محمد_باقر",
+    "creator": "الصدر، محمد باقر",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 177,
+  "title": "الحلقات",
+  "author": "محمد باقر الصدر",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*حلقات*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(حلقات OR الحلقات)",
+  "hits": 7,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "BBib-Alex-16998",
+    "title": "الصحيفة_الصادقية_احدى_حلقات_حياة_الامام_الصادق_16998_القرشى,_باقر",
+    "creator": "القرشى, باقر شريف.",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 178,
+  "title": "فلسفتنا",
+  "author": "محمد باقر الصدر",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*فلسفتنا*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(فلسفتنا OR الفلسفتنا)",
+  "hits": 3,
+  "old": 0,
+  "other": 2,
+  "found": [
+   {
+    "id": "AAlexandrina-003749",
+    "title": "003749_فلسفتنا_دراسة_موضوعية_فى_معترك_الصراع_الفكرى_القائم_بين_مختلف",
+    "creator": "\"الصدر، محمد باقر\"",
+    "date": "1989-01-01T00:00:00Z",
+    "publisher": "دار التعارف للمطبوعات",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-005254",
+    "title": "005254_فلسفتنا_دراسة_موضوعية_فى_معترك_الصراع_الفكرى_القائم_بين_مختلف",
+    "creator": "\"الصدر، محمد باقر.\"",
+    "date": "1982-01-01T00:00:00Z",
+    "publisher": "دار التعارف",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 179,
+  "title": "اقتصادنا",
+  "author": "محمد باقر الصدر",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*اقتصادنا*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(اقتصادنا OR الاقتصادنا)",
+  "hits": 4,
+  "old": 0,
+  "other": 2,
+  "found": [
+   {
+    "id": "AAlexandrina-093990",
+    "title": "093990_اقتصادنا_دراسة_موضوعية_تتناول_بالنقد_والبحث_المذاهب_الاق",
+    "creator": "\"الصدر، محمد باقر.\"",
+    "date": "1980-01-01T00:00:00Z",
+    "publisher": "دار التعارف للمطبوعات",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-013751",
+    "title": "013751_اقتصادنا_دراسة_موضوعية_تتناول_بالنقد_والبحث_المذاهب_الاقتصادية",
+    "creator": "\"الصدر، محمد باقر\"",
+    "date": "1987-01-01T00:00:00Z",
+    "publisher": "دار التعارف للمطبوعات",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 180,
+  "title": "الأسس المنطقية للاستقراء",
+  "author": "محمد باقر الصدر",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*للاستقراء*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(للاستقراء OR الللاستقراء)",
+  "hits": 1,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 181,
+  "title": "بحث حول المهدي",
+  "author": "محمد باقر الصدر",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*مهدي* OR *مهدى*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(مهدي OR المهدي OR مهدى OR المهدى)",
+  "hits": 82,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "BBib-Alex-10493",
+    "title": "بحث_حول_المهدى_10493_باقر_الصدر,_محمد",
+    "creator": "باقر الصدر, محمد.",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 182,
+  "title": "الإسلام يقود الحياة",
+  "author": "محمد باقر الصدر",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*اسلام*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(اسلام OR الاسلام)",
+  "hits": 535,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 183,
+  "title": "المراجعات",
+  "author": "عبد الحسين شرف الدين",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*مراجعات*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(مراجعات OR المراجعات)",
+  "hits": 16,
+  "old": 1,
+  "other": 3,
+  "found": [
+   {
+    "id": "AAlexandrina-111167",
+    "title": "111167 - كتاب المراجعات",
+    "creator": "\"الموسوي، عبد الحسين شرف الدين\"",
+    "date": "1936-01-01T00:00:00Z",
+    "publisher": "مطبعة العرفان",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-17656",
+    "title": "المراجعات_ابحاث_جديدة_فى_اصول_المذهب_و_الامامة_العامة_17656_الموسوى",
+    "creator": "الموسوى, السيد عبدالحسين شرف الدين.-الراضى, حسين،",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-124280",
+    "title": "124280 - المراجعات",
+    "creator": "\"الموسوي، عبد الحسين شرف الدين.\"",
+    "date": "2026-07-19T00:00:00Z",
+    "publisher": "د.ن",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-112212",
+    "title": "112212 - المراجعات",
+    "creator": "\"الموسوي، عبد الحسين شرف الدين\"",
+    "date": "1900-01-01T00:00:00Z",
+    "publisher": "دار الاندلس",
+    "old": true
+   }
+  ]
+ },
+ {
+  "n": 184,
+  "title": "النص والاجتهاد",
+  "author": "عبد الحسين شرف الدين",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*والاجتهاد*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(والاجتهاد OR الوالاجتهاد)",
+  "hits": 2,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 185,
+  "title": "أبو هريرة",
+  "author": "عبد الحسين شرف الدين",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*هريره* OR *هريرة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(هريره OR الهريره OR هريرة OR الهريرة)",
+  "hits": 2,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 186,
+  "title": "الفصول المهمة في تأليف الأمة",
+  "author": "عبد الحسين شرف الدين",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*فصول*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(فصول OR الفصول)",
+  "hits": 255,
+  "old": 0,
+  "other": 2,
+  "found": [
+   {
+    "id": "AAlexandrina-028147",
+    "title": "028147_الفصول_المهمة_فى_تاليف_الامة_ويليها_الكلمة_الغراء_فى_تفضيل",
+    "creator": "\"الموسوي، عبد الحسين شرف الدين\"",
+    "date": "1327-01-01T00:00:00Z",
+    "publisher": "مطبعة العرفان",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-07232",
+    "title": "الفصول_المهمة_فى_معرفة_أحوال_الائمة_عليهم_السلام_07232_ابن_الصباغ،",
+    "creator": "ابن الصباغ، نور الدين على بن محمد بن احمد الصفاقسى المالكى المكى،",
+    "date": "",
+    "publisher": "None",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 187,
+  "title": "المثل الأعلى في الإسلام لا في بحمدون",
+  "author": "عبد الحسين شرف الدين",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*اسلام*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(اسلام OR الاسلام)",
+  "hits": 543,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 188,
+  "title": "الغدير",
+  "author": "عبد الحسين الأميني",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*غدير*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(غدير OR الغدير)",
+  "hits": 9,
+  "old": 0,
+  "other": 9,
+  "found": [
+   {
+    "id": "BBib-Alex-16851",
+    "title": "الغدير_في_الكتاب_و_السنة_والأدب_الجزء_01_16851_أحمد_الأميني_النجفي",
+    "creator": "أحمد الأميني النجفي",
+    "date": "1993-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مؤسسة الأعلى للمطبوعات",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10162",
+    "title": "الغدير_في_الكتاب_و_السنة_والأدب_الجزء_09_10162_أحمد_الأميني_النجفي",
+    "creator": "أحمد الأميني النجفي",
+    "date": "1993-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مؤسسة الأعلى للمطبوعات",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10160",
+    "title": "الغدير_في_الكتاب_و_السنة_والأدب_الجزء_05_10160_أحمد_الأميني_النجفي",
+    "creator": "أحمد الأميني النجفي",
+    "date": "1993-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مؤسسة الأعلى للمطبوعات",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10161",
+    "title": "الغدير_في_الكتاب_و_السنة_والأدب_الجزء_06_10161_أحمد_الأميني_النجفي",
+    "creator": "أحمد الأميني النجفي",
+    "date": "1993-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مؤسسة الأعلى للمطبوعات",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10157",
+    "title": "الغدير_في_الكتاب_و_السنة_والأدب_الجزء_10_10157_أحمد_الأميني_النجفي",
+    "creator": "أحمد الأميني النجفي",
+    "date": "1993-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مؤسسة الأعلى للمطبوعات",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-16853",
+    "title": "الغدير_في_الكتاب_و_السنة_والأدب_الجزء_07_16853_أحمد_الأميني_النجفي",
+    "creator": "أحمد الأميني النجفي",
+    "date": "1993-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مؤسسة الأعلى للمطبوعات",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10159",
+    "title": "الغدير_في_الكتاب_و_السنة_والأدب_الجزء_03_10159_أحمد_الأميني_النجفي",
+    "creator": "أحمد الأميني النجفي",
+    "date": "1993-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مؤسسة الأعلى للمطبوعات",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-10158",
+    "title": "الغدير_في_الكتاب_و_السنة_والأدب_الجزء_02_10158_أحمد_الأميني_النجفي",
+    "creator": "أحمد الأميني النجفي",
+    "date": "1993-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مؤسسة الأعلى للمطبوعات",
+    "old": false
+   },
+   {
+    "id": "BBib-Alex-16852",
+    "title": "الغدير_في_الكتاب_و_السنة_والأدب_الجزء_04_16852_أحمد_الأميني_النجفي",
+    "creator": "أحمد الأميني النجفي",
+    "date": "1993-01-01T00:00:00Z",
+    "publisher": "الطبعة الأولى مؤسسة الأعلى للمطبوعات",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 189,
+  "title": "شهداء الفضيلة",
+  "author": "عبد الحسين الأميني",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*فضيله* OR *فضيلة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(فضيله OR الفضيله OR فضيلة OR الفضيلة)",
+  "hits": 37,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "AAlexandrina-139099",
+    "title": "139099_شهداء_الفضيلة_كتاب_فنى،_تأريخى،_ادبى،_مبتكر_فى_م_لاعلام",
+    "creator": "\"النجفى، عبد الحسين احمد الامينى\"",
+    "date": "1936-01-01T00:00:00Z",
+    "publisher": "مطبعة الغرى",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 190,
+  "title": "أدب الطف",
+  "author": "جواد شبر",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*طف*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(طف OR الطف)",
+  "hits": 302,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 191,
+  "title": "منتخب الأثر في الإمام الثاني عشر",
+  "author": "لطف الله الصافي الكلبايكاني",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*ثاني* OR *ثانى*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(ثاني OR الثاني OR ثانى OR الثانى)",
+  "hits": 394,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 192,
+  "title": "الإمامة والتبصرة من الحيرة",
+  "author": "علي بن الحسين بن بابويه القمي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*والتبصره* OR *والتبصرة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(والتبصره OR الوالتبصره OR والتبصرة OR الوالتبصرة)",
+  "hits": 0,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 193,
+  "title": "دلائل الإمامة",
+  "author": "محمد بن جرير الطبري الإمامي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*امامه* OR *امامة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(امامه OR الامامه OR امامة OR الامامة)",
+  "hits": 37,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 194,
+  "title": "كفاية الأثر في النص على الأئمة الاثني عشر",
+  "author": "علي بن محمد الخزاز القمي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*كفايه* OR *كفاية*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(كفايه OR الكفايه OR كفاية OR الكفاية)",
+  "hits": 62,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 195,
+  "title": "الإمامة والسياسة",
+  "author": "ابن قتيبة",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*والسياسه* OR *والسياسة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(والسياسه OR الوالسياسه OR والسياسة OR الوالسياسة)",
+  "hits": 250,
+  "old": 4,
+  "other": 3,
+  "found": [
+   {
+    "id": "AAlexandrina-119154",
+    "title": "119154 - كتاب الامامة والسياسة",
+    "creator": "\"ابن قتيبة، عبد الله بن مسلم\"",
+    "date": "2026-03-19T00:00:00Z",
+    "publisher": "د.ن",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-147499",
+    "title": "147499 - كتاب الامامة والسياسة",
+    "creator": "\"ابن قتيبة، عبد الله بن مسلم\"",
+    "date": "1328-01-01T00:00:00Z",
+    "publisher": "مطبعة الامة",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-141649",
+    "title": "141649 - كتاب الامامة والسياسة",
+    "creator": "\"ابن قتيبة، عبد الله بن مسلم\"",
+    "date": "1904-01-01T00:00:00Z",
+    "publisher": "د.ن",
+    "old": true
+   },
+   {
+    "id": "AAlexandrina-154304",
+    "title": "154304 - كتاب الامامة والسياسة",
+    "creator": "\"ابن قتيبة، عبد الله بن مسلم\"",
+    "date": "1900-01-01T00:00:00Z",
+    "publisher": "مطبعة القاهرة",
+    "old": true
+   },
+   {
+    "id": "AAlexandrina-141530",
+    "title": "141530 - كتاب الامامة والسياسة",
+    "creator": "\"ابن قتيبة، عبد الله بن مسلم\"",
+    "date": "1900-01-01T00:00:00Z",
+    "publisher": "مطبعة القاهرة",
+    "old": true
+   },
+   {
+    "id": "AAlexandrina-120553",
+    "title": "120553 - كتاب الامامة والسياسة",
+    "creator": "\"ابن قتيبة، عبد الله بن مسلم\"",
+    "date": "1331-01-01T00:00:00Z",
+    "publisher": "مطبعة الفتوح الادبية",
+    "old": false
+   },
+   {
+    "id": "AAlexandrina-131454",
+    "title": "131454 - كتاب الامامة والسياسة",
+    "creator": "\"ابن قتيبة، عبد الله بن مسلم\"",
+    "date": "1904-01-01T00:00:00Z",
+    "publisher": "مطبعة النيل",
+    "old": true
+   }
+  ]
+ },
+ {
+  "n": 196,
+  "title": "جامع السعادات",
+  "author": "محمد مهدي النراقي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*سعادات*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(سعادات OR السعادات)",
+  "hits": 2,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 197,
+  "title": "معراج السعادة",
+  "author": "أحمد النراقي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*سعاده* OR *سعادة*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(سعاده OR السعاده OR سعادة OR السعادة)",
+  "hits": 80,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 198,
+  "title": "غرر الحكم ودرر الكلم",
+  "author": "عبد الواحد الآمدي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*حكم*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(حكم OR الحكم)",
+  "hits": 517,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "AAlexandrina-055022",
+    "title": "055022_غرر_الحكم_ودرر_الكلم_وهى_حكم_رائعة_ودرر_ناصعة_من_كلام_اء",
+    "creator": "\"الآمدي، عبد الواحد بن محمد\"",
+    "date": "1931-01-01T00:00:00Z",
+    "publisher": "مطبعة العرفان",
+    "old": false
+   }
+  ]
+ },
+ {
+  "n": 199,
+  "title": "عيون الحكم والمواعظ",
+  "author": "علي بن محمد الليثي الواسطي",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*والمواعظ*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(والمواعظ OR الوالمواعظ)",
+  "hits": 5,
+  "old": 0,
+  "other": 0,
+  "found": []
+ },
+ {
+  "n": 200,
+  "title": "تنبيه الخواطر ونزهة النواظر",
+  "author": "ورام بن أبي فراس",
+  "q": "identifier:(AAlexandrina* OR BBib-Alex*) AND title:(*خواطر*) || identifier:(AAlexandrina* OR BBib-Alex*) AND title:(خواطر OR الخواطر)",
+  "hits": 83,
+  "old": 0,
+  "other": 1,
+  "found": [
+   {
+    "id": "AAlexandrina-108021",
+    "title": "108021_هذا_كتاب_تنبيه_الخواطر_ونزهة_النواظر_المعروف_بمجموعة_ورام",
+    "creator": "ورام الحيلى",
+    "date": "1311-01-01T00:00:00Z",
+    "publisher": "[كارخانة اقا سيد مرتضى]",
+    "old": false
+   }
+  ]
+ }
+]
