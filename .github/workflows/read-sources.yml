@@ -1,0 +1,42 @@
+name: Read sources
+
+# The open sources for the "اقرأ" part (tools/read): fetched on GitHub, which
+# can reach them, and left on the "read-sources" branch. Run by hand, or by a
+# push to the work branch that asks for it ("[read]" in its message).
+on:
+  workflow_dispatch:
+  push:
+    branches: [ccr-da195117-owjnxk]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: read-sources
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    if: github.event_name != 'push' || contains(github.event.head_commit.message, '[read]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Fetch
+        run: node tools/read/explore.mjs out
+      - name: Publish on the read-sources branch
+        if: always()
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p out && cd out
+          echo "${GITHUB_SHA}" > SHA
+          git init -q -b read-sources
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add -A
+          git commit -qm "Read sources of ${GITHUB_SHA::7}"
+          git push -qf "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" read-sources
