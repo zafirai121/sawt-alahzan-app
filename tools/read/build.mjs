@@ -254,8 +254,8 @@ try {
 // ─── The lists ───
 // Each group: its texts in order ([id] or [id, a title for this list, a line]),
 // by id from what was written above (one left out above is left out here).
-// The du'as' and the ziyarat's tabs list their own group, then the groups whose
-// `tab` is theirs, each a card (`headline` its big words, `line` under it).
+// The du'as' and the ziyarat's tabs list their own group, under a tile for each
+// group whose `tab` is theirs (`count`: how many, said as Arabic says it).
 const S = (n, title) => [`sahifa-${n}`, title]
 const GROUPS = [
   {
@@ -273,11 +273,11 @@ const GROUPS = [
       ['jamia'], ['masuma'],
     ],
   },
-  { id: 'sahifa', title: 'الصحيفة السجادية', tab: 'duas', headline: 'زبور آل محمد', line: 'للإمام زين العابدين عليه السلام', unit: ['أدعية', 'دعاءً'], items: SAHIFA.map((_, i) => [`sahifa-${i + 1}`, '', `الدعاء ${ordinal(i + 1)}`]) },
-  { id: 'munajat', title: 'المناجاة الخمس عشرة', tab: 'duas', headline: 'مناجاة الإمام زين العابدين', line: 'من مفاتيح الجنان', unit: ['مناجيات', 'مناجاة'], items: Array.from({ length: 15 }, (_, i) => [`munajat-${i + 1}`]) },
-  { id: 'week', title: 'أدعية أيام الأسبوع', tab: 'duas', headline: 'لكل يوم دعاؤه', line: 'من ملحقات الصحيفة السجادية', unit: ['أدعية', 'دعاءً'], items: ['sat', 'sun', 'mon', 'tue', 'wed', 'thu', 'fri'].map(d => [`week-${d}`]) },
+  { id: 'sahifa', title: 'الصحيفة السجادية', tab: 'duas', unit: ['أدعية', 'دعاءً'], items: SAHIFA.map((_, i) => [`sahifa-${i + 1}`, '', `الدعاء ${ordinal(i + 1)}`]) },
+  { id: 'munajat', title: 'المناجاة الخمس عشرة', tab: 'duas', unit: ['مناجيات', 'مناجاة'], items: Array.from({ length: 15 }, (_, i) => [`munajat-${i + 1}`]) },
+  { id: 'week', title: 'أدعية أيام الأسبوع', tab: 'duas', unit: ['أدعية', 'دعاءً'], items: ['sat', 'sun', 'mon', 'tue', 'wed', 'thu', 'fri'].map(d => [`week-${d}`]) },
   {
-    id: 'needs', title: 'أدعية الحاجات', tab: 'duas', headline: 'لكل حاجة دعاؤها', line: 'الرزق والشفاء والهمّ والدَّين', unit: ['أدعية', 'دعاءً'], items: [
+    id: 'needs', title: 'أدعية الحاجات', tab: 'duas', unit: ['أدعية', 'دعاءً'], items: [
       S(13, 'دعاء قضاء الحوائج'), S(29, 'دعاء الرزق وسعة المعيشة'), S(30, 'دعاء قضاء الدين'), S(54, 'دعاء كشف الهموم'), ['karb'],
       S(22, 'دعاء الكرب والشدة'), ['khalas'], S(15, 'دعاء المرض'), S(23, 'دعاء طلب العافية'), ['nur'], ['hirz-sajjad'],
       S(8, 'دعاء الاستعاذة من المكاره'), S(9, 'دعاء طلب المغفرة'), S(31, 'دعاء التوبة والاستغفار'), S(12, 'دعاء الاعتراف وطلب التوبة'),
@@ -288,13 +288,13 @@ const GROUPS = [
     ],
   },
   {
-    id: 'occasions', title: 'أدعية المناسبات', tab: 'duas', headline: 'رمضان والعيدان وعرفة', line: 'وليلة الجمعة وليالي القدر', unit: ['أدعية', 'دعاءً'], items: [
+    id: 'occasions', title: 'أدعية المناسبات', tab: 'duas', unit: ['أدعية', 'دعاءً'], items: [
       ['kumayl'], ['simat'], S(43, 'دعاء رؤية الهلال'), S(44, 'دعاء دخول شهر رمضان'), ['abu-hamza'], ['baha'],
       ['jawshan-kabir', 'دعاء الجوشن الكبير (ليالي القدر)'], ['mujir'], S(45, 'دعاء وداع شهر رمضان'), S(46, 'دعاء عيد الفطر'),
       ['arafa'], ['sahifa-47', 'دعاء الإمام زين العابدين يوم عرفة'], S(48, 'دعاء عيد الأضحى ويوم الجمعة'), S(42, 'دعاء ختم القرآن'),
     ],
   },
-  { id: 'taqibat', title: 'تعقيبات الصلوات', tab: 'duas', headline: 'بعد الصلوات الخمس', line: 'من مصباح المتهجد', unit: ['تعقيبات', 'تعقيباً'], items: ['subh', 'zuhr', 'asr', 'maghrib', 'isha'].map(p => [`taqib-${p}`]) },
+  { id: 'taqibat', title: 'تعقيبات الصلوات', tab: 'duas', unit: ['تعقيبات', 'تعقيباً'], items: ['subh', 'zuhr', 'asr', 'maghrib', 'isha'].map(p => [`taqib-${p}`]) },
 ]
 // "٣ أدعية", "١٥ دعاءً": the plural from three to ten
 const count = (n, [few, many]) => `${n} ${n >= 3 && n <= 10 ? few : many}`
