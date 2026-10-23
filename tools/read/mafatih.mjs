@@ -196,8 +196,9 @@ export function passageAt({ text, heads }, from, page, to) {
     if (t instanceof RegExp) { const m = t.exec(text.slice(begin)); return m ? begin + m.index : -1 }
     const head = heads.find((h) => h.at > begin && h.title.startsWith(t))
     if (!head) return -1
+    // A page's first line runs on from the last page's: back only over what heads the line
     const line = text.lastIndexOf('\n', head.at)
-    return line > begin ? line : head.at
+    return line > begin && head.at - line < 40 ? line : head.at
   }).filter((at) => at > begin)
   if (!ends.length) throw new Error(`no end after: ${from}`)
   return { start: begin, end: Math.min(...ends) }
@@ -222,7 +223,7 @@ export const MAFATIH_ITEMS = [
   { id: 'saifi', from: 'دعای سیفی صغیر', page: 106, to: ['فصل هفتم'], title: 'دعاء السيفي الصغير (دعاء القاموس)', note: '' },
   // Chapter 7: short du'as of use (the 2nd, al-Tawassul, is Wikisource's; the 10th is the Sahifa's 7th)
   { id: 'karb', from: /\nسوم‌?\s+شیخ کفعمی در بلد الامین دعایی/, to: [/\nچهارم دعای خلاص/], title: 'دعاء المكروب والمحزون', note: 'عن أمير المؤمنين عليه السلام: لكل ملهوف ومكروب ومحزون وخائف' },
-  { id: 'khalas', from: /\nچهارم دعای خلاص[^\n]*/, to: [/\nپنجم/], title: 'دعاء الخلاص من الشدة', note: 'علّمته السيدة الزهراء عليها السلام في المنام رجلاً طال حبسه' },
+  { id: 'khalas', from: /\nچهارم دعای خلاص/, to: [/\nپنجم/], title: 'دعاء الخلاص من الشدة', note: 'علّمته السيدة الزهراء عليها السلام في المنام رجلاً طال حبسه' },
   { id: 'nur', from: /\nپنجم‌?\s+سید بن طاوس در مهج الدعوات روایتی از سلمان/, to: ['ششم'], title: 'دعاء النور', note: 'علّمته السيدة الزهراء عليها السلام سلمانَ، يُقرأ صباحاً ومساءً للعافية من الحمّى' },
   { id: 'hirz-sajjad', from: 'ششم', page: 113, to: ['هفتم'], title: 'حرز الإمام زين العابدين عليه السلام', note: 'للحفظ والأمان' },
   { id: 'ilahi-kayf', from: 'هفتم', page: 113, to: ['هشتم'], title: 'دعاء «إلهي كيف أدعوك وأنا أنا»', note: 'للإمام زين العابدين عليه السلام' },
@@ -249,7 +250,7 @@ export const MAFATIH_ITEMS = [
   { id: 'week-fri', from: 'دعای روز جمعه', page: 27, to: ['دعای روز شنبه'], title: 'دعاء يوم الجمعة', note: SAHIFA_SUPPLEMENT },
   // The ziyarat of the days of the week: each day's own (Saturday the Prophet's...)
   // (its Saturday ziyara's first page is not proofread yet: the salam Imam al-Rida taught, which follows it)
-  { id: 'z-nabi', from: /ابن ابی نصر خدمت امام رضا[^\n]*/, to: ['زیارت امیر المؤمنین'], title: 'زيارة النبي صلى الله عليه وآله', note: 'السلام عليه كما علّمه الإمام الرضا عليه السلام ابنَ أبي نصر البزنطي' },
+  { id: 'z-nabi', from: /ابن ابی نصر خدمت امام رضا/, to: ['زیارت امیر المؤمنین'], title: 'زيارة النبي صلى الله عليه وآله', note: 'السلام عليه كما علّمه الإمام الرضا عليه السلام ابنَ أبي نصر البزنطي' },
   { id: 'z-amir', from: 'زیارت امیر المؤمنین', page: 56, to: ['زیارت حضرت فاطمه'], title: 'زيارة أمير المؤمنين عليه السلام', note: 'في يوم الأحد' },
   { id: 'z-zahra', from: 'زیارت حضرت فاطمه', page: 56, to: ['ایضاً زیارت'], title: 'زيارة السيدة فاطمة الزهراء عليها السلام', note: 'في يوم الأحد' },
   { id: 'z-zahra-2', from: 'ایضاً زیارت', page: 56, to: ['روز دوشنبه'], title: 'زيارة السيدة الزهراء عليها السلام (رواية أخرى)', note: 'زيارتها: يا ممتحنة' },

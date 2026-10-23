@@ -207,6 +207,7 @@ try {
   }
   for (const m of mafatihTexts(joinPages(pages))) {
     if (m.error) { report.push(`${m.id}: ${m.error}`); continue }
+    if (!m.parts.length) { report.push(`${m.id}: no words found, left out`); continue }
     const unproofread = m.pages.filter((p, i) => m.levels[i] < 3)
     if (unproofread.length) { report.push(`${m.id}: pages ${unproofread.join(',')} not proofread, left out`); continue }
     const first = m.pages[0], last = m.pages[m.pages.length - 1]
