@@ -27,9 +27,12 @@ for (const c of ['تصنيف:أدعية', 'تصنيف:زيارات', 'تصنيف
 // The sizes of the pages found
 const titles = [...new Set(Object.values(report).flat().filter(t => typeof t === 'string'))]
 const sizes = {}
-for (let i = 0; i < titles.length; i += 50) {
-  const j = await get(`${WS}?action=query&prop=info&titles=${encodeURIComponent(titles.slice(i, i + 50).join('|'))}&format=json`)
-  for (const p of Object.values(j.query.pages)) sizes[p.title] = p.length
+// A few titles a request (Arabic titles make long addresses, which the server refuses)
+for (let i = 0; i < titles.length; i += 8) {
+  try {
+    const j = await get(`${WS}?action=query&prop=info&titles=${encodeURIComponent(titles.slice(i, i + 8).join('|'))}&format=json`)
+    for (const p of Object.values(j.query.pages)) sizes[p.title] = p.length
+  } catch (e) { sizes[titles[i]] = String(e) }
 }
 report.sizes = sizes
 for (const u of ['https://ar.wikishia.net/view/%D9%88%D9%8A%D9%83%D9%8A_%D8%B4%D9%8A%D8%B9%D8%A9:%D8%AD%D9%82%D9%88%D9%82_%D8%A7%D9%84%D9%86%D8%B4%D8%B1',
