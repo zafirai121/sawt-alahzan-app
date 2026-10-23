@@ -8,7 +8,7 @@ on:
     inputs:
       script:
         description: The script in tools/read to run
-        default: explore2
+        default: build
   push:
     branches: [ccr-da195117-owjnxk]
 
@@ -30,7 +30,7 @@ jobs:
         with:
           node-version: 22
       - name: Fetch
-        run: node tools/read/${{ inputs.script || 'explore2' }}.mjs out
+        run: node tools/read/${{ inputs.script || 'build' }}.mjs out
       - name: Publish on the read-sources branch
         if: always()
         env:
