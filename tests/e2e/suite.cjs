@@ -373,6 +373,58 @@ async function startServer() {
     expect(realErrors(page).length === 0, 'no page errors', realErrors(page));
   });
 
+  await test('T16', 'The "اقرأ" part: in from the home screen, a du\'a and a sura read, its place kept, back steps out page by page, "استمع" back to listening', async ({ browser, expect }) => {
+    const { page, mock } = await L.newPage(browser);
+    await L.boot(page, mock);
+    const state = () => page.evaluate(() => ({
+      reading: document.body.classList.contains('reading'),
+      homeShown: getComputedStyle(document.getElementById('home-view')).display === 'block',
+      appNav: getComputedStyle(document.querySelector('.bottom-nav:not(.read-nav)')).display,
+      readNav: getComputedStyle(document.getElementById('read-nav')).display,
+      lines: document.querySelectorAll('#read-app .rq-line').length,
+      ayas: document.querySelectorAll('#read-app .rq-ayas').length,
+      title: document.querySelector('#read-app .rq-bar-title, #read-app .rq-titles h1')?.textContent || '',
+    }));
+    expect(await page.locator('#home-greeting').count() === 0, 'no greeting at the top of the home screen');
+    await page.click('.read-btn');
+    await L.until(() => page.locator('#read-app .rq-tile').count(), 10000);
+    let s = await state();
+    expect(s.reading && s.appNav === 'none' && s.readNav === 'flex', 'the part opens with its own bottom bar', s);
+    await page.click('#read-nav [data-tab="duas"]');
+    await page.click('[data-read="open:t:kumayl"]');
+    await L.until(async () => (await state()).lines > 10, 10000);
+    s = await state();
+    expect(s.title === 'دعاء كميل' && s.lines > 10, 'a du\'a opens with its words', { title: s.title, lines: s.lines });
+    await page.evaluate(() => { document.getElementById('read-app').scrollTop = 2500; });
+    await L.sleep(400);
+    await page.goBack();
+    await L.sleep(400);
+    s = await state();
+    expect(s.reading && s.title === 'الأدعية', 'back: the du\'as list, still in the part', s.title);
+    await page.click('#read-nav [data-tab="quran"]');
+    await page.click('[data-read="open:q:112"]');
+    await L.until(async () => (await state()).ayas > 0, 10000);
+    const basmalas = await page.evaluate(() => (document.querySelector('#read-app .rq-quran').textContent.match(/بِسْمِ/g) || []).length);
+    expect(basmalas === 1, 'a sura\'s basmala shown once, above it', basmalas);
+    await page.goBack();
+    await L.sleep(300);
+    await page.click('#read-nav [data-tab="home"]');
+    await L.sleep(300);
+    const last = await page.evaluate(() => document.querySelector('[data-read^="open:"] .rq-label')?.textContent);
+    expect(last === 'تابع القراءة', 'the part\'s home offers to go on reading', last);
+    await page.click('[data-read="listen"]');
+    await L.sleep(600);
+    s = await state();
+    expect(!s.reading && s.homeShown && s.appNav === 'flex', '"استمع": back to the home screen and its bar', s);
+    await page.click('.read-btn');
+    await L.sleep(300);
+    await page.goBack();
+    await L.sleep(500);
+    s = await state();
+    expect(!s.reading && s.homeShown, 'the phone\'s back from the part\'s home: back to listening', s);
+    expect(realErrors(page).length === 0, 'no page errors', realErrors(page));
+  });
+
   if (server) server.kill();
   const failed = results.filter((r) => r.status !== 'passed');
   console.log(`

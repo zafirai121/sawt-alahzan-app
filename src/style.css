@@ -1814,3 +1814,154 @@ body.has-player .up-bar { bottom: calc(var(--nav-height) + var(--safe-bottom) + 
 }
 .rp-done:active { transform: scale(0.95); }
 .rp-done .ic { font-size: 22px; }
+
+/* ─── The "اقرأ" part (src/read.js) ─── */
+@font-face {
+  /* Amiri Quran (SIL Open Font License): the words of the du'as and the Quran, a naskh made for them */
+  font-family: 'Amiri Quran';
+  font-display: swap;
+  src: url('./assets/AmiriQuran.woff2') format('woff2');
+}
+.home-header .read-btn {
+  position: relative; height: 38px; padding: 0 14px; border: none; border-radius: 999px; background: var(--gold); color: #121212;
+  display: inline-flex; align-items: center; gap: 6px; font-family: inherit; font-size: 15px; font-weight: 800; cursor: pointer;
+}
+.read-btn .ic { font-size: 18px; }
+.read-btn:active { transform: scale(0.94); }
+.read-dot { position: absolute; top: 1px; left: 1px; width: 11px; height: 11px; border-radius: 50%; background: #E53935; border: 2px solid var(--dark-bg); }
+
+.read-app, .read-nav { display: none; }
+body.reading .read-app { display: block; }
+body.reading .read-nav { display: flex; }
+body.reading .bottom-nav:not(.read-nav), body.reading #page-bar { display: none; }
+.read-app {
+  position: fixed; inset: 0; z-index: 35; overflow-y: auto; overflow-x: hidden; background: var(--dark-bg);
+  padding: 0 12px calc(var(--nav-height) + 24px + var(--safe-bottom)); --read-size: 22px;
+}
+body.has-player .read-app { padding-bottom: calc(var(--nav-height) + 96px + var(--safe-bottom)); }
+.read-nav .nav-item.active .ic { color: var(--accent); }
+.rq-amiri { font-family: 'Amiri Quran', 'Rubik', serif; font-weight: 400; }
+.rq-sub { display: block; font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; }
+
+.rq-head { display: flex; align-items: center; gap: 8px; margin: 0; padding: calc(env(safe-area-inset-top, 0px) + 16px) 0 18px; }
+.rq-titles { flex: 1; min-width: 0; }
+.rq-titles h1 { font-size: 26px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rq-titles h1.small { font-size: 22px; }
+.rq-back { font-size: 24px; margin-inline-start: -8px; }
+.rq-listen {
+  height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(222,190,79,0.7); background: none; color: var(--accent);
+  display: inline-flex; align-items: center; gap: 6px; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; flex-shrink: 0;
+}
+.rq-listen .ic { font-size: 16px; }
+
+.rq-feature {
+  width: 100%; display: flex; align-items: center; gap: 14px; padding: 16px; margin-bottom: 14px; border-radius: 14px; cursor: pointer;
+  background: var(--accent-soft); border: 1px solid rgba(222,190,79,0.3); color: var(--primary); font-family: inherit; text-align: start;
+}
+.rq-feature > .ic { color: var(--text-secondary); font-size: 20px; }
+.rq-feature-ic { width: 48px; height: 48px; border-radius: 50%; background: var(--gold); color: #121212; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
+.rq-feature-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.rq-label { font-size: 12px; font-weight: 700; color: var(--accent); }
+/* Amiri's final letters reach past their box (the lam's tail): never clipped, so a long name wraps instead */
+.rq-feature-title { font-size: 21px; line-height: 1.6; }
+
+.rq-section-title { margin-bottom: 12px; }
+.rq-picks { gap: 10px; }
+.rq-pick {
+  flex: 0 0 150px; min-height: 112px; padding: 14px; border-radius: 12px; border: none; background: var(--dark-surface); color: var(--primary);
+  display: flex; flex-direction: column; gap: 6px; text-align: start; font-family: inherit; cursor: pointer;
+}
+.rq-pick .rq-amiri { font-size: 19px; line-height: 1.5; }
+.rq-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.rq-tile {
+  height: 76px; padding: 0 12px; border-radius: 12px; border: none; background: var(--dark-surface); color: var(--primary);
+  display: flex; align-items: center; gap: 10px; text-align: start; font-family: inherit; cursor: pointer;
+}
+.rq-tile b { display: block; font-size: 14.5px; line-height: 1.3; }
+.rq-tile-ic { width: 42px; height: 42px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+.rq-sources { text-align: center; padding: 22px 0 8px; }
+
+.rq-list { display: flex; flex-direction: column; }
+.rq-row {
+  display: flex; align-items: center; gap: 12px; padding: 10px 0; border: none; background: none; color: var(--primary);
+  text-align: start; font-family: inherit; cursor: pointer; width: 100%;
+}
+.rq-row > .ic { color: var(--text-secondary); font-size: 18px; }
+.rq-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.rq-row-text .rq-amiri { font-size: 20px; line-height: 1.6; }
+/* A number in a gold-edged diamond, as the mushaf numbers its suras */
+.rq-num {
+  position: relative; width: 38px; height: 38px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: var(--accent);
+}
+.rq-num::before { content: ''; position: absolute; inset: 8px; border: 1.5px solid rgba(222,190,79,0.55); border-radius: 4px; transform: rotate(45deg); }
+.rq-num::after { content: ''; position: absolute; inset: 5px; border: 1px solid rgba(222,190,79,0.55); border-radius: 50%; }
+.rq-search {
+  display: flex; align-items: center; gap: 10px; padding: 0 16px; margin-bottom: 10px; border-radius: 6px; background: rgba(255,255,255,0.1);
+}
+.rq-search .ic { color: rgba(255,255,255,0.6); font-size: 20px; }
+.rq-search input { flex: 1; padding: 14px 0; border: none; background: none; color: var(--primary); font-family: inherit; font-size: 16px; font-weight: 600; outline: none; }
+
+/* The reader */
+.rq-bar {
+  position: sticky; top: 0; z-index: 2; display: flex; align-items: center; margin: 0 -12px; padding: env(safe-area-inset-top, 0px) 4px 0;
+  height: calc(56px + env(safe-area-inset-top, 0px)); background: var(--dark-bg);
+}
+.rq-bar .icon-btn { font-size: 22px; }
+.rq-bar .icon-btn:first-child { font-size: 24px; }
+.rq-bar-title { flex: 1; min-width: 0; font-size: 17px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rq-text { padding: 12px 8px 24px; }
+.rq-title { font-size: 30px; line-height: 1.6; color: var(--accent); text-align: center; }
+.rq-play {
+  display: flex; margin: 10px auto 0; height: 36px; padding: 0 16px; border: none; border-radius: 999px; background: var(--gold); color: #121212;
+  align-items: center; gap: 6px; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+}
+.rq-play .ic { font-size: 14px; }
+.rq-about { margin: 14px 0 18px; padding: 14px; border-radius: 12px; background: var(--dark-surface); color: var(--text-secondary); font-size: 14px; line-height: 1.7; }
+.rq-about summary { display: flex; align-items: center; gap: 8px; color: var(--primary); font-weight: 700; cursor: pointer; list-style: none; }
+.rq-about summary::-webkit-details-marker { display: none; }
+.rq-about summary .ic { color: var(--accent); font-size: 18px; }
+.rq-about p { margin-top: 8px; }
+.rq-line { font-family: 'Amiri Quran', 'Rubik', serif; font-size: var(--read-size); line-height: 1.95; margin-bottom: 14px; }
+.rq-part { font-size: 15px; font-weight: 700; color: var(--accent); margin: 18px 0 6px; }
+.rq-source-line { display: block; text-align: center; color: var(--text-secondary); font-size: 12px; text-decoration: none; padding: 18px 0; }
+.rq-source-line small { font-size: 11px; opacity: 0.7; }
+.rq-surah-head {
+  display: flex; flex-direction: column; align-items: center; padding: 10px; border-radius: 12px;
+  border: 1px solid rgba(222,190,79,0.5); background: var(--accent-soft);
+}
+.rq-surah-head .rq-amiri { font-size: 26px; color: var(--accent); }
+.rq-basmala { text-align: center; font-size: calc(var(--read-size) + 2px); margin-top: 16px; }
+.rq-ayas { font-family: 'Amiri Quran', 'Rubik', serif; font-size: calc(var(--read-size) + 2px); line-height: 2.1; text-align: justify; margin-bottom: 6px; }
+.rq-aya { color: var(--accent); white-space: nowrap; }
+
+/* The tasbih */
+.rq-tasbih { display: flex; flex-direction: column; align-items: center; }
+.rq-zahra { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; margin-bottom: 26px; }
+.rq-zahra > div { display: flex; flex-direction: column; align-items: center; padding: 8px 0; border-radius: 10px; background: var(--dark-surface); border: 1px solid transparent; }
+.rq-zahra > div.now { background: var(--accent-soft); border-color: rgba(222,190,79,0.5); color: var(--accent); }
+.rq-zahra .rq-amiri { font-size: 16px; }
+.rq-dhikr { font-size: 30px; color: var(--accent); margin-bottom: 18px; }
+.rq-bead {
+  position: relative; width: 230px; height: 230px; border-radius: 50%; border: none; background: var(--dark-surface); color: var(--primary);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: inherit; cursor: pointer; touch-action: manipulation;
+}
+.rq-bead:active:not([disabled]) { transform: scale(0.97); }
+.rq-bead svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.rq-ring { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 8; }
+.rq-ring-fill { fill: none; stroke: url(#gold-ring); stroke-width: 8; stroke-linecap: round; }
+.rq-count { position: relative; font-size: 56px; font-weight: 900; line-height: 1.1; }
+.rq-bead .rq-sub { position: relative; font-size: 14px; }
+.rq-reset {
+  margin: 24px 0 14px; display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.3); background: none; color: var(--primary); font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+}
+
+/* Where the texts come from */
+.rq-intro { font-size: 14px; color: var(--text-secondary); line-height: 1.7; margin-bottom: 12px; }
+.rq-source { padding: 16px; margin-bottom: 12px; border-radius: 12px; background: var(--dark-surface); }
+.rq-source b { font-size: 17px; font-weight: 800; }
+.rq-source p { font-size: 13.5px; color: var(--text-secondary); line-height: 1.7; margin-top: 6px; }
+.rq-links { display: flex; gap: 14px; margin-top: 6px; }
+.rq-links .link-btn { margin: 0; padding: 6px 0; font-size: 13px; text-decoration: none; }
+.rq-notice { margin-top: 10px; padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.3); color: var(--text-secondary); font-size: 11px; line-height: 1.5; white-space: pre-wrap; text-align: left; font-family: inherit; }

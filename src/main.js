@@ -3,6 +3,7 @@ import { icon, iconSvg, setIcon, startIcons } from './icons.js';
 import { dominantHsl, playerShades, mixHex, bandColors, NEUTRAL_SHADES } from './color.js';
 import occasionBg from './assets/occasion-bg.webp';
 import BUILD from './version.json';
+import { setupRead } from './read.js';
 import { readTags, readDuration, shrinkCover, fixTag, cleanText, shownTitle, guess as guessUpload, dbCategory, extFor, countWord, checkReciter, reciterSuggestions, reciterProblem } from './uploads.js';
 
 // Sizes that follow a card's width (cqw: the occasion, radio and mix cards):
@@ -1395,6 +1396,8 @@ function drawPage(entry) {
 // track's like/download state) and is redrawn as soon as they change
 function openPage(viewId, render, { library = false } = {}) {
   if (rewinding) { waiting.push(() => openPage(viewId, render, { library })); return; }
+  // From the "اقرأ" part (a recording's reciter...): back to listening first
+  if (readingDepth()) { closeReading(() => openPage(viewId, render, { library })); return; }
   const from = topPage();
   if (from) from.scrollTop = mainEl().scrollTop; else tabScroll = mainEl().scrollTop;
   const entry = { type: 'page', viewId, render, library };
@@ -1404,11 +1407,34 @@ function openPage(viewId, render, { library = false } = {}) {
   history.pushState({ depth: navStack.length }, '');
 }
 
-function openOverlay(show, hide) {
-  if (rewinding) { waiting.push(() => openOverlay(show, hide)); return; }
+// `read`: one of the "اقرأ" part's (the part itself, a page in it): leaving
+// the part takes them all away together (closeReading)
+function openOverlay(show, hide, { read = false } = {}) {
+  if (rewinding) { waiting.push(() => openOverlay(show, hide, { read })); return; }
   show();
-  navStack.push({ type: 'overlay', hide });
+  navStack.push({ type: 'overlay', hide, read });
   history.pushState({ depth: navStack.length }, '');
+}
+
+// Close the top `count` overlays in one step (each hidden as it goes), then fn
+function dropOverlays(count, fn) {
+  if (rewinding) { waiting.push(() => dropOverlays(count, fn)); return; }
+  if (count <= 0) { fn?.(); return; }
+  navStack.splice(-count).reverse().forEach((e) => e.hide?.());
+  ignorePops = 1;
+  rewinding = true;
+  if (fn) waiting.push(fn);
+  history.go(-count);
+}
+
+// How many entries, from the top, belong to the "اقرأ" part (with what is over it)
+function readingDepth() {
+  const first = navStack.findIndex((e) => e.read);
+  return first < 0 ? 0 : navStack.length - first;
+}
+// Back to listening, where it was left: the "اقرأ" part and its pages closed together
+function closeReading(fn) {
+  dropOverlays(readingDepth(), fn);
 }
 
 // Close the top overlay, then run fn (e.g. open the next sheet)
@@ -1602,17 +1628,11 @@ function showLoading() {
   $('sections-container').innerHTML = `<div class="loading">${icon('spinner')}</div>`;
 }
 
-function greeting() {
-  const h = new Date().getHours();
-  return h >= 5 && h < 12 ? 'صباح الخير' : h >= 12 && h < 18 ? 'مساء الخير' : 'طاب مساؤك';
-}
-
 function renderHome() {
   const container = $('sections-container');
   if (!allTracks.length) return;
   container.innerHTML = '';
   tabDrawnAt.home = tabStamp();
-  $('home-greeting').textContent = greeting();
   renderHomeBar();
 
   // A category chosen in the top bar: its own home
@@ -2674,7 +2694,7 @@ function wideCard(t) {
 
 // ─── The home screen's top bar (Spotify's): "all" and the categories ───
 // It stays on top as the page scrolls, on the page's dark ground once the
-// greeting has gone up; a category chosen turns the home screen into its own
+// header (اقرأ and the account) has gone up; a category chosen turns the home screen into its own
 let homeFilter = null;
 function renderHomeBar() {
   const bar = $('home-bar');
@@ -7123,6 +7143,7 @@ new MutationObserver((records) => {
 // one clean lets the back button step over them (see popstate)
 history.replaceState(null, '');
 startIcons();
+setupRead({ openOverlay, dropOverlays, closeReading: () => closeReading(), toast, playFromList, tracks: () => allTracks, esc, store });
 paintAutoplay();
 initAuth();
 loadData();

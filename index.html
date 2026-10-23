@@ -51,7 +51,8 @@
         <!-- Home -->
         <div id="home-view" class="view">
           <header class="home-header">
-            <h1 class="greeting" id="home-greeting">صوت الأحزان</h1>
+            <!-- The way into the "اقرأ" part on the right (the book on the word's left), the account on the left -->
+            <button class="read-btn" onclick="openReading()"><span>اقرأ</span><i class="ic" data-icon="book-open"></i></button>
             <button class="avatar-btn" onclick="goProfile()" aria-label="حسابي"></button>
           </header>
           <!-- Spotify's top bar: "all" and the categories, staying on top as the page scrolls -->
@@ -408,6 +409,10 @@
         <a href="#" class="nav-item" onclick="goDownloads(); return false;"><i class="ic" data-icon="download"></i><span>التنزيلات</span></a>
         <a href="#" class="nav-item" onclick="goProfile(); return false;"><i class="ic" data-icon="user"></i><span>حسابي</span></a>
       </nav>
+
+      <!-- The "اقرأ" part (src/read.js): its pages, and its own bottom bar in place of the app's -->
+      <div id="read-app" class="read-app"></div>
+      <nav class="bottom-nav read-nav" id="read-nav"></nav>
 
       <!-- Mini player -->
       <div id="mini-player" class="mini-player" style="display: none;">
