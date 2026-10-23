@@ -2,7 +2,7 @@
 // al-Sahifa al-Sajjadiyya, the Quran and the tasbih, a part of the app of its
 // own (its own bottom bar), reached from the gold "اقرأ" on the home screen and
 // left by "استمع". Its texts are the site's read/ files (tools/read builds them
-// from open sources: Arabic Wikisource and Tanzil), loaded when opened; the
+// from open sources: Arabic and Persian Wikisource, and Tanzil), loaded when opened; the
 // service worker keeps them for offline.
 import { icon } from './icons.js';
 
@@ -135,6 +135,12 @@ function header(title, subtitle = '', back = false) {
 }
 
 const group = (id) => index?.groups?.find((g) => g.id === id);
+/** How many there are, as the index says it, or counted as du'as or ziyarat. */
+const countOf = (g) => g.count || (g.id === 'ziyarat' ? count(g.items.length, 'زيارات', 'زيارة') : count(g.items.length, 'أدعية', 'دعاءً'));
+/** The groups that are tiles on a tab (an index from before tiles: the Sahifa, on the du'as'). */
+const cardsOn = (t) => (index?.groups || []).filter((g) => g.tab === t || (t === 'duas' && g.id === 'sahifa' && !g.tab));
+const GROUP_ICONS = { sahifa: 'scroll-text', munajat: 'moon-star', week: 'calendar-days', needs: 'hand-heart', occasions: 'sparkles', taqibat: 'clock' };
+const groupIcon = (g) => GROUP_ICONS[g.id] || (g.tab === 'ziyarat' ? 'landmark' : 'book-open');
 
 function feature(label, title, line, ic, action) {
   return `<button class="rq-feature" data-read="${esc(action)}">
@@ -145,30 +151,37 @@ function feature(label, title, line, ic, action) {
 }
 
 function homePage() {
-  const duas = group('duas'), ziyarat = group('ziyarat'), sahifa = group('sahifa');
+  const duas = group('duas'), ziyarat = group('ziyarat');
   const last = ctx.store.get('read_last', null);
   const now = new Date();
+  // Today's du'a, of the days' (Saturday's, Sunday's...)
+  const today = group('week')?.items?.find((i) => i.id === `week-${['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][now.getDay()]}`);
   // Thursday evening to Friday: the night of Friday, the night of Kumayl
   const friday = (now.getDay() === 4 && now.getHours() >= 16) || now.getDay() === 5;
   const pick = (g, id) => g?.items?.find((i) => i.id === id);
   const picks = [pick(duas, 'kumayl'), pick(ziyarat, 'ashura'), pick(duas, 'tawassul'), pick(ziyarat, 'jamia'), pick(duas, 'jawshan-kabir')].filter(Boolean);
   const tiles = [
-    ['الأدعية', count(duas?.items?.length || 0, 'أدعية', 'دعاءً'), 'moon-star', 'tab:duas'],
-    ['الزيارات', count(ziyarat?.items?.length || 0, 'زيارات', 'زيارة'), 'landmark', 'tab:ziyarat'],
-    ['الصحيفة السجادية', count(sahifa?.items?.length || 0, 'أدعية', 'دعاءً'), 'scroll-text', 'group:sahifa'],
+    ...(duas ? [['الأدعية', countOf(duas), 'moon-star', 'tab:duas']] : []),
+    ...(ziyarat ? [['الزيارات', countOf(ziyarat), 'landmark', 'tab:ziyarat']] : []),
+    ...[...cardsOn('duas'), ...cardsOn('ziyarat')].map((g) => [g.title, countOf(g), groupIcon(g), `group:${g.id}`]),
     ['القرآن الكريم', `${index.surahs.length} سورة`, 'book-open', 'tab:quran'],
     ['المسبحة', 'تسبيح الزهراء', 'circle-dot', 'tab:tasbih'],
   ];
   return header('اقرأ', 'الأدعية والزيارات والقرآن الكريم')
     + (last ? feature('تابع القراءة', last.title, last.line > 0 ? 'من حيث توقفت' : 'من البداية', 'bookmark', `open:${last.key}`) : '')
+    + (today ? feature('دعاء اليوم', today.title, today.note || 'من أدعية أيام الأسبوع', 'calendar-days', `open:t:${today.id}`) : '')
     + (friday ? feature('ليلة الجمعة', 'دعاء كميل', 'يُستحب قراءته ليلة الجمعة', 'moon-star', 'open:t:kumayl') : '')
     + `<div class="section"><div class="section-title rq-section-title">يُقرأ كثيراً</div>
         <div class="horizontal-scroller rq-picks">${picks.map((p) => `<button class="rq-pick" data-read="open:t:${esc(p.id)}">
           <span class="rq-amiri">${esc(p.title)}</span>${p.note ? `<span class="rq-sub">${esc(p.note)}</span>` : ''}</button>`).join('')}</div></div>
       <div class="section"><div class="section-title rq-section-title">الأقسام</div>
-        <div class="rq-tiles">${tiles.map(([t, c, ic, a]) => `<button class="rq-tile" data-read="${a}">
-          <span class="rq-tile-ic">${icon(ic)}</span><span><b>${esc(t)}</b><span class="rq-sub">${esc(c)}</span></span></button>`).join('')}</div></div>
+        <div class="rq-tiles">${tilesOf(tiles)}</div></div>
       <div class="rq-sources"><button class="link-btn" data-read="sources">مصادر النصوص وحقوقها</button></div>`;
+}
+
+function tilesOf(tiles) {
+  return tiles.map(([t, c, ic, a]) => `<button class="rq-tile" data-read="${a}">
+    <span class="rq-tile-ic">${icon(ic)}</span><span><b>${esc(t)}</b><span class="rq-sub">${esc(c)}</span></span></button>`).join('');
 }
 
 function mark(n) { return `<span class="rq-num">${n}</span>`; }
@@ -176,10 +189,9 @@ function mark(n) { return `<span class="rq-num">${n}</span>`; }
 function groupPage(id, back) {
   const g = group(id);
   if (!g) return header('') + waiting();
-  const sahifa = group('sahifa');
-  const sub = id === 'ziyarat' ? count(g.items.length, 'زيارات', 'زيارة') : count(g.items.length, 'أدعية', 'دعاءً');
-  return header(g.title, sub, back)
-    + (id === 'duas' && sahifa ? feature('الصحيفة السجادية', 'زبور آل محمد', `${count(sahifa.items.length, 'أدعية', 'دعاءً')} للإمام زين العابدين`, 'scroll-text', 'group:sahifa') : '')
+  return header(g.title, countOf(g), back)
+    // The groups on this tab (the Sahifa, the munajat...), two by two above its list
+    + (cardsOn(id).length ? `<div class="rq-tiles rq-group-tiles">${tilesOf(cardsOn(id).map((c) => [c.title, countOf(c), groupIcon(c), `group:${c.id}`]))}</div>` : '')
     + `<div class="rq-list">${g.items.map((it, i) => `<button class="rq-row" data-read="open:t:${esc(it.id)}">
         ${mark(i + 1)}<span class="rq-row-text"><span class="rq-amiri">${esc(it.title)}</span>${it.note ? `<span class="rq-sub">${esc(it.note)}</span>` : ''}</span>${icon('chevron-left')}</button>`).join('')}</div>`;
 }
@@ -261,7 +273,11 @@ function titleFor(id) {
  * Sahifa's by its number with "الصحيفة"; a ziyara by its whole name.
  */
 function recordingsOf(t) {
-  const name = plain(t.title.split(' (')[0]);
+  // "دعاء الفرج «إلهي عظم البلاء»" by "الفرج"; "دعاء «إلهي كيف أدعوك»" by its words
+  const full = plain(t.title.split(' (')[0]);
+  const quoted = full.match(/«(.+?)»/)?.[1];
+  const head = full.split('«')[0].trim();
+  const name = head === 'دعاء' && quoted ? quoted.trim() : head;
   // "الدعاء الثاني", not "الدعاء الثاني عشر" or "الدعاء الثاني والعشرون"
   const number = new RegExp(`${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?!\\s*(عشر|و))`);
   const matches = (title) => {

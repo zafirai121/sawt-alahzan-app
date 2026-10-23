@@ -11,7 +11,7 @@ import {
   Share2, MonitorSpeaker, Check, CirclePlus, Link, MessageSquareMore, Ellipsis, ImageDown, MessageCircle, Send,
   ArrowDownUp, LayoutGrid, Pin, CircleMinus, ArrowUp, ArrowDown, Pencil, Copy, CircleX, Album, Blend, Flame, AudioLines, QrCode,
   Lock, Upload, CloudUpload, Sparkles, ImagePlus, Volume2, VolumeOff, Pointer, MicVocal, CircleDot, Flag, Star,
-  BookOpen, ScrollText, Landmark, Headphones, MoonStar, RotateCcw, AArrowUp, AArrowDown, Info, Bookmark,
+  BookOpen, ScrollText, Landmark, Headphones, MoonStar, RotateCcw, AArrowUp, AArrowDown, Info, Bookmark, CalendarDays, HandHeart,
 } from 'lucide';
 
 // Spotify's "Your Library": two books standing and one leaning on them
@@ -46,6 +46,7 @@ const ICONS = {
   // The feedback card's stars
   star: Star,
   // The "اقرأ" part: its button, its tabs, and the reader's text size
+  'calendar-days': CalendarDays, 'hand-heart': HandHeart,
   'book-open': BookOpen, 'scroll-text': ScrollText, landmark: Landmark, headphones: Headphones, 'moon-star': MoonStar,
   'rotate-ccw': RotateCcw, 'text-larger': AArrowUp, 'text-smaller': AArrowDown, info: Info, bookmark: Bookmark,
 };

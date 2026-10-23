@@ -373,7 +373,7 @@ async function startServer() {
     expect(realErrors(page).length === 0, 'no page errors', realErrors(page));
   });
 
-  await test('T16', 'The "اقرأ" part: in from the home screen, a du\'a and a sura read, its place kept, back steps out page by page, "استمع" back to listening', async ({ browser, expect }) => {
+  await test('T16', 'The "اقرأ" part: in from the home screen, a du\'a, a group and a sura read, its place kept, back steps out page by page, "استمع" back to listening', async ({ browser, expect }) => {
     const { page, mock } = await L.newPage(browser);
     await L.boot(page, mock);
     const state = () => page.evaluate(() => ({
@@ -401,6 +401,20 @@ async function startServer() {
     await L.sleep(400);
     s = await state();
     expect(s.reading && s.title === 'الأدعية', 'back: the du\'as list, still in the part', s.title);
+    const cards = await page.evaluate(() => [...document.querySelectorAll('#read-app [data-read^="group:"]')].map((b) => b.dataset.read));
+    expect(['sahifa', 'munajat', 'week', 'needs', 'occasions', 'taqibat'].every((g) => cards.includes(`group:${g}`)), 'the du\'as tab: a card for each group on it', cards);
+    await page.click('[data-read="group:munajat"]');
+    await L.sleep(300);
+    const munajat = await page.evaluate(() => ({ title: document.querySelector('#read-app .rq-titles h1')?.textContent, rows: document.querySelectorAll('#read-app .rq-row').length }));
+    expect(munajat.title === 'المناجاة الخمس عشرة' && munajat.rows === 15, 'a group\'s card opens its list', munajat);
+    await page.goBack();
+    await L.sleep(300);
+    await page.click('[data-read="open:t:ashara"]');
+    await L.until(async () => (await state()).lines > 10, 10000);
+    const heads = await page.evaluate(() => [...document.querySelectorAll('#read-app .rq-part')].map((h) => h.textContent));
+    expect(heads.filter((h) => h === 'عشر مرات').length >= 10, 'how many times a saying is said, over it', heads);
+    await page.goBack();
+    await L.sleep(300);
     await page.click('#read-nav [data-tab="quran"]');
     await page.click('[data-read="open:q:112"]');
     await L.until(async () => (await state()).ayas > 0, 10000);
