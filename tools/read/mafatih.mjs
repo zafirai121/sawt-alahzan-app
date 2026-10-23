@@ -158,16 +158,32 @@ export function arabicOf(passage) {
 // The book's lines are its pages': a part is said again in paragraphs, each
 // begun where a saying begins (اللَّهُمَّ, إِلَهِي, السَّلامُ...), of 30 words or more
 const OPENS = new Set(['اللهم', 'الهي', 'السلام', 'سبحان', 'اشهد', 'الحمد'])
-const plainWord = (w) => w.replace(/[ً-ْٰـ]/g, '').replace(/[أإآ]/g, 'ا')
-function paragraphs(text) {
+const plainWord = (w) => w.replace(/[ً-ْٰـ]/g, '').replace(/[أإآ]/g, 'ا').replace(/[^ء-ي]/g, '')
+/** Whether a saying begins at the i-th word (not a word inside one: "وَ اجْعَلْنِي اللَّهُمَّ", "عَلَيْهِمُ السَّلامُ"). */
+function opensAt(words, i) {
+  const raw = words[i - 1] || '', prev = plainWord(raw), w = plainWord(words[i]), next = plainWord(words[i + 1] || '')
+  // "وَ" and "فَ" go with what follows them, as "أَنَا" with its verb
+  if (['و', 'ف', 'انا', 'فانا', 'وانا', 'انت', 'وانت', 'فانت', 'نحن'].includes(prev)) return false
+  if (w === 'يا') return next === 'من'
+  if (!OPENS.has(w)) return false
+  // اللهم called on inside a saying: after a bidding (افْتَحِ, صَلِّ, اجْعَلْنِي)
+  if (w === 'اللهم') return !/ِّ?$/.test(raw.replace(/[^ء-ْ]/g, '')) && !/(ني|نا|نى)$/.test(prev)
+  if (w === 'السلام') return !prev.startsWith('عل')
+  if (w === 'الحمد') return next.startsWith('لل')
+  return true
+}
+export function paragraphs(text) {
   const words = text.split(/\s+/).filter(Boolean)
   const out = []
   let cur = []
   for (let i = 0; i < words.length; i++) {
     const w = plainWord(words[i])
-    const opens = OPENS.has(w) || (w === 'يا' && plainWord(words[i + 1] || '') === 'من')
+    const pause = /[.؛!؟]$/.test(words[i - 1] || '')
     // A long one is broken where a clause begins, and a very long one anywhere
-    if (cur.length >= 30 && (opens || (cur.length >= 90 && (w === 'و' || w === 'يا')) || cur.length >= 160)) { out.push(cur.join(' ')); cur = [] }
+    if (cur.length >= 30 && (opensAt(words, i) || (pause && cur.length >= 60) || (cur.length >= 90 && (w === 'و' || w === 'يا' || /،$/.test(words[i - 1]))) || cur.length >= 160)) {
+      out.push(cur.join(' '))
+      cur = []
+    }
     cur.push(words[i])
   }
   if (cur.length) out.push(cur.join(' '))

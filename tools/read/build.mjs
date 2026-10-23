@@ -9,12 +9,15 @@
 //   Mafatih al-Jinan (in the public domain), its proofread pages on Persian
 //   Wikisource (CC BY-SA 4.0), the Arabic taken and the Persian notes left out
 //   (see mafatih.mjs).
+// - Ziyarat Amin Allah and Al Yasin and the Sha'baniyya salawat: Arabic
+//   Wikipedia (CC BY-SA 4.0), whose articles give them in full (see wikipedia.mjs).
 // - The Quran: Tanzil's Uthmani text (CC BY 3.0), verbatim, with its notice.
 //
 // Run on GitHub (read-sources.yml), which can reach these sites.
 import { mkdirSync, writeFileSync } from 'node:fs'
 import vm from 'node:vm'
 import { joinPages, mafatihTexts, faNumber, MAFATIH_INDEX } from './mafatih.mjs'
+import { WIKIPEDIA_ITEMS, textOfSection, leadOf } from './wikipedia.mjs'
 
 const out = (process.argv[2] || 'out') + '/read'
 for (const d of ['', '/t', '/q', '/debug']) mkdirSync(out + d, { recursive: true })
@@ -223,6 +226,34 @@ try {
   index.sources.push(MAFATIH)
 } catch (e) { report.push(`mafatih: ${e}`) }
 
+// Arabic Wikipedia: the few texts its articles give in full
+{
+  const WP = 'https://ar.wikipedia.org'
+  const WIKIPEDIA = {
+    name: 'ويكيبيديا العربية', url: WP, license: 'CC BY-SA 4.0', licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/deed.ar',
+    note: 'زيارة أمين الله وزيارة آل ياسين والصلوات الشعبانية كما في مقالاتها. حُذفت منها رموز التنسيق، وجُعلت الآيات بين قوسي القرآن ﴿ ﴾، وصُحّح خطآن في الكتابة: ياء كُتبت بعد ألف مقصورة، وياء في آخر الكلمة بعد فتحة هي ألف مقصورة (عَلَي ← عَلَى)، ولم يُغيَّر شيء غير ذلك.',
+  }
+  let took = 0
+  for (const it of WIKIPEDIA_ITEMS) {
+    try {
+      const j = await (await fetch(`${WP}/w/api.php?action=query&prop=revisions&rvprop=content|ids&rvslots=main&titles=${encodeURIComponent(it.page)}&redirects=1&format=json`, { headers: UA })).json()
+      const page = Object.values(j.query.pages)[0]
+      const rev = page.revisions?.[0]
+      if (!rev) throw new Error(`no page ${it.page}`)
+      const wt = rev.slots.main['*']
+      const { intro, parts } = textOfSection(wt, it.section)
+      const t = {
+        id: it.id, title: it.title, about: [leadOf(wt), intro].filter(Boolean), parts,
+        source: { ...WIKIPEDIA, name: `ويكيبيديا: ${page.title}`, url: `${WP}/wiki/${encodeURIComponent(page.title.replace(/ /g, '_'))}?oldid=${rev.revid}` },
+      }
+      save(t, it.note)
+      took++
+      report.push(`${it.id}: parts ${parts.map(p => `${p.head || '-'}(${p.text.length})`).join(' ')}, ${JSON.stringify(t).length} bytes`)
+    } catch (e) { report.push(`${it.id}: ${e}`) }
+  }
+  if (took) index.sources.push(WIKIPEDIA)
+}
+
 // The Quran: Tanzil's Uthmani text, a file a sura, its notice kept with it
 {
   const r = await fetch('https://tanzil.net/pub/download/index.php?marks=true&sajdah=true&rub=false&alif=true&quranType=uthmani&outType=txt-2&agree=true', { headers: UA })
@@ -264,13 +295,13 @@ const GROUPS = [
       ['mashlul'], ['yastashir'], ['adila'], ['saifi'], ['abu-hamza'], ['baha'], ['arafa'],
       ['sahifa-47', 'دعاء الإمام زين العابدين يوم عرفة', 'الدعاء السابع والأربعون من الصحيفة السجادية'],
       S(20, 'دعاء مكارم الأخلاق'), S(31, 'دعاء التوبة'), ['istighatha'], ['tawfiq'], ['bihaqqi'], ['kazim'], ['ilahi-kayf'], ['tara'],
-      ['karb'], ['khalas'], ['nur'], ['hirz-sajjad'],
+      ['karb'], ['khalas'], ['nur'], ['hirz-sajjad'], ['shabaniyya'],
     ],
   },
   {
     id: 'ziyarat', title: 'الزيارات', items: [
-      ['z-nabi'], ['z-zahra'], ['z-zahra-2'], ['z-amir'], ['z-hasan'], ['z-husain'], ['ashura'], ['z-tue'], ['z-wed'], ['z-askari'], ['z-mahdi'],
-      ['jamia'], ['masuma'],
+      ['z-nabi'], ['z-zahra'], ['z-zahra-2'], ['z-amir'], ['amin-allah'], ['z-hasan'], ['z-husain'], ['ashura'], ['z-tue'], ['z-wed'], ['z-askari'], ['z-mahdi'],
+      ['al-yasin'], ['jamia'], ['masuma'],
     ],
   },
   { id: 'sahifa', title: 'الصحيفة السجادية', tab: 'duas', unit: ['أدعية', 'دعاءً'], items: SAHIFA.map((_, i) => [`sahifa-${i + 1}`, '', `الدعاء ${ordinal(i + 1)}`]) },
@@ -289,7 +320,7 @@ const GROUPS = [
   },
   {
     id: 'occasions', title: 'أدعية المناسبات', tab: 'duas', unit: ['أدعية', 'دعاءً'], items: [
-      ['kumayl'], ['simat'], S(43, 'دعاء رؤية الهلال'), S(44, 'دعاء دخول شهر رمضان'), ['abu-hamza'], ['baha'],
+      ['kumayl'], ['simat'], S(43, 'دعاء رؤية الهلال'), ['shabaniyya'], S(44, 'دعاء دخول شهر رمضان'), ['abu-hamza'], ['baha'],
       ['jawshan-kabir', 'دعاء الجوشن الكبير (ليالي القدر)'], ['mujir'], S(45, 'دعاء وداع شهر رمضان'), S(46, 'دعاء عيد الفطر'),
       ['arafa'], ['sahifa-47', 'دعاء الإمام زين العابدين يوم عرفة'], S(48, 'دعاء عيد الأضحى ويوم الجمعة'), S(42, 'دعاء ختم القرآن'),
     ],
