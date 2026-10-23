@@ -5,6 +5,10 @@ name: Read sources
 # push to the work branch that asks for it ("[read]" in its message).
 on:
   workflow_dispatch:
+    inputs:
+      script:
+        description: The script in tools/read to run
+        default: explore2
   push:
     branches: [ccr-da195117-owjnxk]
 
@@ -26,7 +30,7 @@ jobs:
         with:
           node-version: 22
       - name: Fetch
-        run: node tools/read/explore.mjs out
+        run: node tools/read/${{ inputs.script || 'explore2' }}.mjs out
       - name: Publish on the read-sources branch
         if: always()
         env:
