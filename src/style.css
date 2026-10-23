@@ -1840,6 +1840,7 @@ body.reading .bottom-nav:not(.read-nav), body.reading #page-bar { display: none;
 }
 body.has-player .read-app { padding-bottom: calc(var(--nav-height) + 96px + var(--safe-bottom)); }
 .read-nav .nav-item.active .ic { color: var(--accent); }
+/* Amiri for the words of the du'as and the Quran; their titles are the app's Rubik */
 .rq-amiri { font-family: 'Amiri Quran', 'Rubik', serif; font-weight: 400; }
 .rq-sub { display: block; font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; }
 
@@ -1862,8 +1863,8 @@ body.has-player .read-app { padding-bottom: calc(var(--nav-height) + 96px + var(
 .rq-feature-ic { width: 48px; height: 48px; border-radius: 50%; background: var(--gold); color: #121212; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
 .rq-feature-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .rq-label { font-size: 12px; font-weight: 700; color: var(--accent); }
-/* Amiri's final letters reach past their box (the lam's tail): never clipped, so a long name wraps instead */
-.rq-feature-title { font-size: 21px; line-height: 1.6; }
+/* A long name wraps, never cut short */
+.rq-feature-title { font-size: 17px; font-weight: 700; line-height: 1.5; }
 
 .rq-section-title { margin-bottom: 12px; }
 .rq-picks { gap: 10px; }
@@ -1871,7 +1872,7 @@ body.has-player .read-app { padding-bottom: calc(var(--nav-height) + 96px + var(
   flex: 0 0 150px; min-height: 112px; padding: 14px; border-radius: 12px; border: none; background: var(--dark-surface); color: var(--primary);
   display: flex; flex-direction: column; gap: 6px; text-align: start; font-family: inherit; cursor: pointer;
 }
-.rq-pick .rq-amiri { font-size: 19px; line-height: 1.5; }
+.rq-pick-title { font-size: 15px; font-weight: 700; line-height: 1.4; }
 .rq-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .rq-tile {
   height: 76px; padding: 0 12px; border-radius: 12px; border: none; background: var(--dark-surface); color: var(--primary);
@@ -1889,7 +1890,7 @@ body.has-player .read-app { padding-bottom: calc(var(--nav-height) + 96px + var(
 }
 .rq-row > .ic { color: var(--text-secondary); font-size: 18px; }
 .rq-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.rq-row-text .rq-amiri { font-size: 20px; line-height: 1.6; }
+.rq-row-title { font-size: 16px; font-weight: 700; line-height: 1.5; }
 /* A number in a gold-edged diamond, as the mushaf numbers its suras */
 .rq-num {
   position: relative; width: 38px; height: 38px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
@@ -1912,7 +1913,7 @@ body.has-player .read-app { padding-bottom: calc(var(--nav-height) + 96px + var(
 .rq-bar .icon-btn:first-child { font-size: 24px; }
 .rq-bar-title { flex: 1; min-width: 0; font-size: 17px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rq-text { padding: 12px 8px 24px; }
-.rq-title { font-size: 30px; line-height: 1.6; color: var(--accent); text-align: center; }
+.rq-title { font-size: 24px; font-weight: 800; line-height: 1.4; color: var(--accent); text-align: center; }
 .rq-play {
   display: flex; margin: 10px auto 0; height: 36px; padding: 0 16px; border: none; border-radius: 999px; background: var(--gold); color: #121212;
   align-items: center; gap: 6px; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
@@ -1931,7 +1932,7 @@ body.has-player .read-app { padding-bottom: calc(var(--nav-height) + 96px + var(
   display: flex; flex-direction: column; align-items: center; padding: 10px; border-radius: 12px;
   border: 1px solid rgba(222,190,79,0.5); background: var(--accent-soft);
 }
-.rq-surah-head .rq-amiri { font-size: 26px; color: var(--accent); }
+.rq-surah-name { font-size: 22px; font-weight: 800; color: var(--accent); }
 .rq-basmala { text-align: center; font-size: calc(var(--read-size) + 2px); margin-top: 16px; }
 .rq-ayas { font-family: 'Amiri Quran', 'Rubik', serif; font-size: calc(var(--read-size) + 2px); line-height: 2.1; text-align: justify; margin-bottom: 6px; }
 .rq-aya { color: var(--accent); white-space: nowrap; }

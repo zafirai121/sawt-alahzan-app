@@ -145,7 +145,7 @@ const groupIcon = (g) => GROUP_ICONS[g.id] || (g.tab === 'ziyarat' ? 'landmark' 
 function feature(label, title, line, ic, action) {
   return `<button class="rq-feature" data-read="${esc(action)}">
     <span class="rq-feature-ic">${icon(ic)}</span>
-    <span class="rq-feature-text"><span class="rq-label">${esc(label)}</span><span class="rq-amiri rq-feature-title">${esc(title)}</span><span class="rq-sub">${esc(line)}</span></span>
+    <span class="rq-feature-text"><span class="rq-label">${esc(label)}</span><span class="rq-feature-title">${esc(title)}</span><span class="rq-sub">${esc(line)}</span></span>
     ${icon('chevron-left')}
   </button>`;
 }
@@ -173,7 +173,7 @@ function homePage() {
     + (friday ? feature('ليلة الجمعة', 'دعاء كميل', 'يُستحب قراءته ليلة الجمعة', 'moon-star', 'open:t:kumayl') : '')
     + `<div class="section"><div class="section-title rq-section-title">يُقرأ كثيراً</div>
         <div class="horizontal-scroller rq-picks">${picks.map((p) => `<button class="rq-pick" data-read="open:t:${esc(p.id)}">
-          <span class="rq-amiri">${esc(p.title)}</span>${p.note ? `<span class="rq-sub">${esc(p.note)}</span>` : ''}</button>`).join('')}</div></div>
+          <span class="rq-pick-title">${esc(p.title)}</span>${p.note ? `<span class="rq-sub">${esc(p.note)}</span>` : ''}</button>`).join('')}</div></div>
       <div class="section"><div class="section-title rq-section-title">الأقسام</div>
         <div class="rq-tiles">${tilesOf(tiles)}</div></div>
       <div class="rq-sources"><button class="link-btn" data-read="sources">مصادر النصوص وحقوقها</button></div>`;
@@ -193,7 +193,7 @@ function groupPage(id, back) {
     // The groups on this tab (the Sahifa, the munajat...), two by two above its list
     + (cardsOn(id).length ? `<div class="rq-tiles rq-group-tiles">${tilesOf(cardsOn(id).map((c) => [c.title, countOf(c), groupIcon(c), `group:${c.id}`]))}</div>` : '')
     + `<div class="rq-list">${g.items.map((it, i) => `<button class="rq-row" data-read="open:t:${esc(it.id)}">
-        ${mark(i + 1)}<span class="rq-row-text"><span class="rq-amiri">${esc(it.title)}</span>${it.note ? `<span class="rq-sub">${esc(it.note)}</span>` : ''}</span>${icon('chevron-left')}</button>`).join('')}</div>`;
+        ${mark(i + 1)}<span class="rq-row-text"><span class="rq-row-title">${esc(it.title)}</span>${it.note ? `<span class="rq-sub">${esc(it.note)}</span>` : ''}</span>${icon('chevron-left')}</button>`).join('')}</div>`;
 }
 
 function quranPage() {
@@ -205,7 +205,7 @@ function quranPage() {
 function surahRows(query) {
   const q = plain(query);
   return index.surahs.filter((s) => !q || plain(s.name).includes(q) || String(s.n) === q)
-    .map((s) => `<button class="rq-row" data-read="open:q:${s.n}">${mark(s.n)}<span class="rq-row-text"><span class="rq-amiri">سورة ${esc(s.name)}</span>
+    .map((s) => `<button class="rq-row" data-read="open:q:${s.n}">${mark(s.n)}<span class="rq-row-text"><span class="rq-row-title">سورة ${esc(s.name)}</span>
       <span class="rq-sub">${esc(s.place)} · ${s.ayas} ${s.ayas >= 3 && s.ayas <= 10 ? 'آيات' : 'آية'}</span></span></button>`).join('');
 }
 
@@ -299,7 +299,7 @@ async function drawText(id) {
   const lines = t.parts.flatMap((p) => [...(p.head ? [`<h3 class="rq-part">${esc(p.head)}</h3>`] : []), ...p.text.map((l) => `<p class="rq-line">${esc(l)}</p>`)]);
   el.innerHTML = readerBar(t.title)
     + `<div class="rq-text">
-      <h2 class="rq-amiri rq-title">${esc(t.title)}</h2>
+      <h2 class="rq-title">${esc(t.title)}</h2>
       ${rec.length ? `<button class="rq-play" data-read="play">${icon('play', { fill: true })}<span>استمع إليه (${rec.length})</span></button>` : ''}
       ${t.about.length ? `<details class="rq-about"><summary>${icon('info')}<span>عنه</span></summary>${t.about.map((a) => `<p>${esc(a)}</p>`).join('')}</details>` : ''}
       ${lines.join('')}
@@ -336,7 +336,7 @@ async function drawSurah(n) {
   const ayaWord = s.ayas.length >= 3 && s.ayas.length <= 10 ? 'آيات' : 'آية';
   el.innerHTML = readerBar(`سورة ${s.name}`)
     + `<div class="rq-text rq-quran">
-      <div class="rq-surah-head"><span class="rq-amiri">سورة ${esc(s.name)}</span><span class="rq-sub">${esc(s.place)} · ${s.ayas.length} ${ayaWord}</span></div>
+      <div class="rq-surah-head"><span class="rq-surah-name">سورة ${esc(s.name)}</span><span class="rq-sub">${esc(s.place)} · ${s.ayas.length} ${ayaWord}</span></div>
       ${basmala ? `<p class="rq-amiri rq-basmala">${esc(basmala)}</p>` : ''}
       ${blocks.join('')}
       <a class="rq-source-line" href="https://tanzil.net" target="_blank" rel="noopener">المصدر: مشروع Tanzil (tanzil.net)<br><small>رخصة CC BY 3.0</small></a>
