@@ -2,7 +2,8 @@ name: Read sources
 
 # The open sources for the "اقرأ" part (tools/read): fetched on GitHub, which
 # can reach them, and left on the "read-sources" branch. Run by hand, or by a
-# push to the work branch that asks for it ("[read]" in its message).
+# push to the work branch that asks for it ("[read]" in its message, or
+# "[read:<script>]" for another script than build).
 on:
   workflow_dispatch:
     inputs:
@@ -21,7 +22,7 @@ concurrency:
 
 jobs:
   fetch:
-    if: github.event_name != 'push' || contains(github.event.head_commit.message, '[read]')
+    if: github.event_name != 'push' || contains(github.event.head_commit.message, '[read]') || contains(github.event.head_commit.message, '[read:')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -30,7 +31,12 @@ jobs:
         with:
           node-version: 22
       - name: Fetch
-        run: node tools/read/${{ inputs.script || 'build' }}.mjs out
+        env:
+          SCRIPT: ${{ inputs.script }}
+          MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          [ -n "$SCRIPT" ] || SCRIPT=$(printf '%s' "$MESSAGE" | grep -o '\[read:[a-z0-9-]*\]' | head -1 | sed 's/^\[read:\(.*\)\]$/\1/')
+          node "tools/read/${SCRIPT:-build}.mjs" out
       - name: Publish on the read-sources branch
         if: always()
         env:
