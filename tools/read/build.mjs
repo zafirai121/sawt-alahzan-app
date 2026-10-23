@@ -5,11 +5,16 @@
 // - Du'as, ziyarat and al-Sahifa al-Sajjadiyya: Arabic Wikisource (CC BY-SA 4.0).
 //   Its wiki markup is taken off; Persian letters typed by mistake (ی، ک) are
 //   made Arabic; nothing else in the words is changed.
+// - More du'as, ziyarat, the fifteen munajat and the ta'qibat: Shaykh Abbas al-Qummi's
+//   Mafatih al-Jinan (in the public domain), its proofread pages on Persian
+//   Wikisource (CC BY-SA 4.0), the Arabic taken and the Persian notes left out
+//   (see mafatih.mjs).
 // - The Quran: Tanzil's Uthmani text (CC BY 3.0), verbatim, with its notice.
 //
 // Run on GitHub (read-sources.yml), which can reach these sites.
 import { mkdirSync, writeFileSync } from 'node:fs'
 import vm from 'node:vm'
+import { joinPages, mafatihTexts, faNumber, MAFATIH_INDEX } from './mafatih.mjs'
 
 const out = (process.argv[2] || 'out') + '/read'
 for (const d of ['', '/t', '/q', '/debug']) mkdirSync(out + d, { recursive: true })
@@ -106,6 +111,20 @@ const ZIYARAT = [
   ['jamia', 'الزيارة الجامعة الكبيرة', 'الزيارة الجامعة الكبيرة', 'زيارة الأئمة جميعاً'],
   ['masuma', 'زيارة السيدة فاطمة المعصومة', 'زيارة السيدة فاطمة المعصومة', 'في قم المقدسة'],
 ]
+// al-Sahifa's du'as by what each is for (its headings say it at length)
+const SAHIFA = [
+  'دعاء التحميد لله تعالى', 'دعاء الصلاة على محمد وآله', 'دعاء الصلاة على حملة العرش', 'دعاء الصلاة على مصدّقي الرسل',
+  'دعاؤه لنفسه وأهل ولايته', 'دعاء الصباح والمساء', 'دعاء المهمات', 'دعاء الاستعاذة من المكاره', 'دعاء الاشتياق إلى طلب المغفرة',
+  'دعاء الالتجاء إلى الله', 'دعاء خواتيم الخير', 'دعاء الاعتراف وطلب التوبة', 'دعاء طلب الحوائج', 'دعاء الظُّلامات',
+  'دعاء المرض والكرب', 'دعاء الاستقالة من الذنوب', 'دعاء الاستعاذة من الشيطان', 'دعاء دفع المحذور', 'دعاء الاستسقاء',
+  'دعاء مكارم الأخلاق', 'دعاء الحزن', 'دعاء الشدة والجهد', 'دعاء العافية', 'دعاء الوالدين', 'دعاء الأولاد', 'دعاء الجيران والأولياء',
+  'دعاء أهل الثغور', 'دعاء التفزّع إلى الله', 'دعاء ضيق الرزق', 'دعاء المعونة على قضاء الدين', 'دعاء التوبة', 'دعاء صلاة الليل',
+  'دعاء الاستخارة', 'دعاء من ابتُلي أو رأى مبتلى بفضيحة', 'دعاء الرضا بالقضاء', 'دعاء رؤية السحاب والبرق وسماع الرعد',
+  'دعاء الاعتراف بالتقصير عن الشكر', 'دعاء الاعتذار من تبعات العباد', 'دعاء طلب العفو والرحمة', 'دعاء ذكر الموت',
+  'دعاء طلب الستر والوقاية', 'دعاء ختم القرآن', 'دعاء رؤية الهلال', 'دعاء دخول شهر رمضان', 'دعاء وداع شهر رمضان',
+  'دعاء عيد الفطر', 'دعاء يوم عرفة', 'دعاء عيد الأضحى ويوم الجمعة', 'دعاء دفع كيد الأعداء', 'دعاء الرهبة',
+  'دعاء التضرع والاستكانة', 'دعاء الإلحاح على الله', 'دعاء التذلل لله', 'دعاء كشف الهموم',
+]
 const ORDINALS = ['الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس', 'السادس', 'السابع', 'الثامن', 'التاسع', 'العاشر']
 const TENS = ['', 'عشر', 'العشرون', 'الثلاثون', 'الأربعون', 'الخمسون']
 function ordinal(n) {
@@ -118,27 +137,29 @@ function ordinal(n) {
 
 const index = { v: 1, groups: [], surahs: [], sources: [] }
 const report = []
-async function group(id, title, list) {
-  const items = []
+// The texts written, by id: their title and a line on them, for the groups' lists
+const known = {}
+function save(t, note) {
+  writeFileSync(`${out}/t/${t.id}.json`, JSON.stringify(t))
+  writeFileSync(`${out}/debug/${t.id}.txt`, [t.title, '-- about', ...t.about, ...t.parts.flatMap(p => ['-- ' + p.head, ...p.text])].join('\n'))
+  known[t.id] = { title: t.title, note }
+}
+async function fetchAll(list) {
   for (const [tid, page, shown, note] of list) {
     try {
       const wt = await wikitext(page)
       const t = textOf(tid, shown, wt, page)
-      writeFileSync(`${out}/t/${tid}.json`, JSON.stringify(t))
-      writeFileSync(`${out}/debug/${tid}.txt`, [t.title, '-- about', ...t.about, ...t.parts.flatMap(p => ['-- ' + p.head, ...p.text])].join('\n'))
-      items.push({ id: tid, title: shown, note })
+      save(t, note)
       report.push(`${tid}: about ${t.about.length}, parts ${t.parts.map(p => `${p.head || '-'}(${p.text.length})`).join(' ')}, ${JSON.stringify(t).length} bytes`)
     } catch (e) { report.push(`${tid}: ${e}`) }
   }
-  index.groups.push({ id, title, items })
 }
-await group('duas', 'الأدعية', DUAS)
-await group('ziyarat', 'الزيارات', ZIYARAT)
+await fetchAll(DUAS)
+await fetchAll(ZIYARAT)
 
 // al-Sahifa al-Sajjadiyya: one page on Wikisource, its 54 du'as each under a heading
 {
   const wt = await wikitext('الصحيفة السجادية')
-  const items = []
   const secs = sections(wt.text).filter(s => s.head)
   // Each heading: "الدعاء الاول: '''what it is for'''" (the number written several ways)
   const heads = [...wt.text.matchAll(/^==(.*)==\s*$/gm)].map(m => arabic(m[1].match(/'''([\s\S]*?)'''/)?.[1] || '').trim())
@@ -151,13 +172,55 @@ await group('ziyarat', 'الزيارات', ZIYARAT)
       id: tid, title: `الدعاء ${ordinal(n)}`, about: about ? [about] : [], parts: [{ head: '', text: s.text }],
       source: { ...WIKISOURCE, name: 'ويكي مصدر: الصحيفة السجادية', url: `${WS}/wiki/${encodeURIComponent('الصحيفة_السجادية')}?oldid=${wt.revid}` },
     }
-    writeFileSync(`${out}/t/${tid}.json`, JSON.stringify(t))
-    items.push({ id: tid, title: t.title, note: about })
+    // Listed by what it is for, its number under it
+    save(t, `الدعاء ${ordinal(n)} من الصحيفة السجادية`)
+    known[tid].title = SAHIFA[i]
   })
-  index.groups.push({ id: 'sahifa', title: 'الصحيفة السجادية', items })
+  if (secs.length !== SAHIFA.length) report.push(`sahifa: ${secs.length} du'as, ${SAHIFA.length} titles`)
   report.push(`sahifa: ${secs.length} du'as`)
 }
 index.sources.push(WIKISOURCE)
+
+// Mafatih al-Jinan: the pages of its first part (all proofread to 137), each
+// text taken only if all its pages are proofread
+const FA = 'https://fa.wikisource.org'
+const wikiPath = (title) => encodeURIComponent(title.replace(/ /g, '_')).replace(/%2F/g, '/').replace(/%3A/g, ':')
+const MAFATIH = {
+  name: 'ويكي مصدر الفارسية: مفاتيح الجنان', url: FA, license: 'CC BY-SA 4.0', licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/deed.ar',
+  note: 'أدعية وزيارات ومناجاة وتعقيبات من كتاب مفاتيح الجنان للشيخ عباس القمي (في الملك العام)، من صفحاته المدققة. النص العربي كما هو، وحُذفت تعليقات المؤلف الفارسية، وكُتب بالعربية ما يحتاجه القارئ منها (عدد المرات، ثم يقول، ثم يسجد، ثم يذكر حاجته)، وصُحّحت الحروف الفارسية (ی، ک) إلى العربية.',
+}
+try {
+  const api = `${FA}/w/api.php`
+  const ns = await (await fetch(`${api}?action=query&meta=siteinfo&siprop=namespaces&format=json`, { headers: UA })).json()
+  const space = (canonical) => Object.values(ns.query.namespaces).find(n => n.canonical === canonical)['*']
+  const pageTitle = (n) => `${space('Page')}:${MAFATIH_INDEX}/${faNumber(n)}`
+  MAFATIH.url = `${FA}/wiki/${wikiPath(`${space('Index')}:${MAFATIH_INDEX}`)}`
+  const pages = [], revs = {}
+  for (let n = 12; n <= 137; n += 10) {
+    const titles = Array.from({ length: Math.min(10, 138 - n) }, (_, i) => pageTitle(n + i))
+    const j = await (await fetch(`${api}?action=query&prop=revisions&rvprop=content|ids&rvslots=main&titles=${encodeURIComponent(titles.join('|'))}&format=json`, { headers: UA })).json()
+    const byTitle = Object.fromEntries(Object.values(j.query.pages).map(p => [p.title, p.revisions?.[0]]))
+    titles.forEach((t, i) => {
+      const r = byTitle[t]
+      if (r) { pages.push([n + i, r.slots.main['*']]); revs[n + i] = r.revid } else report.push(`mafatih: no page ${n + i}`)
+    })
+  }
+  for (const m of mafatihTexts(joinPages(pages))) {
+    if (m.error) { report.push(`${m.id}: ${m.error}`); continue }
+    const unproofread = m.pages.filter((p, i) => m.levels[i] < 3)
+    if (unproofread.length) { report.push(`${m.id}: pages ${unproofread.join(',')} not proofread, left out`); continue }
+    const first = m.pages[0], last = m.pages[m.pages.length - 1]
+    const ar = (n) => String(n).replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d])
+    const pagesShown = first === last ? `ص ${ar(first)}` : `ص ${ar(first)}–${ar(last)}`
+    const t = {
+      id: m.id, title: m.title, about: [m.note, 'من كتاب مفاتيح الجنان للشيخ عباس القمي'].filter(Boolean), parts: m.parts,
+      source: { ...MAFATIH, name: `ويكي مصدر الفارسية: مفاتيح الجنان، ${pagesShown}`, url: `${FA}/wiki/${wikiPath(pageTitle(first))}?oldid=${revs[first]}` },
+    }
+    save(t, m.note)
+    report.push(`${m.id}: pages ${first}-${last}, parts ${m.parts.map(p => `${p.head || '-'}(${p.text.length})`).join(' ')}, ${JSON.stringify(t).length} bytes`)
+  }
+  index.sources.push(MAFATIH)
+} catch (e) { report.push(`mafatih: ${e}`) }
 
 // The Quran: Tanzil's Uthmani text, a file a sura, its notice kept with it
 {
@@ -185,6 +248,65 @@ index.sources.push(WIKISOURCE)
     note: 'نص القرآن الكريم بالرسم العثماني، كما هو دون أي تغيير.', notice,
   })
   report.push(`quran: ${Object.values(ayas).flat().length} ayas`)
+}
+
+// ─── The lists ───
+// Each group: its texts in order ([id] or [id, a title for this list, a line]),
+// by id from what was written above (one left out above is left out here).
+// The du'as' and the ziyarat's tabs list their own group, then the groups whose
+// `tab` is theirs, each a card (`headline` its big words, `line` under it).
+const S = (n, title) => [`sahifa-${n}`, title]
+const GROUPS = [
+  {
+    id: 'duas', title: 'الأدعية', items: [
+      ['kumayl'], ['sabah'], ['tawassul'], ['simat'], ['ashara'], ['faraj'], ['jawshan-kabir'], ['jawshan-saghir'], ['mujir'],
+      ['mashlul'], ['yastashir'], ['adila'], ['saifi'], ['abu-hamza'], ['baha'], ['arafa'],
+      ['sahifa-47', 'دعاء الإمام زين العابدين يوم عرفة', 'الدعاء السابع والأربعون من الصحيفة السجادية'],
+      S(20, 'دعاء مكارم الأخلاق'), S(31, 'دعاء التوبة'), ['istighatha'], ['tawfiq'], ['bihaqqi'], ['kazim'], ['ilahi-kayf'], ['tara'],
+      ['karb'], ['khalas'], ['nur'], ['hirz-sajjad'],
+    ],
+  },
+  {
+    id: 'ziyarat', title: 'الزيارات', items: [
+      ['z-nabi'], ['z-zahra'], ['z-zahra-2'], ['z-amir'], ['z-hasan'], ['z-husain'], ['ashura'], ['z-tue'], ['z-wed'], ['z-askari'], ['z-mahdi'],
+      ['jamia'], ['masuma'],
+    ],
+  },
+  { id: 'sahifa', title: 'الصحيفة السجادية', tab: 'duas', headline: 'زبور آل محمد', line: 'للإمام زين العابدين عليه السلام', unit: ['أدعية', 'دعاءً'], items: SAHIFA.map((_, i) => [`sahifa-${i + 1}`, '', `الدعاء ${ordinal(i + 1)}`]) },
+  { id: 'munajat', title: 'المناجاة الخمس عشرة', tab: 'duas', headline: 'مناجاة الإمام زين العابدين', line: 'من مفاتيح الجنان', unit: ['مناجيات', 'مناجاة'], items: Array.from({ length: 15 }, (_, i) => [`munajat-${i + 1}`]) },
+  { id: 'week', title: 'أدعية أيام الأسبوع', tab: 'duas', headline: 'لكل يوم دعاؤه', line: 'من ملحقات الصحيفة السجادية', unit: ['أدعية', 'دعاءً'], items: ['sat', 'sun', 'mon', 'tue', 'wed', 'thu', 'fri'].map(d => [`week-${d}`]) },
+  {
+    id: 'needs', title: 'أدعية الحاجات', tab: 'duas', headline: 'لكل حاجة دعاؤها', line: 'الرزق والشفاء والهمّ والدَّين', unit: ['أدعية', 'دعاءً'], items: [
+      S(13, 'دعاء قضاء الحوائج'), S(29, 'دعاء الرزق وسعة المعيشة'), S(30, 'دعاء قضاء الدين'), S(54, 'دعاء كشف الهموم'), ['karb'],
+      S(22, 'دعاء الكرب والشدة'), ['khalas'], S(15, 'دعاء المرض'), S(23, 'دعاء طلب العافية'), ['nur'], ['hirz-sajjad'],
+      S(8, 'دعاء الاستعاذة من المكاره'), S(9, 'دعاء طلب المغفرة'), S(31, 'دعاء التوبة والاستغفار'), S(12, 'دعاء الاعتراف وطلب التوبة'),
+      S(24, 'دعاء الوالدين'), S(25, 'دعاء الأولاد والذرية'), ['tawfiq', 'دعاء التوفيق للطاعة'], S(33, 'دعاء الاستخارة'),
+      S(7, 'دعاء المهمات ودفع البلاء'), S(14, 'دعاء المظلوم'), S(41, 'دعاء طلب الستر والوقاية'), S(10, 'دعاء الالتجاء إلى الله'),
+      S(11, 'دعاء خواتيم الخير'), S(21, 'دعاء الحزن'), S(35, 'دعاء الرضا بالقضاء'), S(37, 'دعاء الشكر لله'), S(40, 'دعاء ذكر الموت'),
+      S(49, 'دعاء دفع كيد الأعداء'), S(51, 'دعاء التضرع والاستكانة'), S(53, 'دعاء التذلل لله'), S(20, 'دعاء مكارم الأخلاق'),
+    ],
+  },
+  {
+    id: 'occasions', title: 'أدعية المناسبات', tab: 'duas', headline: 'رمضان والعيدان وعرفة', line: 'وليلة الجمعة وليالي القدر', unit: ['أدعية', 'دعاءً'], items: [
+      ['kumayl'], ['simat'], S(43, 'دعاء رؤية الهلال'), S(44, 'دعاء دخول شهر رمضان'), ['abu-hamza'], ['baha'],
+      ['jawshan-kabir', 'دعاء الجوشن الكبير (ليالي القدر)'], ['mujir'], S(45, 'دعاء وداع شهر رمضان'), S(46, 'دعاء عيد الفطر'),
+      ['arafa'], ['sahifa-47', 'دعاء الإمام زين العابدين يوم عرفة'], S(48, 'دعاء عيد الأضحى ويوم الجمعة'), S(42, 'دعاء ختم القرآن'),
+    ],
+  },
+  { id: 'taqibat', title: 'تعقيبات الصلوات', tab: 'duas', headline: 'بعد الصلوات الخمس', line: 'من مصباح المتهجد', unit: ['تعقيبات', 'تعقيباً'], items: ['subh', 'zuhr', 'asr', 'maghrib', 'isha'].map(p => [`taqib-${p}`]) },
+]
+// "٣ أدعية", "١٥ دعاءً": the plural from three to ten
+const count = (n, [few, many]) => `${n} ${n >= 3 && n <= 10 ? few : many}`
+for (const g of GROUPS) {
+  const items = []
+  for (const [id, title, note] of g.items) {
+    if (!known[id]) { report.push(`${g.id}: ${id} missing`); continue }
+    items.push({ id, title: title || known[id].title, note: note ?? known[id].note })
+  }
+  if (!items.length) continue
+  const { unit, ...rest } = g
+  index.groups.push({ ...rest, items, ...(unit ? { count: count(items.length, unit) } : {}) })
+  report.push(`${g.id}: ${items.length} items`)
 }
 
 writeFileSync(`${out}/index.json`, JSON.stringify(index))
