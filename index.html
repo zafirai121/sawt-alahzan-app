@@ -53,7 +53,14 @@
           <header class="home-header">
             <!-- The way into the "اقرأ" part on the right (the book on the word's left), the account on the left -->
             <button class="read-btn" onclick="openReading()"><span>اقرأ</span><i class="ic" data-icon="book-open"></i></button>
-            <button class="avatar-btn" onclick="goProfile()" aria-label="حسابي"></button>
+            <div class="home-header-end">
+              <!-- The Android app to download, beside the account: shown on Android phones only (main.js).
+                   In the browser, not inside the installed web app, which would have no way back -->
+              <a id="android-dl" class="android-dl" href="https://zafirai121.github.io/sawt-alahzan-app/android/" target="_blank" rel="noopener" hidden>
+                <i class="ic" data-icon="download-plain"></i><span>حمّل التطبيق</span>
+              </a>
+              <button class="avatar-btn" onclick="goProfile()" aria-label="حسابي"></button>
+            </div>
           </header>
           <!-- Spotify's top bar: "all" and the categories, staying on top as the page scrolls -->
           <div id="home-bar" class="home-bar horizontal-scroller" style="display: none;"></div>

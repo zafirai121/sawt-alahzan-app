@@ -7149,6 +7149,8 @@ initAuth();
 loadData();
 autoCheckUpdate();
 countOpening();
+// The Android app's button: on Android phones only (an iPhone or a computer can't install it)
+if (webPlatform() === 'web-android') $('android-dl').hidden = false;
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
