@@ -31,9 +31,9 @@
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;800;900&display=swap" crossorigin />
-    <script type="module" crossorigin src="/sawt-alahzan-app/assets/index-C0YVcHxM.js"></script>
-    <link rel="stylesheet" crossorigin href="/sawt-alahzan-app/assets/index-CJC4nnzG.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;800;900&display=swap" crossorigin />
+    <script type="module" crossorigin src="/sawt-alahzan-app/assets/index-DarzTlcV.js"></script>
+    <link rel="stylesheet" crossorigin href="/sawt-alahzan-app/assets/index-B8Q5NdCE.css">
   </head>
   <body>
     <svg width="0" height="0" style="position: absolute;" aria-hidden="true">
@@ -54,7 +54,14 @@
           <header class="home-header">
             <!-- The way into the "اقرأ" part on the right (the book on the word's left), the account on the left -->
             <button class="read-btn" onclick="openReading()"><span>اقرأ</span><i class="ic" data-icon="book-open"></i></button>
-            <button class="avatar-btn" onclick="goProfile()" aria-label="حسابي"></button>
+            <div class="home-header-end">
+              <!-- The Android app to download, beside the account: shown on Android phones only (main.js).
+                   In the browser, not inside the installed web app, which would have no way back -->
+              <a id="android-dl" class="android-dl" href="https://zafirai121.github.io/sawt-alahzan-app/android/" target="_blank" rel="noopener" hidden>
+                <i class="ic" data-icon="download-plain"></i><span>حمّل التطبيق</span>
+              </a>
+              <button class="avatar-btn" onclick="goProfile()" aria-label="حسابي"></button>
+            </div>
           </header>
           <!-- Spotify's top bar: "all" and the categories, staying on top as the page scrolls -->
           <div id="home-bar" class="home-bar horizontal-scroller" style="display: none;"></div>
@@ -678,6 +685,6 @@
     </div>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-
+
   </body>
 </html>
