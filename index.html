@@ -3,6 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- Never inside another site's frame (a page dressed over it to trick a click): GitHub Pages
+         can't send X-Frame-Options, so the page stays hidden unless it is the whole window, and
+         a framed one takes the whole window instead (tests/frame_guard.test.mjs) -->
+    <style id="frame-guard">html{display:none!important}</style>
+    <script>
+      if (self === top) document.getElementById('frame-guard').remove();
+      else try { top.location = self.location.href; } catch (e) { /* a sandboxed frame: it stays hidden */ }
+    </script>
     <title>صوت الأحزان | أضخم مكتبة صوتيات حسينية</title>
     <meta name="description" content="تطبيق صوت الأحزان - مكتبتك الشاملة للقصائد والصوتيات الحسينية لكبار الرواديد. استمع وشارك واصنع قوائم التشغيل الخاصة بك." />
     <meta name="author" content="صوت الأحزان" />
@@ -32,7 +40,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;800;900&display=swap" crossorigin />
-    <script type="module" crossorigin src="/sawt-alahzan-app/assets/index-D1HoQ1uK.js"></script>
+    <script type="module" crossorigin src="/sawt-alahzan-app/assets/index-s96FpRcH.js"></script>
     <link rel="stylesheet" crossorigin href="/sawt-alahzan-app/assets/index-oD-PVTl_.css">
   </head>
   <body>
