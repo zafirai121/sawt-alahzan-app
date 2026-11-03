@@ -3070,7 +3070,8 @@ function openAllReciters() {
   });
 }
 
-window.openCategoryDetail = (cat) => openPage('category-view', () => renderCategory(cat));
+// (redrawn when the library changes: its ♡ and download show what was kept)
+window.openCategoryDetail = (cat) => openPage('category-view', () => renderCategory(cat), { library: true });
 
 function renderCategory(cat) {
   const list = allTracks.filter((t) => cat.values.includes(t.category));
@@ -3098,8 +3099,15 @@ function renderCategory(cat) {
   const source = { kind: 'category', id: cat.id };
   renderTrackList($('category-tracks'), list, { numbered: true, source, emptyText: 'لا توجد مقاطع في هذا التصنيف بعد' });
   $('category-play-all').onclick = () => playFromList(list, 0, { shuffleStart: isShuffle, source });
-  $('category-share-btn').style.display = list.length ? '' : 'none';
-  $('category-share-btn').onclick = () => share(`${cat.title} | صوت الأحزان`, playlistText(cat.title, list), APP_URL);
+  // ♡ keep, download, share, ⋮, as on a track's page and in the Android app; they act on
+  // the newest hundred (a category holds thousands), in the track page's size
+  const newest = list.slice(0, 100);
+  const plain = (b) => { b.classList.remove('pv-icon'); return b; };
+  $('category-actions-start').replaceChildren(...(list.length ? [
+    saveListButton(cat.title, newest), downloadButton(newest),
+    iconButton('share-nodes', 'مشاركة', () => share(`${cat.title} | صوت الأحزان`, playlistText(cat.title, list), APP_URL)),
+    iconButton('more', 'خيارات', () => openListOptions(cat.title, newest)),
+  ].map(plain) : []));
 }
 
 // ─── Shared by the reciter, radio and mix pages ───
