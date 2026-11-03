@@ -3078,23 +3078,13 @@ function renderCategory(cat) {
   $('category-detail-name').textContent = cat.title;
   $('category-detail-stats').textContent = `${formatCount(list.length)} مقطع`;
   $('category-detail-image').src = thumb(list[0]?.coverImage, 400);
-  // Its picture fades into its cover's colour, and the actions sit on it
+  // Its picture as it is, the actions on the page's own dark: no colour from its cover
+  // (that was the newest track's, and changed with each upload), as in the phone app
   const view = $('category-view');
-  view.querySelector('.hero-image').style.background = cat.color;
-  view.style.setProperty('--tint', cat.color);
-  const token = newPageToken(view);
   // The bar once the picture, and the name on it, have gone up under it
-  let deep = mixHex(cat.color, '#000000', 0.25);
-  const handler = pageScroller({
-    title: cat.title, color: () => deep, at: () => view.querySelector('.hero-image').offsetHeight - barHeight() * 1.3,
+  viewScroll['category-view'] = pageScroller({
+    title: cat.title, color: () => '#121212', at: () => view.querySelector('.hero-image').offsetHeight - barHeight() * 1.3,
     play: () => mirrorPlay($('category-play-all')), own: () => $('category-play-all'),
-  });
-  viewScroll['category-view'] = handler;
-  if (list[0]) withShades(list[0], (sh) => {
-    if (view._token !== token) return;
-    view.style.setProperty('--tint', sh.vivid);
-    deep = mixHex(sh.vivid, '#000000', 0.25);
-    handler.recolor();
   });
   const source = { kind: 'category', id: cat.id };
   renderTrackList($('category-tracks'), list, { numbered: true, source, emptyText: 'لا توجد مقاطع في هذا التصنيف بعد' });
