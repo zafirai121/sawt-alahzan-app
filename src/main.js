@@ -5,6 +5,7 @@ import occasionBg from './assets/occasion-bg.webp';
 import BUILD from './version.json';
 import { setupRead } from './read.js';
 import { readTags, readDuration, shrinkCover, fixTag, cleanText, shownTitle, guess as guessUpload, dbCategory, extFor, countWord, checkReciter, reciterSuggestions, reciterProblem, copyIn } from './uploads.js';
+import { LOGIN_GATE, TURNSTILE_SITE_KEY, TURNSTILE_TEST_KEY, gateAnswer, gateMessage } from './login.js';
 
 // Sizes that follow a card's width (cqw: the occasion, radio and mix cards):
 // older iPhones (iOS 15 and before) don't know them; there, a small helper
@@ -6652,7 +6653,55 @@ window.openAuthModal = () => {
   $('auth-modal').style.display = 'flex';
   void $('auth-modal').offsetWidth;
   $('auth-sheet').classList.add('open');
+  paintTurnstile();
 };
+
+// ─── The robot check (Cloudflare Turnstile) in the sign-in card ───────────────
+// Unseen while nothing is suspicious; its box once it must be passed (after five
+// wrong passwords, see login.js). A token works once: each try asks for a new one.
+let turnstileWidget = null;
+let turnstileToken = '';
+let turnstileShown = false;
+let mustCheck = false;
+let waitUntil = 0;
+let turnstileLoading = null;
+function loadTurnstile() {
+  if (window.turnstile) return Promise.resolve(window.turnstile);
+  turnstileLoading ??= new Promise((done, fail) => {
+    const s = document.createElement('script');
+    s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    s.async = true;
+    s.onload = () => (window.turnstile ? done(window.turnstile) : fail(new Error('turnstile')));
+    s.onerror = () => { turnstileLoading = null; fail(new Error('turnstile')); };
+    document.head.appendChild(s);
+  });
+  return turnstileLoading;
+}
+function paintTurnstile() {
+  const box = $('auth-turnstile');
+  if (!box) return;
+  loadTurnstile().then((ts) => {
+    if (turnstileWidget && turnstileShown === mustCheck) return;
+    if (turnstileWidget) ts.remove(turnstileWidget);
+    turnstileShown = mustCheck;
+    turnstileToken = '';
+    box.classList.toggle('shown', mustCheck);
+    turnstileWidget = ts.render(box, {
+      sitekey: /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? TURNSTILE_TEST_KEY : TURNSTILE_SITE_KEY,
+      language: 'ar',
+      theme: 'dark',
+      appearance: mustCheck ? 'always' : 'interaction-only',
+      callback: (token) => { turnstileToken = token; },
+      'expired-callback': () => { turnstileToken = ''; },
+      'error-callback': () => { turnstileToken = ''; },
+    });
+  }).catch(() => {});
+}
+function freshTurnstile() {
+  turnstileToken = '';
+  if (turnstileWidget) window.turnstile?.reset(turnstileWidget);
+}
+const lockEnds = (until) => new Intl.DateTimeFormat('ar', { day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' }).format(new Date(until));
 function closeAuthModal() {
   $('auth-sheet').classList.remove('open');
   setTimeout(() => { $('auth-modal').style.display = 'none'; }, 400);
@@ -6737,7 +6786,8 @@ window.forgotPassword = async () => {
   const email = $('auth-email').value.trim();
   if (!email) { showAuthMessage('اكتب بريدك الإلكتروني أولاً، ثم اضغط «نسيت كلمة المرور؟»'); $('auth-email').focus(); return; }
   setAuthLoading(true);
-  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: APP_URL });
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: APP_URL, captchaToken: turnstileToken || undefined });
+  freshTurnstile();
   setAuthLoading(false);
   if (error) showAuthMessage(authErrorText(error));
   else showAuthMessage('أرسلنا إلى بريدك رابطاً لتعيين كلمة مرور جديدة', false);
@@ -6761,12 +6811,18 @@ window.submitAuth = async () => {
   if (!email || !password) { showAuthMessage('يرجى تعبئة جميع الحقول'); return; }
   if (password.length < 6) { showAuthMessage('كلمة المرور يجب أن تكون 6 أحرف على الأقل'); return; }
   if (authMode === 'signup' && password !== $('auth-confirm').value) { showAuthMessage('كلمتا المرور غير متطابقتين'); return; }
+  if (authMode === 'login') {
+    const left = Math.ceil((waitUntil - Date.now()) / 1000);
+    if (left > 0) { showAuthMessage(`انتظر ${left} ثانية قبل المحاولة التالية`); return; }
+    if (mustCheck && !turnstileToken) { showAuthMessage('أكّد أنك لست روبوتاً، ثم اضغط «دخول»'); return; }
+  }
 
   setAuthLoading(true);
   $('auth-message').style.display = 'none';
   try {
     if (authMode === 'signup') {
-      const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name || email.split('@')[0] } } });
+      const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name || email.split('@')[0] }, captchaToken: turnstileToken || undefined } });
+      freshTurnstile();
       if (error) throw error;
       // With e-mail confirmation on, Supabase answers an existing address with a
       // user that has no identities instead of an error
@@ -6774,10 +6830,25 @@ window.submitAuth = async () => {
       if (data.session) { afterSignIn(); toast('أهلاً بك! تم إنشاء حسابك'); }
       else showAuthMessage('تم إنشاء الحساب! تفقد بريدك لتفعيله ثم سجّل الدخول.', false);
     } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      afterSignIn();
-      toast('تم تسجيل الدخول');
+      // Through the site's gate, which counts wrong passwords (login.js)
+      const res = await fetch(LOGIN_GATE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, captchaToken: turnstileToken || undefined }),
+      });
+      const answer = gateAnswer(res.status, await res.json().catch(() => ({})));
+      freshTurnstile();
+      if (answer.ok) {
+        const { error } = await supabase.auth.setSession(answer.session);
+        if (error) throw error;
+        afterSignIn();
+        toast('تم تسجيل الدخول');
+      } else {
+        const said = gateMessage(answer, lockEnds);
+        if (said.waitSeconds) waitUntil = Date.now() + said.waitSeconds * 1000;
+        if (said.mustCheck && !mustCheck) { mustCheck = true; paintTurnstile(); }
+        showAuthMessage(said.text);
+      }
     }
   } catch (err) {
     showAuthMessage(authErrorText(err));

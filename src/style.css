@@ -1976,3 +1976,7 @@ body.has-player .read-app { padding-bottom: calc(var(--nav-height) + 96px + var(
 .rq-links { display: flex; gap: 14px; margin-top: 6px; }
 .rq-links .link-btn { margin: 0; padding: 6px 0; font-size: 13px; text-decoration: none; }
 .rq-notice { margin-top: 10px; padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.3); color: var(--text-secondary); font-size: 11px; line-height: 1.5; white-space: pre-wrap; text-align: left; font-family: inherit; }
+
+/* The robot check (Turnstile) in the sign-in card: unseen unless it asks something, its box once it must be passed */
+.auth-turnstile:empty { display: none; }
+.auth-turnstile.shown { display: flex; justify-content: center; margin: 4px 0 8px; min-height: 65px; }
