@@ -1,7 +1,7 @@
 {
- "versionCode": 131,
- "versionName": "1.0.131",
- "url": "https://zafirai121.github.io/sawt-alahzan-app/android/sawt-alahzan-1.0.131.apk",
- "notes": "صفحة التصنيف (مثل «قصائد حسينية») فيها شريط أيقونات صفحة المقطع: الحفظ في مكتبتك، والتنزيل، والمشاركة، والخيارات.\nصورة صفحة التصنيف كما هي، بلا تدرج لوني يتغير مع كل مقطع جديد.\nالحفظ والتنزيل والخيارات تشمل أحدث 100 مقطع في التصنيف.",
- "size": 3797571
+ "versionCode": 132,
+ "versionName": "1.0.132",
+ "url": "https://zafirai121.github.io/sawt-alahzan-app/android/sawt-alahzan-1.0.132.apk",
+ "notes": "أُزيل زر «اقرأ» من أعلى الشاشة الرئيسية.",
+ "size": 3797575
 }
