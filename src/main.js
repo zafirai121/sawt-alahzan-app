@@ -6,6 +6,7 @@ import BUILD from './version.json';
 import { setupRead } from './read.js';
 import { readTags, readDuration, shrinkCover, fixTag, cleanText, shownTitle, guess as guessUpload, dbCategory, extFor, countWord, checkReciter, reciterSuggestions, reciterProblem, copyIn } from './uploads.js';
 import { LOGIN_GATE, TURNSTILE_SITE_KEY, TURNSTILE_TEST_KEY, gateAnswer, gateMessage } from './login.js';
+import { isStale, merged, retryDelay } from './refresh.js';
 
 // Sizes that follow a card's width (cqw: the occasion, radio and mix cards):
 // older iPhones (iOS 15 and before) don't know them; there, a small helper
@@ -203,6 +204,7 @@ let popularTracks = [];    // most listened
 let reciters = [];         // { id, dbId, name, image, count }
 let reciterByName = new Map();
 let fullyLoaded = false;
+let loadedAt = 0;          // when the library was last read from the server (refresh.js)
 let reciterRows = [];      // the reciters table as last read
 let resolveDataReady;
 const dataReady = new Promise((resolve) => { resolveDataReady = resolve; });
@@ -313,6 +315,7 @@ async function loadData() {
     return;
   }
   loadState = 'ready';
+  loadedAt = Date.now();
   dataVersion++;
   allTracks = first.rows.map(mapTrack);
   popularTracks = (popular.data || []).map(mapTrack);
@@ -345,18 +348,26 @@ async function fetchTrackPageRetrying(from) {
 let missingPages = []; // the library's pages that could not be read (asked again when the connection returns)
 let loadingRest = false;
 
-// The pages that came are kept even when another one fails; the library is
-// whole (fullyLoaded) once none is missing
-async function loadRestPages(froms) {
+// The pages that came are kept even when another one fails; those are asked
+// again soon (refresh.js retryDelay), then when the connection returns or the
+// app is come back to; the library is whole (fullyLoaded) once none is missing
+async function loadRestPages(froms, round = 1) {
   loadingRest = true;
   const got = await Promise.allSettled(froms.map(fetchTrackPageRetrying));
   loadingRest = false;
-  got.forEach((p) => { if (p.status === 'fulfilled') allTracks.push(...p.value.rows.map(mapTrack)); });
+  const came = got.flatMap((p) => (p.status === 'fulfilled' ? p.value.rows.map(mapTrack) : []));
   missingPages = froms.filter((_, i) => got[i].status === 'rejected');
   if (missingPages.length) console.warn('Could not load the whole library:', got.find((p) => p.status === 'rejected').reason);
   // A track uploaded while the pages load shifts them by one: the same track
-  // can then arrive twice (mapTrack hands back the same object)
-  allTracks = [...new Set(allTracks)];
+  // can then arrive twice; pages asked again come after the others: newest first
+  allTracks = merged(allTracks, came, false);
+  libraryRead();
+  const wait = missingPages.length ? retryDelay(round) : null;
+  if (wait) setTimeout(() => { if (missingPages.length && !loadingRest) loadRestPages(missingPages, round + 1); }, wait);
+}
+
+// The tracks have changed: the reciters, what is on screen, and what is new from those followed
+function libraryRead() {
   fullyLoaded = !missingPages.length;
   buildReciters(reciterRows);
   backfillDownloadMeta();
@@ -364,6 +375,36 @@ async function loadRestPages(froms) {
   if (fullyLoaded) announceFollowedNew();
   const atTop = document.querySelector('.main-container').scrollTop < 40;
   if (navStack.some((e) => e.type === 'page') || currentTab !== 'home' || atTop) refreshOpenViews();
+}
+
+// Back to the app after a while (a tab or the installed app left open for
+// days): the library read again, so tracks and reciters added since show; what
+// is shown stays until the new reading has come
+let refreshing = false;
+async function refreshLibrary() {
+  if (loadState !== 'ready' || loadingRest || refreshing || !isStale(loadedAt, Date.now())) return;
+  refreshing = true;
+  try {
+    const [first, popular, recRes] = await Promise.all([
+      fetchTrackPage(0),
+      supabase.from('audio_library').select(TRACK_COLUMNS).order('listen_count', { ascending: false }).limit(40),
+      supabase.from('reciters').select('id,name,image_url').limit(1000),
+    ]);
+    const froms = [];
+    for (let from = PAGE_SIZE; from < (first.count || 0); from += PAGE_SIZE) froms.push(from);
+    const got = await Promise.allSettled(froms.map(fetchTrackPageRetrying));
+    missingPages = froms.filter((_, i) => got[i].status === 'rejected');
+    const fresh = [first, ...got.filter((p) => p.status === 'fulfilled').map((p) => p.value)].flatMap((p) => p.rows.map(mapTrack));
+    loadedAt = Date.now();
+    allTracks = merged(allTracks, fresh, !missingPages.length);
+    if (popular.data?.length) popularTracks = popular.data.map(mapTrack);
+    if (recRes.data?.length) reciterRows = recRes.data;
+    libraryRead();
+  } catch (err) {
+    console.warn('Could not read the library again:', err);
+  } finally {
+    refreshing = false;
+  }
 }
 
 // No connection (or the server is unreachable): what was downloaded still plays
@@ -394,8 +435,12 @@ window.addEventListener('online', () => {
   if (loadState === 'failed') { toast('عاد الاتصال بالإنترنت'); loadData(); }
   else retryMissingPages();
 });
-// Back to the app (the server may have been down a while ago)
-document.addEventListener('visibilitychange', () => { if (!document.hidden) retryMissingPages(); });
+// Back to the app (the server may have been down a while ago; the library may be old)
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  retryMissingPages();
+  refreshLibrary();
+});
 
 function retryMissingPages() {
   if (missingPages.length && !loadingRest) loadRestPages(missingPages);
@@ -1692,8 +1737,8 @@ function renderHome() {
 
     followed: followedSection,
 
-    // Newest uploads
-    newest: () => section('مضاف حديثاً', scroller(newest, wideCard), () => openListPage('مضاف حديثاً', allTracks.slice(0, 100))),
+    // Newest uploads, as squares like the other rows (as in the Android app)
+    newest: () => section('مضاف حديثاً', scroller(newest, (t) => squareCard(t)), () => openListPage('مضاف حديثاً', allTracks.slice(0, 100))),
 
     radios: () => radiosSection(w, topReciters, returning),
 

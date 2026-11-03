@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",
-    "test": "node --test tests/uploads.test.mjs tests/login.test.mjs tests/frame_guard.test.mjs",
+    "test": "node --test tests/uploads.test.mjs tests/login.test.mjs tests/frame_guard.test.mjs tests/refresh.test.mjs",
     "test:e2e": "node tests/e2e/suite.cjs"
   },
   "devDependencies": {
