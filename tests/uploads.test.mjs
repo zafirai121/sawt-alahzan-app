@@ -2,7 +2,7 @@
 // person would (the same cases as the phone app's TrackGuessTest). npm test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fixTag, cleanTitle, guess, category, dbCategory, duration, checkReciter, reciterSuggestions, reciterProblem } from '../src/uploads.js';
+import { fixTag, cleanTitle, guess, category, dbCategory, duration, checkReciter, reciterSuggestions, reciterProblem, sameRecording, copyIn } from '../src/uploads.js';
 
 const r = (name, count = 40) => ({ name, count });
 const library = [r('باسم الكربلائي', 300), r('سيد فاقد الموسوي', 120), r('علي الدلفي', 90), r('حسين فيصل', 60), r('علي', 2)];
@@ -124,4 +124,25 @@ test('library titles shown without their reciter\'s name', async () => {
   assert.equal(shownTitle('01 - يا حسين (Official Video).mp3￼', b), 'يا حسين');
   assert.equal(shownTitle('منو_اليسند - باسم_الكربلائي', b), 'منو اليسند');
   assert.equal(shownTitle('  ', b), '');
+});
+
+test('sameRecordingWithinFiveSecondsOrThreePercent', () => {
+  assert.equal(sameRecording('11:19', '11:19'), true);
+  assert.equal(sameRecording('16:48', '16:47'), true);
+  assert.equal(sameRecording('4:00', '4:10'), false);
+  assert.equal(sameRecording('1:00:00', '1:01:30'), true);
+  assert.equal(sameRecording('0:00', '0:00'), false);
+  assert.equal(sameRecording('', '4:00'), false);
+});
+
+test('aFileAlreadyInTheLibraryIsFound', () => {
+  const waeli = [
+    { id: '11784', title: 'تعبتو ابوكم ليش ولدي موكب ائمه البقيع الحسيني 1443ه', duration: '11:19' },
+    { id: '11790', title: 'حياك', duration: '11:16' },
+    { id: '11800', title: 'صبح جيهم', duration: '7:02' },
+  ];
+  // The nearest length of theirs
+  assert.equal(copyIn('11:19', waeli)?.id, '11784');
+  assert.equal(copyIn('9:30', waeli), null);
+  assert.equal(copyIn('0:00', waeli), null);
 });

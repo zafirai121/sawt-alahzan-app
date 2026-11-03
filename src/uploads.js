@@ -522,6 +522,32 @@ export function duration(ms) {
   return h ? `${h}:${String(m).padStart(2, '0')}:${s}` : `${m}:${s}`;
 }
 
+// "4:05" or "1:02:05" in seconds (0 when unknown)
+const secondsOf = (d) => {
+  const parts = String(d ?? '').split(':');
+  const n = parts.map(Number);
+  return parts.length < 2 || n.some((x) => !Number.isInteger(x) || x < 0) ? 0 : n.reduce((s, x) => s * 60 + x, 0);
+};
+
+/** Whether two lengths are one recording: within 5 seconds, or 3% of the longer (as the website's tidying finds copies). */
+export function sameRecording(a, b) {
+  const x = secondsOf(a);
+  const y = secondsOf(b);
+  if (!x || !y) return false;
+  return Math.abs(x - y) <= Math.max(5, Math.max(x, y) * 0.03);
+}
+
+/** The track of [tracks] (one reciter's) that is likely this file uploaded already: the nearest in length, or null. */
+export function copyIn(length, tracks) {
+  const own = secondsOf(length);
+  let best = null;
+  for (const t of tracks) {
+    if (!sameRecording(length, t.duration)) continue;
+    if (!best || Math.abs(secondsOf(t.duration) - own) < Math.abs(secondsOf(best.duration) - own)) best = t;
+  }
+  return best;
+}
+
 /**
  * Everything at once, from the file's name and its tags (already through
  * fixTag): the tags first, the name when they say nothing; a reciter written

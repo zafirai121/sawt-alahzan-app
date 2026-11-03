@@ -4,7 +4,7 @@ import { dominantHsl, playerShades, mixHex, bandColors, NEUTRAL_SHADES } from '.
 import occasionBg from './assets/occasion-bg.webp';
 import BUILD from './version.json';
 import { setupRead } from './read.js';
-import { readTags, readDuration, shrinkCover, fixTag, cleanText, shownTitle, guess as guessUpload, dbCategory, extFor, countWord, checkReciter, reciterSuggestions, reciterProblem } from './uploads.js';
+import { readTags, readDuration, shrinkCover, fixTag, cleanText, shownTitle, guess as guessUpload, dbCategory, extFor, countWord, checkReciter, reciterSuggestions, reciterProblem, copyIn } from './uploads.js';
 
 // Sizes that follow a card's width (cqw: the occasion, radio and mix cards):
 // older iPhones (iOS 15 and before) don't know them; there, a small helper
@@ -4557,7 +4557,7 @@ window.openCreateSheet = () => {
 // under their account. The sent ones are in the library at once.
 const MAX_UPLOADS = 10;
 const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
-let uploads = [];      // { key, file, mime, title, reciter, category, duration, cover, coverUrl, coverFromFile, fromTags, step, progress, error, trackId }
+let uploads = [];      // { key, file, mime, title, reciter, category, duration, cover, coverUrl, coverFromFile, fromTags, step, progress, error, trackId, notCopy }
 let uploadKey = 0;
 let uploadReading = 0; // files being read, before they show
 const SENDING = ['waiting', 'uploading', 'saving'];
@@ -4583,8 +4583,18 @@ function reciterCheck(typed) {
   if (!reciterChecks.has(name)) reciterChecks.set(name, checkReciter(name, reciters, translateReciterName));
   return reciterChecks.get(name);
 }
-// What keeps a card from being sent: what it is missing, or a reciter to choose from the library
-const uploadProblem = (u) => uploadMissing(u) || reciterProblem(reciterCheck(u.reciter), u.reciter, u.newReciter);
+// The library's track this file likely is, uploaded already: the same reciter's, as long (within
+// seconds); null when none, or when they said it is another one (u.notCopy). A song uploaded under
+// another name is not a second time (the same check as the phone app's Uploads.inLibrary).
+function uploadCopy(u) {
+  if (u.notCopy || !uploadEditable(u)) return null;
+  const check = reciterCheck(u.reciter);
+  const name = check.kind === 'known' ? check.reciters[0].name : u.reciter.trim();
+  return copyIn(u.duration, tracksOf(name));
+}
+// What keeps a card from being sent: what it is missing, a reciter to choose from the library, or that it is there already
+const uploadProblem = (u) => uploadMissing(u) || reciterProblem(reciterCheck(u.reciter), u.reciter, u.newReciter)
+  || (uploadCopy(u) ? `هذا المقطع في المكتبة باسم «${uploadCopy(u).title}»` : null);
 
 window.openUploadPage = () => openPage('page-view', renderUploadPage);
 const onUploadPage = () => navStack.at(-1)?.render === renderUploadPage;
@@ -4839,7 +4849,14 @@ function paintUpload(u) {
   card.querySelectorAll('.up-cat').forEach((b) => b.classList.toggle('active', b.dataset.cat === u.category));
   const status = card.querySelector('.up-status');
   const missing = uploadMissing(u);
-  if (u.step === 'ready') status.innerHTML = missing ? `<div class="up-line-msg bad">${icon('circle-x')} ${esc(missing)}</div>` : '';
+  const copy = uploadCopy(u);
+  if (u.step === 'ready' && !missing && copy) {
+    // It seems to be in the library already: not sent until they look, or say it is another one
+    const length = copy.duration ? ` (${copy.duration})` : '';
+    status.innerHTML = `<div class="up-line-msg bad">${icon('copy')} <span style="flex: 1;">يبدو أنه في المكتبة: «${esc(copy.title)}»${esc(length)}</span><button class="link-btn up-copy-open">افتحه</button><button class="link-btn up-copy-not">ليس هو، ارفعه</button></div>`;
+    status.querySelector('.up-copy-open').onclick = () => openTrackById(copy.id);
+    status.querySelector('.up-copy-not').onclick = () => { u.notCopy = true; paintUpload(u); paintUploadBar(); };
+  } else if (u.step === 'ready') status.innerHTML = missing ? `<div class="up-line-msg bad">${icon('circle-x')} ${esc(missing)}</div>` : '';
   else if (u.step === 'waiting') status.innerHTML = `<div class="up-line-msg">${icon('clock')} في الانتظار…</div>`;
   else if (u.step === 'uploading' || u.step === 'saving') {
     status.innerHTML = `<div class="up-progress"><span style="width: ${Math.max(2, Math.round(u.progress * 100))}%"></span></div>
