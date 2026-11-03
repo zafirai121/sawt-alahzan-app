@@ -1831,8 +1831,10 @@ body.has-player .up-bar { bottom: calc(var(--nav-height) + var(--safe-bottom) + 
 .read-btn .ic { font-size: 18px; }
 .read-btn:active { transform: scale(0.94); }
 .read-dot { position: absolute; top: 1px; left: 1px; width: 11px; height: 11px; border-radius: 50%; background: #E53935; border: 2px solid var(--dark-bg); }
-/* The account's side of the bar: the Android app to download, then the account */
-.home-header-end { display: flex; align-items: center; gap: 8px; }
+/* The home screen's top: the Android app to download on the right, the account always on the left
+   (where no download is offered too) */
+.home-header { display: flex; align-items: center; gap: 8px; }
+.home-header-end { display: flex; align-items: center; gap: 8px; margin-inline-start: auto; }
 .android-dl {
   height: 38px; padding: 0 12px; border-radius: 999px; border: 1.5px solid var(--accent); background: var(--accent-soft); color: var(--accent);
   display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 800; text-decoration: none; white-space: nowrap;
