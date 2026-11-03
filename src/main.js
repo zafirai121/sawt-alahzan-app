@@ -6774,6 +6774,7 @@ function authErrorText(err) {
   if (m.includes('invalid login')) return 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
   if (m.includes('already registered') || m.includes('already been registered')) return 'هذا البريد الإلكتروني مسجل مسبقاً، سجّل الدخول بدلاً من ذلك';
   if (m.includes('not confirmed')) return 'يرجى تأكيد البريد الإلكتروني أولاً من الرسالة التي وصلتك';
+  if (m.includes('captcha')) return 'أكّد أنك لست روبوتاً، ثم حاول مجدداً';
   if (err?.status === 429 || m.includes('rate limit') || m.includes('security purposes')) return 'محاولات كثيرة، انتظر قليلاً ثم حاول مجدداً';
   if (m.includes('invalid format') || m.includes('valid email')) return 'صيغة البريد الإلكتروني غير صحيحة';
   if (m.includes('should be different')) return 'اختر كلمة مرور مختلفة عن السابقة';
