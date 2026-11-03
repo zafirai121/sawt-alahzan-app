@@ -40,8 +40,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;800;900&display=swap" crossorigin />
-    <script type="module" crossorigin src="/sawt-alahzan-app/assets/index-kMJw6kMK.js"></script>
-    <link rel="stylesheet" crossorigin href="/sawt-alahzan-app/assets/index-5AlI9yDu.css">
+    <script type="module" crossorigin src="/sawt-alahzan-app/assets/index-DVDXU6P6.js"></script>
+    <link rel="stylesheet" crossorigin href="/sawt-alahzan-app/assets/index-BkIiLrUa.css">
   </head>
   <body>
     <svg width="0" height="0" style="position: absolute;" aria-hidden="true">
@@ -60,14 +60,13 @@
         <!-- Home -->
         <div id="home-view" class="view">
           <header class="home-header">
-            <!-- The way into the "اقرأ" part on the right (the book on the word's left), the account on the left -->
-            <button class="read-btn" onclick="openReading()"><span>اقرأ</span><i class="ic" data-icon="book-open"></i></button>
+            <!-- The Android app to download on the right, where "اقرأ" was (the owner's choice): shown on
+                 Android phones only (main.js), in the browser, not inside the installed web app, which
+                 would have no way back. The account on the left -->
+            <a id="android-dl" class="android-dl" href="https://zafirai121.github.io/sawt-alahzan-app/android/" target="_blank" rel="noopener" hidden>
+              <i class="ic" data-icon="download-plain"></i><span>حمّل التطبيق</span>
+            </a>
             <div class="home-header-end">
-              <!-- The Android app to download, beside the account: shown on Android phones only (main.js).
-                   In the browser, not inside the installed web app, which would have no way back -->
-              <a id="android-dl" class="android-dl" href="https://zafirai121.github.io/sawt-alahzan-app/android/" target="_blank" rel="noopener" hidden>
-                <i class="ic" data-icon="download-plain"></i><span>حمّل التطبيق</span>
-              </a>
               <button class="avatar-btn" onclick="goProfile()" aria-label="حسابي"></button>
             </div>
           </header>
