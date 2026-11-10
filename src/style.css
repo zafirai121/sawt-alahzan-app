@@ -1608,23 +1608,12 @@ body.has-player .up-bar { bottom: calc(var(--nav-height) + var(--safe-bottom) + 
 }
 
 /* ─── The home screen's playlists and albums ─── */
-/* A playlist, as YouTube Music's mixes: the cover across the card, a band of its colours
-   down the left side and across the bottom with thin light stripes, the name large and dark on it */
+/* A playlist (as the phone app's): four of its covers in one square, its corners a little
+   rounder than the other cards'; under it its name in bold and its reciters on one line */
 #home-view .horizontal-scroller > .square-card.pl-square { width: 50vw; max-width: 210px; }
-.pl-cover { container-type: inline-size; border-radius: 10px; overflow: hidden; }
-.square-card > .pl-cover { box-shadow: 0 8px 20px rgba(0,0,0,0.45); }
-.pl-band {
-  position: absolute; inset: 0; clip-path: polygon(0 0, 22% 0, 22% 64%, 100% 64%, 100% 100%, 0 100%);
-  background:
-    repeating-linear-gradient(to right, transparent 0 calc(3.5% - 0.5px), rgba(255,255,255,0.14) calc(3.5% - 0.5px) calc(3.5% + 0.5px), transparent calc(3.5% + 0.5px) 7%),
-    linear-gradient(to right, var(--band-left, #5e5e5ee0), var(--band-right, #8c8c8ce0));
-}
-.pl-cover .mix-logo { top: 4.5cqw; left: 4.5cqw; width: 13cqw; height: 13cqw; }
-.pl-title {
-  position: absolute; inset-inline: 5cqw; bottom: 4.5cqw; color: var(--band-ink, #111); font-weight: 700; line-height: 1.12;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; transition: color 0.6s ease;
-}
-.pl-name { font-size: 15px; font-weight: 400; margin-bottom: 2px; }
+.pl-square > .art { border-radius: 8px; box-shadow: 0 6px 16px rgba(0,0,0,0.4); }
+.pl-name { font-size: 15px; margin-bottom: 2px; }
+.pl-reciters { font-size: 13px; -webkit-line-clamp: 1; }
 .album-meta { -webkit-line-clamp: 1; }
 
 /* ─── The home screen's last card: what the listeners think of the app ─── */

@@ -1,6 +1,6 @@
 import { supabase, isPasswordRecovery } from './supabaseClient.js';
 import { icon, iconSvg, setIcon, startIcons } from './icons.js';
-import { dominantHsl, playerShades, mixHex, bandColors, NEUTRAL_SHADES } from './color.js';
+import { dominantHsl, playerShades, mixHex, NEUTRAL_SHADES } from './color.js';
 import occasionBg from './assets/occasion-bg.webp';
 import BUILD from './version.json';
 import { setupRead } from './read.js';
@@ -2344,28 +2344,15 @@ function withReciters(tracks) {
 // The pictures of the gold mark (public/cards)
 const CARDS = `${import.meta.env.BASE_URL}cards/`;
 
-// A playlist's card, as YouTube Music's mixes: its first cover across the card, a
-// band of the cover's colours down its left side and across its bottom, thin light
-// stripes on it, the playlist's name large and dark on the band and the app's mark
-// in the corner; under it the name and who is in it
+// A playlist's card (as the phone app's): four of its covers in one square, its most
+// listened tracks' (one while it has fewer than four), as the library shows their own;
+// under it the name and who is in it
 function playlistCard(list) {
-  const first = list.tracks.find((t) => t.coverImage) || list.tracks[0];
   const card = document.createElement('div');
   card.className = 'square-card pl-square';
-  const size = list.title.length <= 18 ? 12 : list.title.length <= 28 ? 10 : 8.5;
-  card.innerHTML = `
-    <div class="art pl-cover"><img src="${esc(thumb(first.coverImage, 240))}" alt="" loading="lazy" />
-      <span class="pl-band"></span>${sLogo('mix-logo')}<span class="pl-title" style="font-size:${size}cqw">${esc(list.title)}</span></div>
+  card.innerHTML = `${artHtml({ covers: list.tracks.map((t) => t.coverImage) }, { width: 240 })}
     <div class="square-title pl-name">${esc(list.title)}</div>
-    <div class="square-subtitle">${esc(withReciters(list.tracks))}</div>`;
-  const cover = card.querySelector('.pl-cover');
-  withShades(first, (sh) => {
-    const [left, right, ink] = bandColors(sh.vivid);
-    // Their cover faint under them (an alpha of 0.88)
-    cover.style.setProperty('--band-left', `${left}e0`);
-    cover.style.setProperty('--band-right', `${right}e0`);
-    cover.style.setProperty('--band-ink', ink);
-  });
+    <div class="square-subtitle pl-reciters">${esc(withReciters(list.tracks))}</div>`;
   return clickable(card, () => openListPage(list.title, list.tracks));
 }
 

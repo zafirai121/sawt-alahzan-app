@@ -92,25 +92,6 @@ export function playerShades([h, s, l, depth = 0.5]) {
 // quiet dark grey, which the cover's colour then fades in over
 export const NEUTRAL_SHADES = playerShades([0, 0, 0.3, 0.5]);
 
-// h in degrees, s and v 0 to 1 → "#rrggbb"
-function hsvHex(h, s, v) {
-  const f = (n) => {
-    const k = (n + h / 60) % 6;
-    return Math.round((v - v * s * Math.max(0, Math.min(k, 4 - k, 1))) * 255).toString(16).padStart(2, '0');
-  };
-  return `#${f(5)}${f(3)}${f(1)}`;
-}
-
-// A playlist card's band (from its left to its right) and its name's colour,
-// from the cover's colour ("#rrggbb"); greys for a grey one (as the phone app's)
-export function bandColors(hex) {
-  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
-  const max = Math.max(r, g, b), d = max - Math.min(r, g, b);
-  if (!max || d / max < 0.15) return ['#5e5e5e', '#8c8c8c', '#111111'];
-  const h = 60 * (max === r ? ((g - b) / d + 6) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4);
-  return [hsvHex((h + 330) % 360, 0.62, 0.78), hsvHex((h + 15) % 360, 0.6, 0.92), hsvHex(h, 0.7, 0.16)];
-}
-
 // a mixed into b by t (0 → a, 1 → b), both "#rrggbb"
 export function mixHex(a, b, t) {
   const pa = [1, 3, 5].map((i) => parseInt(a.slice(i, i + 2), 16));
