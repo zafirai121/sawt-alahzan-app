@@ -7,6 +7,7 @@ import { setupRead } from './read.js';
 import { readTags, readDuration, shrinkCover, fixTag, cleanText, shownTitle, guess as guessUpload, dbCategory, extFor, countWord, checkReciter, reciterSuggestions, reciterProblem, copyIn } from './uploads.js';
 import { LOGIN_GATE, TURNSTILE_SITE_KEY, TURNSTILE_TEST_KEY, gateAnswer, gateMessage } from './login.js';
 import { isStale, merged, retryDelay } from './refresh.js';
+import { MAX_ATTEMPTS, STALL_MS, reconnectDelay, shouldRetry } from './audio_recovery.js';
 
 // Sizes that follow a card's width (cqw: the occasion, radio and mix cards):
 // older iPhones (iOS 15 and before) don't know them; there, a small helper
@@ -5720,6 +5721,32 @@ let hls = null;
 let wantsToPlay = false;   // false for a track restored paused at startup
 let failedInARow = 0;
 
+// A track whose connection drops before its end (audio_recovery.js): where it
+// was, whether it must be asked for again, and the tries so far. Asking again
+// is the same track: its listen is not counted again, nothing is added to the
+// history, and it is not skipped for the next one
+const rec = {
+  pos: 0,            // seconds reached (kept while the file is read again)
+  resumeAt: null,    // where to go back to once it is read again
+  started: false,    // it played at all (a file that never could is skipped, as before)
+  broken: false,     // stopped by the connection: play and seek read the file again
+  interrupted: false, // it stopped while playing (not paused by the listener): goes on by itself
+  attempts: 0,
+  timer: 0,
+  stall: 0,
+  lastData: 0,
+};
+function clearRecoveryTimers() {
+  clearTimeout(rec.timer);
+  clearTimeout(rec.stall);
+  rec.timer = 0;
+  rec.stall = 0;
+}
+function resetRecovery() {
+  clearRecoveryTimers();
+  Object.assign(rec, { pos: 0, resumeAt: null, started: false, broken: false, interrupted: false, attempts: 0 });
+}
+
 // How fast it plays (1 = as recorded), kept for every track; a source's load
 // sets playbackRate to defaultPlaybackRate, so both
 const SPEEDS = [0.75, 1, 1.25, 1.5, 2];
@@ -5792,6 +5819,7 @@ async function playTrack(track, { autoplay = true, startAt = 0 } = {}) {
   currentTrack = track;
   countedListen = null;
   wantsToPlay = autoplay;
+  resetRecovery();
   await loadSource(track.audioUrl);
   if (currentTrack !== track) return; // another track was chosen meanwhile
   if (startAt) audio.addEventListener('loadedmetadata', () => { if (currentTrack === track) audio.currentTime = startAt; }, { once: true });
@@ -5834,9 +5862,16 @@ window.togglePlay = (event) => {
   event?.stopPropagation?.();
   if (!currentTrack) return;
   if (audio.paused) {
-    if (!audio.currentSrc || audio.error) playTrack(currentTrack); // (re)load a file that failed
+    // Stopped by the connection part way: the same file again, from where it was
+    if (rec.broken || (audio.error && rec.started)) { rec.attempts = 0; reloadCurrent(true); }
+    else if (!audio.currentSrc || audio.error) playTrack(currentTrack); // (re)load a file that failed
     else audio.play().catch(() => {});
-  } else audio.pause();
+  } else {
+    rec.interrupted = false; // paused by the listener: it waits for them
+    clearTimeout(rec.timer);
+    rec.timer = 0;
+    audio.pause();
+  }
 };
 const togglePlay = window.togglePlay;
 
@@ -5938,6 +5973,12 @@ audio.addEventListener('play', () => { wantsToPlay = true; paintPlayButtons(); }
 audio.addEventListener('pause', () => { paintPlayButtons(); saveLastPosition(); });
 audio.addEventListener('playing', () => {
   failedInARow = 0;
+  // Playing again: the connection is fine
+  rec.started = true;
+  rec.broken = false;
+  rec.interrupted = false;
+  rec.attempts = 0;
+  clearRecoveryTimers();
   // One listen per play (same counter as the website and the phone app)
   if (currentTrack && countedListen !== currentTrack.id) {
     countedListen = currentTrack.id;
@@ -5951,6 +5992,11 @@ audio.addEventListener('playing', () => {
 // a few in a row at most so a dead connection doesn't run through the queue
 audio.addEventListener('error', () => {
   if (!currentTrack || !audio.error || !wantsToPlay) return; // a restored track reports when played
+  // The connection dropped once the file had begun to come (a network error), or
+  // part way through: the same track again from where it was, not the next one
+  // (see "A track whose connection drops"). One that couldn't be had at all
+  // (missing, or offline and not downloaded) is skipped as before
+  if (shouldRetry(audio.error.code, rec.started)) { recoverAudio(); return; }
   if (failedInARow < 3 && playNext(true)) {
     failedInARow++;
     toast('تعذر تشغيل المقطع، انتقلنا إلى التالي');
@@ -5960,6 +6006,89 @@ audio.addEventListener('error', () => {
     toast(navigator.onLine ? 'تعذر تشغيل هذا المقطع' : 'لا يوجد اتصال، وهذا المقطع غير منزّل');
   }
 });
+
+// ─── A track whose connection drops ─────────────────────────────────────────
+// The same file asked for again (a new connection), back where it was
+async function reloadCurrent(play) {
+  const track = currentTrack;
+  if (!track) return;
+  clearRecoveryTimers();
+  rec.broken = false;
+  rec.resumeAt = rec.pos;
+  await loadSource(track.audioUrl);
+  if (currentTrack !== track) return; // another track was chosen meanwhile
+  if (play) audio.play().catch((err) => { if (err.name !== 'AbortError') console.warn('play failed:', err); });
+}
+
+// Stopped by the connection: tried again after a growing wait while it was
+// meant to be playing; paused by the listener, it is read again when they press play
+function recoverAudio() {
+  clearRecoveryTimers();
+  rec.broken = true;
+  if (audio.paused && !rec.interrupted) return;
+  rec.interrupted = true;
+  if (rec.attempts >= MAX_ATTEMPTS) {
+    audio.pause(); // the play button again: pressing it tries once more
+    toast(navigator.onLine === false ? 'انقطع الاتصال، اضغط تشغيل للمتابعة حين يعود' : 'تعذر متابعة المقطع، اضغط تشغيل للمحاولة مجدداً');
+    return;
+  }
+  rec.timer = setTimeout(() => {
+    rec.timer = 0;
+    if (navigator.onLine !== false) reloadCurrent(true); // offline: when it is back ('online' below)
+  }, reconnectDelay(rec.attempts++));
+}
+
+// Where it is (not while the file is read again, when the element says 0)
+const keepPosition = () => {
+  if (rec.resumeAt == null && !audio.seeking && audio.readyState > 0) rec.pos = audio.currentTime;
+};
+audio.addEventListener('timeupdate', keepPosition);
+audio.addEventListener('seeked', keepPosition);
+// Moved elsewhere in it (from any control): that is where it is, even while its data is on the way
+audio.addEventListener('seeking', () => { if (rec.resumeAt == null) rec.pos = audio.currentTime; });
+audio.addEventListener('loadedmetadata', () => {
+  if (rec.resumeAt == null) return;
+  const at = rec.resumeAt;
+  rec.resumeAt = null;
+  if (at > 0 && !(audio.duration && at >= audio.duration)) audio.currentTime = at;
+});
+audio.addEventListener('progress', () => { rec.lastData = Date.now(); });
+
+// Waiting for data that doesn't come, without an error (some browsers wait for
+// good on a connection that is gone): a track that was playing stands still and
+// no data at all comes in for a while. A slow connection that still brings some is left to go on
+function watchStall() {
+  if (!wantsToPlay || !rec.started || rec.stall || rec.broken || audio.paused) return;
+  const at = audio.currentTime;
+  const check = () => {
+    rec.stall = 0;
+    if (audio.paused || Math.abs(audio.currentTime - at) >= 0.5) return;
+    if (Date.now() - rec.lastData < STALL_MS) { rec.stall = setTimeout(check, STALL_MS); return; }
+    recoverAudio();
+  };
+  rec.stall = setTimeout(check, STALL_MS);
+}
+audio.addEventListener('waiting', watchStall);
+audio.addEventListener('stalled', watchStall);
+
+// Back online: what stopped for the connection while playing goes on at once
+window.addEventListener('online', () => {
+  if (!currentTrack || !rec.broken || !rec.interrupted) return;
+  rec.attempts = 0;
+  reloadCurrent(true);
+});
+
+// Moving in the track (the progress bar, the lock screen): after a dropped
+// connection the file is read again from there
+function seekAudio(t) {
+  rec.pos = t;
+  if (rec.broken || (audio.error && rec.started)) {
+    rec.broken = true;
+    if (!audio.paused || rec.interrupted) { rec.attempts = 0; reloadCurrent(true); }
+    return;
+  }
+  audio.currentTime = t;
+}
 
 let lastSaved = 0;
 audio.addEventListener('timeupdate', () => {
@@ -5976,7 +6105,8 @@ let savedQueueKey = '';
 function saveLastPosition() {
   if (!currentTrack) return;
   lastSaved = Date.now();
-  const t = Math.floor(audio.currentTime || 0);
+  // While the file is read again after a dropped connection, the element says 0: where it was
+  const t = Math.floor(rec.resumeAt ?? (audio.currentTime || 0));
   store.set(own('sawt_last'), { id: currentTrack.id, t });
   const from = Math.max(0, queueIndex - 100);
   const ids = queue.slice(from, from + MAX_SAVED_QUEUE).map((x) => x.id);
@@ -5995,6 +6125,7 @@ function saveLastPosition() {
 // Nothing playing and nothing queued, the mini player gone (another account's listening was)
 function clearPlayer() {
   wantsToPlay = false;
+  resetRecovery();
   audio.pause();
   loadToken++;
   if (hls) { hls.destroy(); hls = null; }
@@ -6075,7 +6206,7 @@ progress.addEventListener('input', (e) => {
 });
 progress.addEventListener('change', (e) => {
   isDragging = false;
-  if (audio.duration && isFinite(audio.duration)) audio.currentTime = (e.target.value / 100) * audio.duration;
+  if (audio.duration && isFinite(audio.duration)) seekAudio((e.target.value / 100) * audio.duration);
 });
 
 function updateNowPlaying() {
@@ -6315,13 +6446,14 @@ $('fp-like-btn').onclick = () => { if (currentTrack) toggleLike(currentTrack); }
 if ('mediaSession' in navigator) {
   const ms = navigator.mediaSession;
   const set = (action, fn) => { try { ms.setActionHandler(action, fn); } catch { /* unsupported */ } };
-  set('play', () => audio.play());
-  set('pause', () => audio.pause());
+  // Play and pause as the app's own button (it reads a dropped file again)
+  set('play', () => { if (audio.paused) togglePlay(); });
+  set('pause', () => { if (!audio.paused) togglePlay(); });
   set('previoustrack', () => playPrev());
   set('nexttrack', () => playNext());
-  set('seekbackward', (d) => { audio.currentTime = Math.max(0, audio.currentTime - (d.seekOffset || 10)); });
-  set('seekforward', (d) => { audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + (d.seekOffset || 10)); });
-  set('seekto', (d) => { audio.currentTime = d.seekTime; });
+  set('seekbackward', (d) => { seekAudio(Math.max(0, audio.currentTime - (d.seekOffset || 10))); });
+  set('seekforward', (d) => { seekAudio(Math.min(audio.duration || 0, audio.currentTime + (d.seekOffset || 10))); });
+  set('seekto', (d) => { seekAudio(d.seekTime); });
 }
 
 // Full player and lyrics
