@@ -3,6 +3,8 @@
 // and category guessed from them the way a person would. The same rules as
 // the phone app's TrackGuess (and its tests: tests/uploads.test.mjs).
 
+import { countOf, TRACKS } from './counts.js';
+
 const normalize = (s) => String(s || '').toLowerCase()
   .replace(/[ً-ْـ]/g, '')
   .replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/ؤ/g, 'و').replace(/ئ/g, 'ي');
@@ -240,6 +242,13 @@ const HANDLE = /@[\w.]+/g;
 const JUNK_IN_BRACKETS = /[[(【{][^\])】}]*(official|video|audio|lyric|hd|4k|mp3|kbps|clip|حصري|فيديو|كليب|اوديو|أوديو|نسخة|جودة|تصميم)[^\])】}]*[\])】}]/gi;
 const JUNK_WORDS = /\b(\d{2,3}\s?kbps|\d{3}k|official\s+(video|audio)|lyrics?\s+video|hq|hd)\b/gi;
 const TRACK_NUMBER = /^\s*(track\s*)?\d{1,2}\s*[-._)]+\s*/i;
+// The technical numbering some library titles carry (decision D3/W11, the same
+// rules as the website's src/utils/titles.ts): the same index twice
+// ("1243. 1243. "), a longer index with a full stop ("784. "), a zero-padded one
+// ("008 - "). A number that is part of the name ("313 - يا مهدي") stays
+const REPEATED_INDEX = /^\s*([0-9٠-٩]{1,5})\s*[.\-–—_)]\s*\1\s*[.\-–—_)]\s*/;
+const DOTTED_INDEX = /^\s*[0-9٠-٩]{3,5}\.\s+/;
+const PADDED_INDEX = /^\s*[0٠][0-9٠-٩]{2,4}\s*[-–—_.)]\s*/;
 const EDGES = ' -–—_|.·:،,';
 const trimEdges = (s) => {
   let a = 0;
@@ -253,7 +262,7 @@ const trimEdges = (s) => {
 export function cleanTitle(s) {
   let t = String(s || '').replace(AUDIO_EXT, '').replace(/_/g, ' ');
   t = t.replace(JUNK_IN_BRACKETS, ' ').replace(SITE, ' ').replace(HANDLE, ' ').replace(JUNK_WORDS, ' ');
-  t = t.replace(TRACK_NUMBER, '');
+  t = t.replace(REPEATED_INDEX, '').replace(TRACK_NUMBER, '').replace(DOTTED_INDEX, '').replace(PADDED_INDEX, '');
   t = t.replace(/[[(]\s*[\])]/g, ' ').replace(/\s+/g, ' ');
   return trimEdges(t);
 }
@@ -498,7 +507,7 @@ const CATEGORY_WORDS = [
   ['muwalid', ['مولد', 'ميلاد', 'مواليد', 'مولود', 'افراح', 'عيد', 'تهنئه', 'ولاده', 'الغدير', 'مبارك', 'مبروك']],
   ['nasheed', ['نشيد', 'انشوده', 'اناشيد', 'nasheed', 'anasheed']],
   ['naei', ['نعي']],
-  ['variety', ['محاضره', 'محاضرات', 'خطبه', 'lecture']],
+  ['lectures', ['محاضره', 'محاضرات', 'خطبه', 'lecture']],
 ];
 const PREFIXES = new Set(['و', 'ف', 'ب', 'ل', 'وال', 'فال', 'بال', 'لل']);
 
@@ -613,4 +622,6 @@ export function extFor(fileName, mime) {
 }
 
 /** "مقطع واحد"، "مقطعين"، "3 مقاطع"، "11 مقطعاً" */
-export const countWord = (n) => (n === 1 ? 'مقطع واحد' : n === 2 ? 'مقطعين' : n <= 10 ? `${n} مقاطع` : `${n} مقطعاً`);
+// After a verbal noun ("جارٍ رفع مقطعين", "تم تنزيل 12 مقطعاً"): the dual as its object
+// takes; otherwise as the app counts everything (src/counts.js)
+export const countWord = (n) => countOf(n, { ...TRACKS, two: 'مقطعين' });

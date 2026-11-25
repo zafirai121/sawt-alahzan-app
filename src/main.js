@@ -7,6 +7,8 @@ import { setupRead } from './read.js';
 import { readTags, readDuration, shrinkCover, fixTag, cleanText, shownTitle, guess as guessUpload, dbCategory, extFor, countWord, checkReciter, reciterSuggestions, reciterProblem, copyIn } from './uploads.js';
 import { LOGIN_GATE, TURNSTILE_SITE_KEY, TURNSTILE_TEST_KEY, gateAnswer, gateMessage } from './login.js';
 import { isStale, merged, retryDelay } from './refresh.js';
+import { clearAction, rememberAction, takeAction } from './pending_auth.js';
+import { countOf, listensCount, RECITERS, tracksCount } from './counts.js';
 import { MAX_ATTEMPTS, STALL_MS, reconnectDelay, shouldRetry } from './audio_recovery.js';
 
 // Sizes that follow a card's width (cqw: the occasion, radio and mix cards):
@@ -35,10 +37,11 @@ const CATEGORIES = [
   { id: 'dua', title: 'أدعية ومناجاة', color: '#1E8C45', values: ['dua', 'أدعية ومناجاة', 'adhkar'] },
   { id: 'muwalid', title: 'مواليد', color: '#1E3264', values: ['muwalid', 'مواليد'] },
   { id: 'naei', title: 'نعي', color: '#AF2896', values: ['naei', 'نعي'] },
-  { id: 'quran', title: 'قرآن كريم', color: '#006450', values: ['quran', 'قرآن'] },
+  { id: 'quran', title: 'القرآن الكريم', color: '#006450', values: ['quran', 'قرآن'] },
   { id: 'ziyarat', title: 'زيارات', color: '#8C1932', values: ['ziyarat', 'زيارات'] },
   { id: 'nasheed', title: 'أناشيد', color: '#E13300', values: ['أناشيد', 'nasheed', 'anasheed'] },
-  { id: 'variety', title: 'منوعات', color: '#E8115B', values: ['منوعات', 'variety', 'lectures', 'محاضرات'] },
+  { id: 'lectures', title: 'محاضرات', color: '#477D95', values: ['lectures', 'محاضرات'] },
+  { id: 'variety', title: 'منوعات', color: '#E8115B', values: ['منوعات', 'variety'] },
 ];
 
 // English reciter names found in older uploads
@@ -492,12 +495,12 @@ function tracksOf(name) {
 const reciterOf = (track) => reciterByName.get(track.reciterName);
 const categoryOf = (track) => CATEGORIES.find((c) => c.values.includes(track.category));
 
-// The categories to browse: those with a few tracks at least, so none opens
-// (nearly) empty; all of them until the library is in
+// The categories offered for browsing: those with tracks (all of them until the
+// library is read). An empty one comes back by itself once it has tracks; the
+// pickers for sending and editing a track still list every category
 function browsableCategories() {
   if (!allTracks.length) return CATEGORIES;
-  const least = fullyLoaded ? 3 : 1;
-  return CATEGORIES.filter((c) => allTracks.reduce((n, t) => n + (c.values.includes(t.category) ? 1 : 0), 0) >= least);
+  return CATEGORIES.filter((c) => allTracks.some((t) => c.values.includes(t.category)));
 }
 
 // ═══ Library state (likes, downloads, playlists, follows, history) ═══════════
@@ -916,11 +919,11 @@ async function downloadAll(list) {
   if (!('caches' in window)) { toast('المتصفح لا يدعم التنزيل'); return; }
   const missing = list.filter((t) => !lib.downloads.has(t.id) && t.audioUrl);
   if (!missing.length) { toast('كل المقاطع منزّلة'); return; }
-  toast(`جارٍ تنزيل ${formatCount(missing.length)} مقطع...`);
+  toast(`جارٍ تنزيل ${countWord(missing.length)}...`);
   let done = 0;
   for (const t of missing) if (await saveOffline(t, { quiet: true })) done++;
   libraryChanged();
-  toast(done ? `تم تنزيل ${formatCount(done)} مقطع` : 'تعذر التنزيل، تحقق من اتصالك');
+  toast(done ? `تم تنزيل ${countWord(done)}` : 'تعذر التنزيل، تحقق من اتصالك');
 }
 
 // The file, its covers and its details into the offline cache; `quiet` leaves
@@ -1035,12 +1038,12 @@ function recentEntry(r) {
       return tracksOf(r.id).length ? { key: `r:${r.id}`, title: r.id, subtitle: 'رادود', art: { cover: reciterPhoto(r.id), round: true }, open: () => openArtistDetail(r.id), more: () => openReciterOptions(r.id) } : null;
     case 'playlist': {
       const pl = lib.playlists.find((p) => p.id === r.id);
-      return pl && { key: `p:${pl.id}`, title: pl.name, subtitle: `قائمة تشغيل • ${formatCount(pl.tracks.length)} مقطع`, art: { covers: playlistTracks(pl).map((t) => t.coverImage) }, open: () => openPlaylistPage(pl) };
+      return pl && { key: `p:${pl.id}`, title: pl.name, subtitle: `قائمة تشغيل • ${tracksCount(pl.tracks.length)}`, art: { covers: playlistTracks(pl).map((t) => t.coverImage) }, open: () => openPlaylistPage(pl) };
     }
     case 'likes':
-      return { key: 'likes', title: 'المقاطع المفضلة', subtitle: `قائمة تشغيل • ${formatCount(likesCount())} مقطع`, art: { likes: true }, open: () => openLikesPage() };
+      return { key: 'likes', title: 'المفضلة', subtitle: `قائمة تشغيل • ${tracksCount(likesCount())}`, art: { likes: true }, open: () => openLikesPage() };
     case 'downloads':
-      return { key: 'downloads', title: 'التنزيلات', subtitle: `${formatCount(lib.downloads.size)} مقطع على جهازك`, art: { downloads: true }, open: () => openDownloadsPage() };
+      return { key: 'downloads', title: 'التنزيلات', subtitle: `${tracksCount(lib.downloads.size)} على جهازك`, art: { downloads: true }, open: () => openDownloadsPage() };
     case 'radio': {
       const t = trackById.get(r.id);
       return t && { key: `radio:${t.id}`, title: `${t.title} الراديو`, subtitle: `راديو • ${t.reciterName}`, art: { cover: t.coverImage, radio: true }, open: () => openRadioPage(t) };
@@ -1651,7 +1654,7 @@ function reciterCard(r) {
   card.innerHTML = `
     <img src="${esc(thumb(r.image, 190))}" alt="" class="square-cover round" loading="lazy" />
     <div class="square-title" style="text-align: center;">${esc(r.name)}</div>
-    <div class="square-subtitle" style="text-align: center;">${formatCount(r.count)} مقطع</div>`;
+    <div class="square-subtitle" style="text-align: center;">${tracksCount(r.count)}</div>`;
   return clickable(card, () => openArtistDetail(r.name));
 }
 
@@ -2236,7 +2239,7 @@ const THEMES = [
   ['زيارات', ['ziyarat']],
   ['شهر رمضان', ['dua', 'quran'], ['رمضان', 'الافتتاح', 'السحر', 'أبو حمزة', 'الجوشن', 'القدر']],
   ['أناشيد', ['nasheed']],
-  ['قرآن كريم', ['quran']],
+  ['القرآن الكريم', ['quran']],
   ['الرسول الأعظم (ص)', ['muwalid', 'naei', 'nasheed', 'hussainiya'], ['النبي', 'الرسول', 'المصطفى', 'محمد']],
   ['الإمام الرضا (ع)', ['hussainiya', 'naei', 'muwalid', 'ziyarat'], ['الرضا', 'غريب طوس']],
   ['الإمام الكاظم (ع)', ['hussainiya', 'naei', 'muwalid'], ['الكاظم', 'موسى بن جعفر']],
@@ -2365,7 +2368,7 @@ function myPlaylistCard(pl) {
   card.className = 'square-card';
   card.innerHTML = `${artHtml({ covers: tracks.map((t) => t.coverImage) }, { width: 240 })}
     <div class="square-title">${esc(pl.name)}</div>
-    <div class="square-subtitle">${formatCount(fullyLoaded ? tracks.length : pl.tracks.length)} مقطع</div>`;
+    <div class="square-subtitle">${tracksCount(fullyLoaded ? tracks.length : pl.tracks.length)}</div>`;
   return clickable(card, () => openPlaylistPage(pl));
 }
 
@@ -2508,7 +2511,7 @@ function renderOccasionPage(title) {
       ${names.length ? `<div class="muted pv-line">مع ${esc(withMore(names))}</div>` : ''}
       <div class="made-for">${sLogo()} مختارة لهذه المناسبة</div>
       ${about ? `<p class="pv-about"><b>حول هذه المناسبة</b> ${esc(about)}</p>` : ''}
-      ${tracks.length ? `<div class="muted pv-line">${totalDuration(tracks)} • ${formatCount(tracks.length)} مقطع</div>` : ''}
+      ${tracks.length ? `<div class="muted pv-line">${totalDuration(tracks)} • ${tracksCount(tracks.length)}</div>` : ''}
     </div>
     <div class="pv-actions-slot"></div>
     <div class="track-list pv-list"></div>`;
@@ -2578,7 +2581,7 @@ function announceFollowedNew() {
   if (!fresh.length) return;
   const reciters = [...new Set(fresh.map((t) => t.reciterName))];
   const n = fresh.length;
-  const count = n === 1 ? 'مقطع جديد' : n === 2 ? 'مقطعان جديدان' : n <= 10 ? `${n} مقاطع جديدة` : `${n} مقطعًا جديدًا`;
+  const count = countOf(n, { one: 'مقطع جديد', two: 'مقطعان جديدان', few: 'مقاطع جديدة', many: 'مقطعاً جديداً', other: 'مقطع جديد' });
   toast(reciters.length === 1 ? `${count} من ${reciters[0]}` : `${count} ممن تتابعهم`);
 }
 
@@ -2797,7 +2800,7 @@ function columnsScroller(list, source = null) {
       item.className = 'mini-row';
       item.innerHTML = `
         <img src="${esc(thumb(t.coverImage, 48))}" alt="" loading="lazy" />
-        <div class="mini-row-text"><div class="ellipsis">${esc(t.title)}</div><div class="ellipsis muted">${esc(t.reciterName)}${t.listens ? ` • ${formatCount(t.listens)} استماع` : ''}</div></div>
+        <div class="mini-row-text"><div class="ellipsis">${esc(t.title)}</div><div class="ellipsis muted">${esc(t.reciterName)}${t.listens ? ` • ${listensCount(t.listens)}` : ''}</div></div>
         <button class="icon-btn row-more" aria-label="خيارات">${icon('more')}</button>`;
       clickable(item, () => playFromList(list, c * 5 + i, { source }));
       item.querySelector('.row-more').onclick = (e) => { e.stopPropagation(); openTrackOptions(t); };
@@ -2854,7 +2857,7 @@ function addAllToQueue(list) {
   if (!list.length) return;
   if (!currentTrack) { playFromList(list, 0); return; }
   queue.splice(queueIndex + 1, 0, ...list);
-  toast(`أُضيف ${formatCount(list.length)} مقطع إلى قائمة الانتظار`);
+  toast(`أُضيف ${tracksCount(list.length)} إلى قائمة الانتظار`);
   updateQueueUI();
 }
 
@@ -2881,7 +2884,7 @@ function renderSectionPage(title, list, source) {
       ${reciter
         ? `<div class="td-artist-row sl-whose" role="button" tabindex="0"><img src="${esc(thumb(reciter.image || cover?.coverImage, 32))}" alt="" /><div class="ellipsis">${esc(reciter.name)}</div></div>`
         : `<div class="td-artist-row sl-whose sl-app">${sLogo()}<div>صوت الأحزان</div></div>`}
-      <div class="muted td-meta">${formatCount(list.length)} مقطع • ${totalDuration(list)}</div>
+      <div class="muted td-meta">${tracksCount(list.length)} • ${totalDuration(list)}</div>
     </div>
     <div class="pv-actions-slot"></div>
     ${list.length > 12 ? `<div class="sl-search"><div class="search-input-container">
@@ -2962,7 +2965,7 @@ function openListOptions(title, list) {
       <img src="${esc(thumb(coverOf(list)?.coverImage, 55))}" alt="" />
       <div style="flex: 1; overflow: hidden;">
         <div class="ellipsis" style="font-size: 18px; font-weight: bold; margin-bottom: 4px;">${esc(title)}</div>
-        <div class="muted" style="font-size: 14px;">قائمة • ${formatCount(list.length)} مقطع</div>
+        <div class="muted" style="font-size: 14px;">قائمة • ${tracksCount(list.length)}</div>
       </div>
     </div>`;
   const item = (iconName, text, fn, cls = '') => sheetItem(sheet, iconName, text, () => closeOverlayThen(fn), cls);
@@ -3006,7 +3009,7 @@ function renderListPage(title, list, playlist, source = null) {
   $('playlist-tracks').className = 'track-list';
   $('playlist-search').parentElement.style.display = 'block';
   $('playlist-title').textContent = title;
-  $('playlist-subtitle').textContent = `${formatCount(list.length)} مقطع`;
+  $('playlist-subtitle').textContent = tracksCount(list.length);
   $('playlist-search').value = '';
   renderTrackList($('playlist-tracks'), list, { numbered: true, playlist, source });
   $('playlist-play-all').onclick = () => playFromList(list, 0, { shuffleStart: isShuffle, source });
@@ -3045,7 +3048,7 @@ function openAllReciters() {
     paintGlow(first ? { coverImage: first.image, reciterName: first.name } : null);
     listBar('كل الرواديد', first ? { coverImage: first.image, reciterName: first.name } : null);
     $('playlist-title').textContent = 'كل الرواديد';
-    $('playlist-subtitle').textContent = `${formatCount(withTracks.length)} رادود`;
+    $('playlist-subtitle').textContent = countOf(withTracks.length, RECITERS);
     $('playlist-delete-btn').style.display = 'none';
     $('playlist-search').parentElement.style.display = 'none';
     const grid = $('playlist-tracks');
@@ -3064,7 +3067,7 @@ window.openCategoryDetail = (cat) => openPage('category-view', () => renderCateg
 function renderCategory(cat) {
   const list = allTracks.filter((t) => cat.values.includes(t.category));
   $('category-detail-name').textContent = cat.title;
-  $('category-detail-stats').textContent = `${formatCount(list.length)} مقطع`;
+  $('category-detail-stats').textContent = tracksCount(list.length);
   $('category-detail-image').src = thumb(list[0]?.coverImage, 400);
   // Its picture as it is, the actions on the page's own dark: no colour from its cover
   // (that was the newest track's, and changed with each upload), as in the phone app
@@ -3387,7 +3390,7 @@ function openReciterOptions(name) {
       <img src="${esc(thumb(reciterPhoto(name), 55))}" alt="" style="border-radius: 50%;" />
       <div style="flex: 1; overflow: hidden;">
         <div class="ellipsis" style="font-size: 18px; font-weight: bold; margin-bottom: 4px;">${esc(name)}</div>
-        <div class="muted" style="font-size: 14px;">رادود • ${formatCount(tracks.length)} مقطع</div>
+        <div class="muted" style="font-size: 14px;">رادود • ${tracksCount(tracks.length)}</div>
       </div>
     </div>`;
   const item = (iconName, text, fn) => {
@@ -3433,7 +3436,7 @@ function renderRadioPage(seed) {
       <div class="muted pv-line rd-poets" style="display: none;"></div>
       <div class="made-for">${sLogo()} مُصمم من أجلك</div>
       <p class="pv-about"><b>حول هذا الراديو</b> مبني على «${esc(seed.title)}» لـ ${esc(seed.reciterName)}<span class="rd-seed-poet"></span>، ومرتّب حسب ذوقك.</p>
-      <div class="muted pv-line">${totalDuration(radio)} • ${formatCount(radio.length)} مقطع</div>
+      <div class="muted pv-line">${totalDuration(radio)} • ${tracksCount(radio.length)}</div>
     </div>
     <div class="pv-actions-slot"></div>
     <div class="track-list pv-list"></div>
@@ -3505,7 +3508,7 @@ function renderMixPage(number) {
         <div class="muted pv-line">${esc(mixReciters(mix))}</div>
         <div class="made-for">${sLogo()} مُصممة من أجلك</div>
         <p class="pv-about"><b>حول هذا الميكس</b> يجمع ${esc(mix.lead)} ومن تستمع إليهم معه، بين ما تحبه وما لم تسمعه بعد، ويتجدد كل يوم بحسب ما تستمع إليه.</p>
-        <div class="muted pv-line">${totalDuration(tracks)} • ${formatCount(tracks.length)} مقطع</div>
+        <div class="muted pv-line">${totalDuration(tracks)} • ${tracksCount(tracks.length)}</div>
       </div>
     </div>
     <div class="pv-actions-slot"></div>
@@ -3615,7 +3618,7 @@ function openPreviews(of) {
         <img src="${esc(thumb(reciterPhoto(t.reciterName), 44))}" alt="" loading="lazy" />
         <div class="pvw-reciter-text">
           <div class="pvw-reciter-name ellipsis">${esc(t.reciterName)}</div>
-          <div class="muted ellipsis">${formatCount(r?.count || tracksOf(t.reciterName).length)} مقطع</div>
+          <div class="muted ellipsis">${tracksCount(r?.count || tracksOf(t.reciterName).length)}</div>
         </div>
         <span class="pvw-follow"></span>
       </div>
@@ -3786,7 +3789,7 @@ function renderCollection(spec) {
   const key = pl ? `p:${pl.id}` : spec.kind;
   if (!collectionUi.has(key)) collectionUi.set(key, { sort: 'custom', editing: false, round: 0 });
   const ui = collectionUi.get(key);
-  const title = pl ? pl.name : spec.kind === 'likes' ? 'المقاطع المفضلة' : 'التنزيلات';
+  const title = pl ? pl.name : spec.kind === 'likes' ? 'المفضلة' : 'التنزيلات';
   const base = uniqueById(spec.kind === 'likes' ? likedTracks() : spec.kind === 'downloads' ? downloadedTracks().reverse() : playlistTracks(pl));
   const list = sortTracks(base, ui.sort);
   const source = pl ? { kind: 'playlist', id: pl.id } : { kind: spec.kind, id: '' };
@@ -3801,7 +3804,7 @@ function renderCollection(spec) {
       <div class="cl-cover">${cover}</div>
       <h1 class="cl-title">${esc(title)}</h1>
       <div class="cl-owner"><span class="cl-owner-dot">${icon('user')}</span>${spec.kind === 'downloads' ? 'على هذا الجهاز' : 'أنت'}</div>
-      <div class="muted cl-meta">${icon('clock')} ${formatCount(list.length)} مقطع • ${totalDuration(list)}</div>
+      <div class="muted cl-meta">${icon('clock')} ${tracksCount(list.length)} • ${totalDuration(list)}</div>
     </div>
     <div class="pv-actions-slot"></div>
     <div class="horizontal-scroller cl-chips"></div>
@@ -3972,7 +3975,7 @@ function openPlaylistOptions(pl) {
       <div class="sheet-art">${artHtml({ covers: tracks.map((t) => t.coverImage) }, { width: 54 })}</div>
       <div style="flex: 1; overflow: hidden;">
         <div class="ellipsis" style="font-size: 18px; font-weight: bold; margin-bottom: 4px;">${esc(pl.name)}</div>
-        <div class="muted" style="font-size: 14px;">قائمة تشغيل • ${formatCount(tracks.length)} مقطع</div>
+        <div class="muted" style="font-size: 14px;">قائمة تشغيل • ${tracksCount(tracks.length)}</div>
       </div>
     </div>`;
   const item = (iconName, text, fn, cls = '') => sheetItem(sheet, iconName, text, () => closeOverlayThen(fn), cls);
@@ -4020,7 +4023,7 @@ function renderTrackDetail(track) {
   const cat = categoryOf(track);
   const album = track.album && realAlbums(track.reciterName).find((a) => a.name === track.album);
   $('td-meta').innerHTML = [album && `<button class="td-album">ألبوم ${esc(album.name)}</button>`, cat && esc(cat.title),
-    track.duration && `<span dir="ltr">${track.duration}</span>`, `${formatCount(track.listens)} استماع`].filter(Boolean).join(' • ');
+    track.duration && `<span dir="ltr">${track.duration}</span>`, listensCount(track.listens)].filter(Boolean).join(' • ');
   if (album) $('td-meta').querySelector('.td-album').onclick = () => openAlbum(album);
 
   // The lyrics and who wrote them, once the track's details are in
@@ -4109,7 +4112,7 @@ function renderSearchHome() {
     card.className = 'genre-card';
     card.style.backgroundColor = cat.color;
     card.innerHTML = `
-      <div class="genre-card-title">${esc(cat.title)}<div class="genre-card-count">${formatCount(inCat.length)} مقطع</div></div>
+      <div class="genre-card-title">${esc(cat.title)}<div class="genre-card-count">${tracksCount(inCat.length)}</div></div>
       <img src="${esc(inCat[0] ? thumb(inCat[0].coverImage, 65) : FALLBACK_COVER)}" class="genre-card-img" alt="" loading="lazy" />`;
     grid.appendChild(clickable(card, () => openCategoryDetail(cat)));
   });
@@ -4217,8 +4220,8 @@ function renderSearchPage() {
     el.dataset.trackId = t.id;
     return el;
   };
-  const reciterRow = (r) => row(`<div class="art sp-art round"><img src="${esc(thumb(r.image, 56))}" alt="" loading="lazy" /></div>`, r.name, `رادود • ${formatCount(r.count)} مقطع`, () => openReciter(r), [followButton(r)]);
-  const playlistRow = (pl) => row(`<div class="sp-art">${artHtml({ covers: playlistTracks(pl).map((t) => t.coverImage) }, { width: 56 })}</div>`, pl.name, `قائمة تشغيل • ${formatCount(pl.tracks.length)} مقطع`, () => openPlaylist(pl));
+  const reciterRow = (r) => row(`<div class="art sp-art round"><img src="${esc(thumb(r.image, 56))}" alt="" loading="lazy" /></div>`, r.name, `رادود • ${tracksCount(r.count)}`, () => openReciter(r), [followButton(r)]);
+  const playlistRow = (pl) => row(`<div class="sp-art">${artHtml({ covers: playlistTracks(pl).map((t) => t.coverImage) }, { width: 56 })}</div>`, pl.name, `قائمة تشغيل • ${tracksCount(pl.tracks.length)}`, () => openPlaylist(pl));
   const categoryRow = (c) => row(catArt(c), c.title, 'تصنيف', () => openCategory(c));
   const empty = (text) => { const d = document.createElement('div'); d.className = 'empty-state'; d.textContent = text; return d; };
 
@@ -4349,7 +4352,7 @@ function renderDownloadsTab() {
       <div class="dl-card-head">
         <span class="dl-disc">${icon('download')}</span>
         <div style="min-width: 0;"><div class="dl-card-title">مكتبتك بلا إنترنت</div>
-        <div class="muted dl-card-sub">${formatCount(newest.length)} مقطع • ${totalDuration(newest)}</div></div>
+        <div class="muted dl-card-sub">${tracksCount(newest.length)} • ${totalDuration(newest)}</div></div>
       </div>
       <div class="dl-bar"><span></span></div>
       <div class="dl-room muted"><span class="dl-used">…</span><span class="dl-free"></span></div>
@@ -4391,7 +4394,7 @@ function renderDownloadsTab() {
         const el = document.createElement('div');
         el.className = `dl-reciter${chosen ? ' on' : ''}${downloadsUi.reciter && !chosen ? ' dim' : ''}`;
         el.innerHTML = `<span class="dl-reciter-photo"><img src="${esc(thumb(reciterPhoto(name), 76))}" alt="" loading="lazy" /></span>
-          <div class="ellipsis dl-reciter-name">${esc(name)}</div><div class="muted dl-reciter-count">${formatCount(n)} مقطع</div>`;
+          <div class="ellipsis dl-reciter-name">${esc(name)}</div><div class="muted dl-reciter-count">${tracksCount(n)}</div>`;
         row.appendChild(clickable(el, () => { downloadsUi.reciter = chosen ? null : name; renderDownloadsTab(); }));
       });
       parts.push(section('حسب الرادود', row));
@@ -4483,11 +4486,11 @@ const playlistTime = (pl) => Number(String(pl.id).match(/\d{10,}/)?.[0] || 0);
 
 function libraryEntries() {
   const all = [
-    { key: 'likes', kind: 'likes', title: 'المقاطع المفضلة', subtitle: `قائمة تشغيل • ${formatCount(likesCount())} مقطع`, art: { likes: true }, pinned: true, time: 2, open: () => openLikesPage() },
-    { key: 'downloads', kind: 'downloads', title: 'التنزيلات', subtitle: `${formatCount(lib.downloads.size)} مقطع على الجهاز`, art: { downloads: true }, pinned: true, time: 1, open: () => goDownloads() },
+    { key: 'likes', kind: 'likes', title: 'المفضلة', subtitle: `قائمة تشغيل • ${tracksCount(likesCount())}`, art: { likes: true }, pinned: true, time: 2, open: () => openLikesPage() },
+    { key: 'downloads', kind: 'downloads', title: 'التنزيلات', subtitle: `${tracksCount(lib.downloads.size)} على الجهاز`, art: { downloads: true }, pinned: true, time: 1, open: () => goDownloads() },
     ...lib.playlists.map((pl) => {
       const tracks = playlistTracks(pl);
-      return { key: `p:${pl.id}`, kind: 'playlist', pl, title: pl.name, subtitle: `قائمة تشغيل • ${formatCount(fullyLoaded ? tracks.length : pl.tracks.length)} مقطع`,
+      return { key: `p:${pl.id}`, kind: 'playlist', pl, title: pl.name, subtitle: `قائمة تشغيل • ${tracksCount(fullyLoaded ? tracks.length : pl.tracks.length)}`,
         art: { covers: tracks.map((t) => t.coverImage) }, time: playlistTime(pl), open: () => openPlaylistPage(pl) };
     }),
     ...[...lib.follows].map((name, i) => ({ key: `r:${name}`, kind: 'reciter', title: name, subtitle: 'رادود', art: { cover: reciterPhoto(name), round: true }, time: i, open: () => openArtistDetail(name) })),
@@ -4919,7 +4922,7 @@ function paintUploadBar() {
     bar.querySelector('.up-gold').onclick = () => openListPage('مقاطعك المرفوعة', sent.map((u) => trackById.get(String(u.trackId))).filter(Boolean));
   } else if (!signedInUser()) {
     bar.innerHTML = '<button class="up-gold">سجّل الدخول لرفع المقاطع</button>';
-    bar.querySelector('button').onclick = () => openAuthModal();
+    bar.querySelector('button').onclick = () => askSignIn({ kind: 'upload' });
   } else if (!ready) {
     bar.innerHTML = '<div class="up-bar-off">أكمل بيانات المقاطع للرفع</div>';
   } else {
@@ -5071,7 +5074,7 @@ function renderEditTrack(id) {
     : !mayEdit(t) ? 'لا يمكنك تعديل هذا المقطع، فهو ليس من رفعك' : null;
   if (blocked) {
     view.innerHTML = `${head(false)}<div class="empty-state">${esc(blocked)}</div>${t && !me ? '<div class="pv-center"><button class="pill-btn ed-signin">تسجيل الدخول</button></div>' : ''}`;
-    view.querySelector('.ed-signin')?.addEventListener('click', () => openAuthModal());
+    view.querySelector('.ed-signin')?.addEventListener('click', () => askSignIn({ kind: 'edit', id }));
     return;
   }
   const startCat = categoryOf(t)?.id || null;
@@ -5276,13 +5279,13 @@ function renderMyUploads() {
       <h1 class="search-header" style="flex: 1;">مقاطعي المرفوعة</h1>
       ${me ? `<button class="ed-pill mu-upload">${icon('upload')} رفع</button>` : ''}
     </header>
-    ${list.length ? `<p class="muted mu-note">${countWord(list.length)} • اضغط على القلم لتعديل أي مقطع</p>` : ''}
+    ${list.length ? `<p class="muted mu-note">${tracksCount(list.length)} • اضغط على القلم لتعديل أي مقطع</p>` : ''}
     <div class="mu-list"></div>`;
   view.querySelector('.mu-upload')?.addEventListener('click', () => openUploadPage());
   const box = view.querySelector('.mu-list');
   if (!me) {
     box.innerHTML = '<div class="empty-state">سجّل الدخول لترى مقاطعك</div><div class="pv-center"><button class="pill-btn">تسجيل الدخول</button></div>';
-    box.querySelector('button').onclick = () => openAuthModal();
+    box.querySelector('button').onclick = () => askSignIn({ kind: 'myUploads' });
     return;
   }
   if (!list.length && !fullyLoaded) {
@@ -5347,7 +5350,7 @@ function openPlaylistPicker(track) {
     const item = document.createElement('button');
     item.className = 'sheet-item';
     const has = pl.tracks.includes(track.id);
-    item.innerHTML = `${icon(has ? 'check' : 'playlist')}<span style="flex:1">${esc(pl.name)}</span><span class="muted" style="font-size:12px">${formatCount(pl.tracks.length)} مقطع</span>`;
+    item.innerHTML = `${icon(has ? 'check' : 'playlist')}<span style="flex:1">${esc(pl.name)}</span><span class="muted" style="font-size:12px">${tracksCount(pl.tracks.length)}</span>`;
     item.onclick = () => {
       if (has) { toast('المقطع موجود في هذه القائمة'); return; }
       pl.tracks.push(track.id);
@@ -5387,7 +5390,7 @@ function openTrackOptions(track, { playlist = null } = {}) {
 
   sheetItem(box, 'share-nodes', 'مشاركة', then(() => openShareSheet(track)));
   if (mayEdit(track)) sheetItem(box, 'pencil', 'تعديل المقطع', toPage(() => openEditTrack(track.id)));
-  sheetItem(box, `<span class="liked-square">${icon('heart', { fill: true })}</span>`, liked ? 'إزالة من "المقاطع المفضلة"' : 'إضافة إلى "المقاطع المفضلة"', then(() => toggleLike(track)));
+  sheetItem(box, `<span class="liked-square">${icon('heart', { fill: true })}</span>`, liked ? 'إزالة من المفضلة' : 'إضافة إلى المفضلة', then(() => toggleLike(track)));
   sheetItem(box, 'circle-plus', 'إضافة إلى قائمة تشغيل', then(() => openPlaylistPicker(track)));
   if (playlist) {
     sheetItem(box, 'trash', 'إزالة من هذه القائمة', then(async () => {
@@ -6298,7 +6301,7 @@ function paintPlayerExtras(t) {
   $('fp-about').style.display = known ? '' : 'none';
   $('fp-about-img').src = thumb(r.image || t.coverImage, 400);
   $('fp-about-name').textContent = r.name;
-  $('fp-about-stats').textContent = `${formatCount(works.length)} مقطع • ${formatCount(works.reduce((sum, x) => sum + x.listens, 0))} استماع`;
+  $('fp-about-stats').textContent = `${tracksCount(works.length)} • ${listensCount(works.reduce((sum, x) => sum + x.listens, 0))}`;
   const famous = works.slice(0, 3).map((x) => `«${x.title}»`).join('، ');
   const paintBio = (bio) => {
     const text = bio || (famous && `أشهر أعماله في صوت الأحزان: ${famous}.`);
@@ -6383,7 +6386,7 @@ function exploreCard(t, onClick) {
     <span class="explore-play">${icon('play', { fill: true })}</span>
     <div class="explore-text">
       <div class="explore-title">${esc(t.title)}</div>
-      <div class="explore-sub">${t.listens ? `${formatCount(t.listens)} استماع` : esc(t.reciterName)}</div>
+      <div class="explore-sub">${t.listens ? listensCount(t.listens) : esc(t.reciterName)}</div>
     </div>`;
   return clickable(card, onClick);
 }
@@ -6691,6 +6694,10 @@ async function initAuth() {
   updateProfileUI();
   if (currentUser) syncFromCloud();
   if (isPasswordRecovery && currentUser) askNewPassword();
+  // Back from Google or Facebook: what they were doing when they chose to sign in.
+  // Not signed in now (they gave up there): forgotten
+  if (signedInUser() && !isPasswordRecovery) resumeAfterSignIn();
+  else clearAction(sessionStorage);
 
   supabase.auth.onAuthStateChange(async (event, s) => {
     const before = currentUser?.id;
@@ -6706,11 +6713,31 @@ async function initAuth() {
     if (currentUser) syncFromCloud();
   });
 
-  // Offer sign-in once, on the first visit (checked when it would show: the
-  // listener may have signed in or dismissed it in the meantime)
-  setTimeout(() => {
-    if (!currentUser && !isPasswordRecovery && !store.get('sawt_auth_skipped', false) && $('auth-modal').style.display !== 'flex') openAuthModal();
-  }, 1200);
+  // A guest uses the app as it is: the sign-in window opens only when they
+  // choose to sign in, or try something that needs an account (askSignIn)
+}
+
+// Something that needs an account (sending tracks, editing one, their uploads):
+// the sign-in window, and the attempt kept to carry on once they have signed in
+function askSignIn(action) {
+  rememberAction(sessionStorage, action);
+  openAuthModal();
+}
+
+// Signed in: the attempt they made, carried on (false when there was none)
+async function resumeAfterSignIn() {
+  const action = takeAction(sessionStorage);
+  if (!action) return false;
+  if (action.kind === 'upload') {
+    if (onUploadPage()) refreshOpenViews(); else openUploadPage();
+  } else if (action.kind === 'myUploads') {
+    if (navStack.at(-1)?.render === renderMyUploads) refreshOpenViews(); else openMyUploads();
+  } else if (action.kind === 'edit') {
+    await dataReady; // the track is looked up in the library
+    if (!signedInUser()) return true;
+    if (onEditPage(action.id)) refreshOpenViews(); else openEditTrack(action.id);
+  }
+  return true;
 }
 
 // The account changed: this browser's listening becomes the new owner's own.
@@ -6870,7 +6897,8 @@ function closeAuthModal() {
 }
 $('auth-modal').addEventListener('click', (e) => { if (e.target.id === 'auth-modal') skipAuth(); });
 
-window.skipAuth = () => { store.set('sawt_auth_skipped', true); closeAuthModal(); };
+// Closed without signing in: they go on as a guest, and the attempt is let go
+window.skipAuth = () => { store.set('sawt_auth_skipped', true); clearAction(sessionStorage); closeAuthModal(); };
 
 // The card's two faces: signing in (Google and Facebook too), and making an
 // account (a name, the password twice, back to signing in)
@@ -6924,9 +6952,11 @@ window.signInWithFacebook = async () => {
   if (error) { showAuthMessage('فشل تسجيل الدخول بواسطة فيسبوك'); console.error(error); }
 };
 
-// Signed in: the home screen (unless they signed in to send their tracks: that page stays)
-function afterSignIn() {
+// Signed in: what they were trying to do carries on; otherwise the home screen
+// (unless they signed in on the page to send their tracks: that page stays)
+async function afterSignIn() {
   closeAuthModal();
+  if (await resumeAfterSignIn()) return;
   if (!onUploadPage()) goHome();
 }
 
@@ -7019,14 +7049,13 @@ window.submitAuth = async () => {
   setAuthLoading(false);
 };
 
-// Signing out stops what is playing (it was theirs); the home screen underneath, the sign-in screen on top
+// Signing out stops what is playing (it was theirs); then the home screen, as a guest
 // (this browser only: the phone app and other browsers stay signed in)
 window.doLogout = async () => {
   audio.pause();
   await supabase.auth.signOut({ scope: 'local' });
   toast('تم تسجيل الخروج');
   goHome();
-  openAuthModal();
 };
 
 // Deleting the account for good (the site's /api/delete-account: its likes,

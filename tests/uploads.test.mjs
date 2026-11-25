@@ -59,6 +59,9 @@ test('category from its words', () => {
   assert.equal(category('عرس القاسم'), 'hussainiya');
   assert.equal(category('يا حسين'), 'hussainiya');
   assert.equal(dbCategory('hussainiya'), 'hussainiya_poems');
+  // A lecture is filed under «محاضرات», its own category (as the website files it)
+  assert.equal(category('محاضرة عن الإمام الحسين'), 'lectures');
+  assert.equal(dbCategory('lectures'), 'lectures');
 });
 
 test('a reciter is chosen, not written again', () => {

@@ -91,7 +91,7 @@
           <!-- Spotify's "Your Library": search, create, filters, sort, grid or list -->
           <header class="page-header lib-bar" id="lib-bar">
             <button class="avatar-btn" onclick="goProfile()" aria-label="حسابي"></button>
-            <h1 class="search-header ellipsis" style="flex: 1; font-size: clamp(16px, 5vw, 20px);">مكتبتك الموسيقية</h1>
+            <h1 class="search-header ellipsis" style="flex: 1; font-size: clamp(16px, 5vw, 20px);">المكتبة الصوتية</h1>
             <button class="icon-btn" id="lib-search-btn" aria-label="البحث في مكتبتك"><i class="ic" data-icon="search"></i></button>
             <button class="icon-btn" onclick="openCreateSheet()" aria-label="إنشاء" style="font-size: 26px;"><i class="ic" data-icon="plus"></i></button>
           </header>
@@ -187,7 +187,7 @@
 
             <div class="list-actions" style="margin-bottom: 30px;">
               <div class="list-actions-buttons">
-                <button class="icon-btn" id="td-like-btn" aria-label="إعجاب"><i class="ic" data-icon="heart"></i></button>
+                <button class="icon-btn" id="td-like-btn" aria-label="المفضلة"><i class="ic" data-icon="heart"></i></button>
                 <button class="icon-btn" id="td-download-btn" aria-label="تنزيل"><i class="ic" data-icon="download"></i></button>
                 <button class="icon-btn" id="td-share-btn" aria-label="مشاركة"><i class="ic" data-icon="share-nodes"></i></button>
                 <button class="icon-btn" id="td-options-btn" aria-label="خيارات"><i class="ic" data-icon="more"></i></button>
@@ -242,7 +242,7 @@
 
           <div class="stats-grid">
             <div class="stat-box"><i class="ic" data-icon="music"></i><div id="stat-listened">0</div><span>مقطع استمعت إليه</span></div>
-            <div class="stat-box"><i class="ic" data-icon="heart"></i><div id="stat-likes">0</div><span>إعجاب</span></div>
+            <div class="stat-box"><i class="ic" data-icon="heart"></i><div id="stat-likes">0</div><span>المفضلة</span></div>
             <button class="stat-box" onclick="openLibraryPlaylists()"><i class="ic" data-icon="playlist"></i><div id="stat-playlists">0</div><span>قائمة تشغيل</span></button>
           </div>
 
@@ -327,7 +327,7 @@
               <h2 id="fp-title" class="ellipsis"></h2>
               <div id="fp-artist" class="ellipsis fp-artist" role="button" tabindex="0"></div>
             </div>
-            <button class="icon-btn fp-like" id="fp-like-btn" aria-label="إعجاب"><i class="ic" data-icon="heart"></i></button>
+            <button class="icon-btn fp-like" id="fp-like-btn" aria-label="المفضلة"><i class="ic" data-icon="heart"></i></button>
           </div>
 
           <div style="width: 100%; margin-bottom: 4vh;">
@@ -439,7 +439,7 @@
         </div>
         <div class="player-controls">
           <button class="icon-btn mp-devices" onclick="openDevices()" aria-label="الاتصال بجهاز"><i class="ic" data-icon="devices"></i></button>
-          <button class="icon-btn" id="mp-like-btn" aria-label="إعجاب"><i class="ic" data-icon="heart"></i></button>
+          <button class="icon-btn" id="mp-like-btn" aria-label="المفضلة"><i class="ic" data-icon="heart"></i></button>
           <!-- The play button inside a ring that fills in gold as the track plays -->
           <div class="mp-ring">
             <svg viewBox="0 0 46 46" aria-hidden="true">
@@ -497,7 +497,7 @@
     <div id="delete-account-modal" class="modal" style="display: none;" role="alertdialog" aria-modal="true" aria-labelledby="delete-account-title">
       <div class="modal-card" style="text-align: center;">
         <h2 id="delete-account-title" class="modal-title" style="border: none;">حذف حسابك نهائياً؟</h2>
-        <p class="muted" style="font-size: 14px; line-height: 1.6; margin-bottom: 18px;">سيُحذف حسابك وكل ما فيه: اسمك وبريدك وصورتك، والمقاطع المفضلة وقوائم التشغيل والمتابعات. المقاطع التي رفعتها تبقى في المكتبة دون اسمك.<br />لا يمكن التراجع عن هذا.</p>
+        <p class="muted" style="font-size: 14px; line-height: 1.6; margin-bottom: 18px;">سيُحذف حسابك وكل ما فيه: اسمك وبريدك وصورتك، والمفضلة وقوائم التشغيل والمتابعات. المقاطع التي رفعتها تبقى في المكتبة دون اسمك.<br />لا يمكن التراجع عن هذا.</p>
         <p id="delete-account-error" class="dialog-error" style="display: none;"></p>
         <div style="display: flex; gap: 15px;">
           <button class="outline-btn" id="delete-account-cancel">إلغاء</button>
@@ -685,7 +685,7 @@
             <span id="auth-toggle-text">ليس لديك حساب؟</span>
             <button type="button" onclick="toggleAuthMode()" id="auth-toggle-btn" class="link-btn">إنشاء حساب</button>
           </div>
-          <p id="auth-note" class="auth-note" style="display: none;">بحسابك تُحفظ إعجاباتك وقوائمك ومن تتابعهم على كل أجهزتك وعلى الموقع.</p>
+          <p id="auth-note" class="auth-note" style="display: none;">بحسابك تُحفظ المفضلة وقوائمك ومن تتابعهم على كل أجهزتك وعلى الموقع.</p>
           <button type="button" id="auth-skip" class="auth-skip" onclick="skipAuth()">المتابعة بدون حساب</button>
         </div>
       </div>
