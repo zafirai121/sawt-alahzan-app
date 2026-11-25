@@ -5909,7 +5909,9 @@ function advanceQueue(fromEnded) {
 }
 
 window.playPrev = () => {
-  if (audio.currentTime > 3 || queueIndex === 0) { audio.currentTime = 0; return; }
+  // Back to its start through seekAudio: after a dropped connection the file is
+  // asked for again from 0. Where it is: while it is read again the element says 0
+  if ((rec.resumeAt ?? audio.currentTime) > 3 || queueIndex === 0) { seekAudio(0); return; }
   queueIndex--;
   playTrack(queue[queueIndex]);
 };
@@ -6085,6 +6087,7 @@ window.addEventListener('online', () => {
 // connection the file is read again from there
 function seekAudio(t) {
   rec.pos = t;
+  if (rec.resumeAt != null) rec.resumeAt = t; // being read again: it goes on from here, not where it was
   if (rec.broken || (audio.error && rec.started)) {
     rec.broken = true;
     if (!audio.paused || rec.interrupted) { rec.attempts = 0; reloadCurrent(true); }
